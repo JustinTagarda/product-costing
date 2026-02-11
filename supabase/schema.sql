@@ -51,3 +51,40 @@ create trigger cost_sheets_set_updated_at
 before update on public.cost_sheets
 for each row execute function public.set_updated_at();
 
+create table if not exists public.materials (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  name text not null default '',
+  code text not null default '',
+  category text not null default '',
+  unit text not null default 'ea',
+  unit_cost_cents integer not null default 0 check (unit_cost_cents >= 0),
+  supplier text not null default '',
+  last_purchase_cost_cents integer not null default 0 check (last_purchase_cost_cents >= 0),
+  last_purchase_date date,
+  is_active boolean not null default true,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists materials_user_id_updated_at_idx
+  on public.materials (user_id, updated_at desc);
+
+create index if not exists materials_user_id_active_name_idx
+  on public.materials (user_id, is_active, name);
+
+alter table public.materials enable row level security;
+
+drop policy if exists "materials_owner_all" on public.materials;
+create policy "materials_owner_all"
+  on public.materials
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists materials_set_updated_at on public.materials;
+create trigger materials_set_updated_at
+before update on public.materials
+for each row execute function public.set_updated_at();
