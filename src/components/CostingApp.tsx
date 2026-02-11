@@ -3,7 +3,7 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { computeTotals, createDemoSheet, makeId } from "@/lib/costing";
+import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { formatCents, formatShortDate } from "@/lib/format";
 import { parseStoredDataJson } from "@/lib/importExport";
@@ -22,6 +22,7 @@ const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 
 const inputMono = "tabular-nums font-mono tracking-tight";
+const LOCAL_STORAGE_KEY = "product-costing:local:v1";
 
 function parseNumber(value: string): number {
   const n = Number(value);
@@ -67,6 +68,33 @@ function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
   return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
+function readLocalSheets(): StoredData | null {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return null;
+    return parseStoredDataJson(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalSheets(sheets: CostSheet[], selectedId: string | null): void {
+  try {
+    if (!sheets.length) {
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+      return;
+    }
+    const payload: StoredData = {
+      version: 1,
+      sheets,
+      selectedId: selectedId ?? undefined,
+    };
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage quota/private mode failures.
+  }
+}
+
 export default function CostingApp() {
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -89,10 +117,13 @@ export default function CostingApp() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
+  const hasHydratedSheetsRef = useRef(false);
 
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const user = session?.user ?? null;
+  const userId = user?.id ?? null;
+  const isCloudMode = Boolean(userId && supabase);
 
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
@@ -104,7 +135,10 @@ export default function CostingApp() {
   }, []);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setAuthReady(true);
+      return;
+    }
     const client = supabase;
     let cancelled = false;
 
@@ -188,25 +222,42 @@ export default function CostingApp() {
     [supabase, toast],
   );
 
-  const userId = user?.id;
   useEffect(() => {
+    if (!authReady) return;
     let cancelled = false;
 
     async function load() {
-      if (!userId) {
-        setSheets([]);
-        setSelectedId(null);
+      hasHydratedSheetsRef.current = false;
+      setLoadingSheets(true);
+
+      if (isCloudMode && userId) {
+        const nextSheets = await fetchSheetsForUser(userId);
+        if (cancelled) return;
+        setSheets(nextSheets);
+        setSelectedId((prev) => {
+          if (prev && nextSheets.some((s) => s.id === prev)) return prev;
+          return nextSheets[0]?.id ?? null;
+        });
+        hasHydratedSheetsRef.current = true;
+        setLoadingSheets(false);
         return;
       }
 
-      setLoadingSheets(true);
-      const nextSheets = await fetchSheetsForUser(userId);
+      const localData = readLocalSheets();
+      const nextSheets =
+        localData?.sheets?.length
+          ? sortSheetsByUpdatedAtDesc(localData.sheets)
+          : [createDemoSheet()];
+      const nextSelectedId =
+        localData?.selectedId && nextSheets.some((s) => s.id === localData.selectedId)
+          ? localData.selectedId
+          : nextSheets[0]?.id ?? null;
+
       if (cancelled) return;
       setSheets(nextSheets);
-      setSelectedId((prev) => {
-        if (prev && nextSheets.some((s) => s.id === prev)) return prev;
-        return nextSheets[0]?.id ?? null;
-      });
+      setSelectedId(nextSelectedId);
+      if (!localData?.sheets?.length) writeLocalSheets(nextSheets, nextSelectedId);
+      hasHydratedSheetsRef.current = true;
       setLoadingSheets(false);
     }
 
@@ -214,7 +265,12 @@ export default function CostingApp() {
     return () => {
       cancelled = true;
     };
-  }, [fetchSheetsForUser, userId]);
+  }, [authReady, fetchSheetsForUser, isCloudMode, userId]);
+
+  useEffect(() => {
+    if (!authReady || isCloudMode || !hasHydratedSheetsRef.current) return;
+    writeLocalSheets(sheets, selectedId);
+  }, [authReady, isCloudMode, selectedId, sheets]);
 
   const selectedSheet = useMemo(() => {
     if (!sheets.length) return null;
@@ -233,7 +289,7 @@ export default function CostingApp() {
   }, [sheets, query]);
 
   async function persistSheet(next: CostSheet): Promise<void> {
-    if (!supabase) return;
+    if (!isCloudMode || !supabase) return;
     const payload = sheetToRowUpdate(next);
     const { error } = await supabase.from("cost_sheets").update(payload).eq("id", next.id);
     if (error) toast("error", `Save failed: ${error.message}`);
@@ -253,7 +309,7 @@ export default function CostingApp() {
     setSheets((prev) =>
       sortSheetsByUpdatedAtDesc(prev.map((s) => (s.id === next.id ? next : s))),
     );
-    schedulePersist(next);
+    if (isCloudMode) schedulePersist(next);
   }
 
   function selectSheet(id: string) {
@@ -262,7 +318,7 @@ export default function CostingApp() {
 
   async function signInWithGoogle() {
     if (!supabase) {
-      toast("error", "Supabase is not configured.");
+      toast("error", supabaseError || "Cloud sync is not configured.");
       return;
     }
     try {
@@ -289,67 +345,93 @@ export default function CostingApp() {
   }
 
   async function newSheet() {
-    if (!supabase || !user) return;
+    if (isCloudMode && supabase && user) {
+      const insert = makeBlankSheetInsert(user.id);
+      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+      if (error || !inserted?.[0]) {
+        toast("error", error?.message || "Could not create sheet.");
+        return;
+      }
 
-    const insert = makeBlankSheetInsert(user.id);
-    const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-    if (error || !inserted?.[0]) {
-      toast("error", error?.message || "Could not create sheet.");
+      const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+      setSheets((prev) => [sheet, ...prev]);
+      setSelectedId(sheet.id);
+      toast("success", "New sheet created.");
       return;
     }
 
-    const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+    const sheet = makeBlankSheet(makeId("sheet"));
     setSheets((prev) => [sheet, ...prev]);
     setSelectedId(sheet.id);
-    toast("success", "New sheet created.");
+    toast("success", "New local sheet created.");
   }
 
   async function duplicateSelected() {
-    if (!supabase || !selectedSheet || !user) return;
+    if (!selectedSheet) return;
 
-    const insert: DbCostSheetInsert = {
-      user_id: user.id,
-      name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
-      sku: selectedSheet.sku,
-      currency: selectedSheet.currency,
-      unit_name: selectedSheet.unitName,
-      batch_size: selectedSheet.batchSize,
-      waste_pct: selectedSheet.wastePct,
-      markup_pct: selectedSheet.markupPct,
-      tax_pct: selectedSheet.taxPct,
-      materials: selectedSheet.materials,
-      labor: selectedSheet.labor,
-      overhead: selectedSheet.overhead,
-      notes: selectedSheet.notes,
-    };
+    if (isCloudMode && supabase && user) {
+      const insert: DbCostSheetInsert = {
+        user_id: user.id,
+        name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
+        sku: selectedSheet.sku,
+        currency: selectedSheet.currency,
+        unit_name: selectedSheet.unitName,
+        batch_size: selectedSheet.batchSize,
+        waste_pct: selectedSheet.wastePct,
+        markup_pct: selectedSheet.markupPct,
+        tax_pct: selectedSheet.taxPct,
+        materials: selectedSheet.materials,
+        labor: selectedSheet.labor,
+        overhead: selectedSheet.overhead,
+        notes: selectedSheet.notes,
+      };
 
-    const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-    if (error || !inserted?.[0]) {
-      toast("error", error?.message || "Could not duplicate sheet.");
+      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+      if (error || !inserted?.[0]) {
+        toast("error", error?.message || "Could not duplicate sheet.");
+        return;
+      }
+
+      const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+      setSheets((prev) => [sheet, ...prev]);
+      setSelectedId(sheet.id);
+      toast("success", "Sheet duplicated.");
       return;
     }
 
-    const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
-    setSheets((prev) => [sheet, ...prev]);
-    setSelectedId(sheet.id);
-    toast("success", "Sheet duplicated.");
+    const now = new Date().toISOString();
+    const localCopy: CostSheet = {
+      ...selectedSheet,
+      id: makeId("sheet"),
+      name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
+      materials: selectedSheet.materials.map((it) => ({ ...it })),
+      labor: selectedSheet.labor.map((it) => ({ ...it })),
+      overhead: selectedSheet.overhead.map((it) => ({ ...it })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    setSheets((prev) => [localCopy, ...prev]);
+    setSelectedId(localCopy.id);
+    toast("success", "Local sheet duplicated.");
   }
 
   async function deleteSelected() {
-    if (!supabase || !selectedSheet || !user) return;
+    if (!selectedSheet) return;
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
-    const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
-    if (error) {
-      toast("error", error.message);
-      return;
+    if (isCloudMode && supabase && user) {
+      const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
+      if (error) {
+        toast("error", error.message);
+        return;
+      }
     }
 
     const remaining = sheets.filter((s) => s.id !== selectedSheet.id);
     setSheets(remaining);
     if (selectedId === selectedSheet.id) setSelectedId(remaining[0]?.id ?? null);
-    toast("info", "Sheet deleted.");
+    toast("info", isCloudMode ? "Sheet deleted." : "Local sheet deleted.");
   }
 
   function exportAll() {
@@ -368,8 +450,6 @@ export default function CostingApp() {
   }
 
   async function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
-    if (!supabase || !user) return;
-
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -388,63 +468,55 @@ export default function CostingApp() {
       return;
     }
 
-    const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
-      user_id: user.id,
-      name: s.name || "Untitled",
-      sku: s.sku || "",
-      currency: s.currency || "USD",
-      unit_name: s.unitName || "unit",
-      batch_size: s.batchSize || 1,
-      waste_pct: s.wastePct || 0,
-      markup_pct: s.markupPct || 0,
-      tax_pct: s.taxPct || 0,
-      materials: s.materials || [],
-      labor: s.labor || [],
-      overhead: s.overhead || [],
-      notes: s.notes || "",
-    }));
+    if (isCloudMode && supabase && user) {
+      const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
+        user_id: user.id,
+        name: s.name || "Untitled",
+        sku: s.sku || "",
+        currency: s.currency || "USD",
+        unit_name: s.unitName || "unit",
+        batch_size: s.batchSize || 1,
+        waste_pct: s.wastePct || 0,
+        markup_pct: s.markupPct || 0,
+        tax_pct: s.taxPct || 0,
+        materials: s.materials || [],
+        labor: s.labor || [],
+        overhead: s.overhead || [],
+        notes: s.notes || "",
+      }));
 
-    const { data: inserted, error } = await supabase.from("cost_sheets").insert(rows).select("*");
-    if (error) {
-      toast("error", error.message);
+      const { data: inserted, error } = await supabase.from("cost_sheets").insert(rows).select("*");
+      if (error) {
+        toast("error", error.message);
+        return;
+      }
+
+      const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+      setSheets((prev) => sortSheetsByUpdatedAtDesc([...insertedSheets, ...prev]));
+      setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
+      toast("success", `Imported ${insertedSheets.length} sheet(s).`);
       return;
     }
 
-    const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
-    setSheets((prev) => sortSheetsByUpdatedAtDesc([...insertedSheets, ...prev]));
-    setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
-    toast("success", `Imported ${insertedSheets.length} sheet(s).`);
+    const now = new Date().toISOString();
+    const usedIds = new Set(sheets.map((s) => s.id));
+    const importedLocal = imported.sheets.map((sheet) => {
+      let nextId = sheet.id;
+      if (!nextId || usedIds.has(nextId)) nextId = makeId("sheet");
+      usedIds.add(nextId);
+      return {
+        ...sheet,
+        id: nextId,
+        createdAt: sheet.createdAt || now,
+        updatedAt: now,
+      };
+    });
+    setSheets((prev) => sortSheetsByUpdatedAtDesc([...importedLocal, ...prev]));
+    setSelectedId((prev) => prev ?? importedLocal[0]?.id ?? null);
+    toast("success", `Imported ${importedLocal.length} local sheet(s).`);
   }
 
   const totals = useMemo(() => (selectedSheet ? computeTotals(selectedSheet) : null), [selectedSheet]);
-
-  if (supabaseError || !supabase) {
-    const msg = supabaseError || "Supabase is not configured.";
-    return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
-          <div className={cardClassName() + " p-6"}>
-            <h1 className="font-serif text-3xl tracking-tight text-ink">Product Costing</h1>
-            <p className="mt-2 text-sm text-danger">{msg}</p>
-
-            <div className="mt-4 rounded-2xl border border-border bg-paper/55 p-4">
-              <p className="font-mono text-xs font-semibold text-ink">Setup</p>
-              <p className="mt-2 text-xs text-muted">
-                1) Create a Supabase project and run the SQL in{" "}
-                <code className="font-mono">supabase/schema.sql</code>.
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                2) Add these to <code className="font-mono">.env.local</code> and restart{" "}
-                <code className="font-mono">npm run dev</code>.
-              </p>
-              <pre className="mt-3 overflow-x-auto rounded-xl bg-ink/5 p-3 font-mono text-xs text-ink">{`NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!authReady) {
     return (
@@ -454,65 +526,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
             <div className={cardClassName() + " h-[520px]"} />
             <div className={cardClassName() + " h-[520px]"} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
-          <div className={cardClassName() + " p-6"}>
-            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
-              Product Costing
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              Sign in with Google to sync cost sheets in Supabase.
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => void signInWithGoogle()}
-              >
-                Continue with Google
-              </button>
-            </div>
-
-            {notice ? (
-              <div
-                className={[
-                  "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                  notice.kind === "error"
-                    ? "bg-danger/10 text-danger"
-                    : notice.kind === "success"
-                      ? "bg-accent/10 text-ink"
-                      : "bg-paper/55 text-ink",
-                ].join(" ")}
-                role="status"
-                aria-live="polite"
-              >
-                {notice.message}
-              </div>
-            ) : null}
-
-            <div className="mt-6 rounded-2xl border border-border bg-paper/55 p-4">
-              <p className="text-xs text-muted">
-                Supabase setup checklist:
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                1) Enable the Google provider in Supabase Auth.
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                2) Add redirect URL:{" "}
-                <code className="select-all font-mono">
-                  {typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"}
-                </code>
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -550,13 +563,27 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
               >
                 New sheet
               </button>
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                onClick={() => void signOut()}
-              >
-                Log out
-              </button>
+              {session ? (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                  onClick={() => void signOut()}
+                >
+                  Log out
+                </button>
+              ) : supabase ? (
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                  onClick={() => void signInWithGoogle()}
+                >
+                  Continue with Google
+                </button>
+              ) : (
+                <p className="text-xs text-muted">
+                  Cloud sync unavailable. Configure Supabase to enable Google login.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -570,16 +597,30 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
-              Signed in as{" "}
-              <span className="select-all">{user?.email || user?.id}</span>{" "}
-              <span className="text-muted">- synced via Supabase</span>
+              {session ? (
+                <>
+                  Signed in as <span className="select-all">{user?.email || user?.id}</span>{" "}
+                  <span className="text-muted">- synced via Supabase</span>
+                </>
+              ) : (
+                <>
+                  Guest mode <span className="text-muted">- saved in this browser (localStorage)</span>
+                </>
+              )}
             </p>
             <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">
               Product Costing
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Materials, labor, overhead, and pricing in one ledger. Your sheets live in Supabase and sync across devices.
+              {session
+                ? "Materials, labor, overhead, and pricing in one ledger. Your sheets sync across devices in Supabase."
+                : "Materials, labor, overhead, and pricing in one ledger. Local mode stores sheets in this browser until you sign in."}
             </p>
+            {!supabase ? (
+              <p className="mt-2 text-xs text-muted">
+                {supabaseError || "Supabase is not configured. Google login is disabled in this environment."}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -604,13 +645,23 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
             >
               Export
             </button>
-            <button
-              type="button"
-              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-              onClick={() => void signOut()}
-            >
-              Log out
-            </button>
+            {session ? (
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                onClick={() => void signOut()}
+              >
+                Log out
+              </button>
+            ) : supabase ? (
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                onClick={() => void signInWithGoogle()}
+              >
+                Continue with Google
+              </button>
+            ) : null}
             <input
               ref={fileInputRef}
               type="file"
@@ -1475,7 +1526,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
         </div>
 
         <footer className="mt-10 text-center text-xs text-muted">
-          Built with Next.js + Supabase. Export JSON if you want an offline backup.
+          {session
+            ? "Built with Next.js + Supabase. Export JSON if you want an offline backup."
+            : "Built with Next.js. Guest mode uses localStorage; sign in with Google to sync via Supabase."}
         </footer>
       </div>
     </div>
