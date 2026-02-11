@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
+import { formatCents } from "@/lib/format";
 import {
   defaultUomConversions,
   makeDefaultSettings,
@@ -31,6 +32,18 @@ function parseNumber(value: string): number {
 
 function sectionTitleClass() {
   return "font-serif text-2xl tracking-tight text-ink";
+}
+
+function safeCurrencyExample(currency: string, display: "symbol" | "code"): string {
+  const value = currency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(value)) {
+    return display === "code" ? "USD 12.34" : "$12.34";
+  }
+  try {
+    return formatCents(1234, value, { currencyDisplay: display });
+  } catch {
+    return display === "code" ? "USD 12.34" : "$12.34";
+  }
 }
 
 export default function SettingsApp() {
@@ -182,6 +195,16 @@ export default function SettingsApp() {
       { code: "DE", label: "Germany" },
     ],
     [],
+  );
+
+  const symbolExample = useMemo(
+    () => safeCurrencyExample(settings.baseCurrency, "symbol"),
+    [settings.baseCurrency],
+  );
+
+  const codeExample = useMemo(
+    () => safeCurrencyExample(settings.baseCurrency, "code"),
+    [settings.baseCurrency],
   );
 
   if (!settingsReady) {
@@ -346,8 +369,8 @@ export default function SettingsApp() {
                       }))
                     }
                   >
-                    <option value="symbol">Symbol ($12.34)</option>
-                    <option value="code">Code (USD 12.34)</option>
+                    <option value="symbol">{`Symbol (${symbolExample})`}</option>
+                    <option value="code">{`Code (${codeExample})`}</option>
                   </select>
                 </div>
                 <div>
