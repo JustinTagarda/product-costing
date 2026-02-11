@@ -109,25 +109,6 @@ export default function CostingApp() {
     let cancelled = false;
 
     async function load() {
-      // Fallback: if OAuth callback lands on "/" with ?code=...
-      // exchange it here so the user doesn't get stuck on sign-in.
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      if (code) {
-        const { error: exchangeError } = await client.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          toast("error", `Login callback error: ${exchangeError.message}`);
-        } else {
-          url.searchParams.delete("code");
-          url.searchParams.delete("state");
-          url.searchParams.delete("error");
-          url.searchParams.delete("error_description");
-          const q = url.searchParams.toString();
-          const nextUrl = `${url.pathname}${q ? `?${q}` : ""}${url.hash}`;
-          window.history.replaceState({}, "", nextUrl);
-        }
-      }
-
       const { data, error } = await client.auth.getSession();
       if (cancelled) return;
       if (error) toast("error", error.message);

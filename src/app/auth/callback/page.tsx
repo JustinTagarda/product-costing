@@ -12,12 +12,9 @@ export default function AuthCallbackPage() {
     async function run() {
       try {
         const supabase = getSupabaseClient();
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        }
+        // With detectSessionInUrl enabled, Supabase handles callback URL exchange.
+        const { error } = await supabase.auth.getSession();
+        if (error) throw error;
         if (!cancelled) window.location.replace("/");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Auth callback failed.";
