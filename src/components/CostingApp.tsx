@@ -1,11 +1,20 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { computeTotals, createDemoSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { formatCents, formatShortDate } from "@/lib/format";
-import { STORAGE_KEY, loadStoredData, parseStoredDataJson, saveStoredData } from "@/lib/storage";
+import { parseStoredDataJson } from "@/lib/importExport";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import {
+  makeBlankSheetInsert,
+  rowToSheet,
+  sheetToRowUpdate,
+  type DbCostSheetInsert,
+  type DbCostSheetRow,
+} from "@/lib/supabase/costSheets";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
@@ -54,115 +63,303 @@ function panelClassName(): string {
   return ["rounded-2xl border border-border bg-paper/45", "shadow-sm"].join(" ");
 }
 
+function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
+  return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
 export default function CostingApp() {
+  const [{ supabase, supabaseError }] = useState(() => {
+    try {
+      return { supabase: getSupabaseClient(), supabaseError: null as string | null };
+    } catch (e) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Supabase is not configured. Check your environment variables.";
+      return {
+        supabase: null as ReturnType<typeof getSupabaseClient> | null,
+        supabaseError: msg,
+      };
+    }
+  });
+
   const [notice, setNotice] = useState<Notice | null>(null);
   const [query, setQuery] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [data, setData] = useState<StoredData>(() => {
-    const initial: StoredData = { version: 1, sheets: [createDemoSheet()], selectedId: "demo" };
-    return loadStoredData() ?? initial;
-  });
+  const saveTimersRef = useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
-    const t = window.setTimeout(() => saveStoredData(data), 200);
-    return () => window.clearTimeout(t);
-  }, [data]);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const user = session?.user ?? null;
 
-  function toast(kind: Notice["kind"], message: string): void {
+  const [loadingSheets, setLoadingSheets] = useState(false);
+  const [sheets, setSheets] = useState<CostSheet[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const client = supabase;
+    let cancelled = false;
+
+    async function load() {
+      const { data, error } = await client.auth.getSession();
+      if (cancelled) return;
+      if (error) toast("error", error.message);
+      setSession(data.session);
+      setAuthReady(true);
+    }
+
+    void load();
+
+    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+      if (cancelled) return;
+      setSession(nextSession);
+    });
+
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+    };
+  }, [supabase, toast]);
+
+  useEffect(() => {
+    const timers = saveTimersRef.current;
+    return () => {
+      for (const t of timers.values()) window.clearTimeout(t);
+      timers.clear();
+    };
+  }, []);
+
+  const fetchSheetsForUser = useCallback(
+    async (userId: string): Promise<CostSheet[]> => {
+      if (!supabase) return [];
+
+      const { data: rows, error } = await supabase
+        .from("cost_sheets")
+        .select("*")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        toast("error", error.message);
+        return [];
+      }
+
+      const normalized = (rows ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+      if (normalized.length > 0) return normalized;
+
+      // First run: create a deterministic demo sheet for the user.
+      const demo = createDemoSheet();
+      const demoInsert: DbCostSheetInsert = {
+        user_id: userId,
+        name: demo.name,
+        sku: demo.sku,
+        currency: demo.currency,
+        unit_name: demo.unitName,
+        batch_size: demo.batchSize,
+        waste_pct: demo.wastePct,
+        markup_pct: demo.markupPct,
+        tax_pct: demo.taxPct,
+        materials: demo.materials,
+        labor: demo.labor,
+        overhead: demo.overhead,
+        notes: demo.notes,
+      };
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("cost_sheets")
+        .insert(demoInsert)
+        .select("*");
+
+      if (insertError) {
+        toast("error", insertError.message);
+        return [];
+      }
+
+      return (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+    },
+    [supabase, toast],
+  );
+
+  const userId = user?.id;
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (!userId) {
+        setSheets([]);
+        setSelectedId(null);
+        return;
+      }
+
+      setLoadingSheets(true);
+      const nextSheets = await fetchSheetsForUser(userId);
+      if (cancelled) return;
+      setSheets(nextSheets);
+      setSelectedId((prev) => {
+        if (prev && nextSheets.some((s) => s.id === prev)) return prev;
+        return nextSheets[0]?.id ?? null;
+      });
+      setLoadingSheets(false);
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchSheetsForUser, userId]);
 
   const selectedSheet = useMemo(() => {
-    if (!data.sheets.length) return null;
-    const found = data.sheets.find((s) => s.id === data.selectedId);
-    return found ?? data.sheets[0];
-  }, [data.selectedId, data.sheets]);
+    if (!sheets.length) return null;
+    const found = selectedId ? sheets.find((s) => s.id === selectedId) : null;
+    return found ?? sheets[0];
+  }, [selectedId, sheets]);
 
   const filteredSheets = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return data.sheets;
-    return data.sheets.filter((s) => {
+    if (!q) return sheets;
+    return sheets.filter((s) => {
       const name = (s.name || "untitled").toLowerCase();
       const sku = (s.sku || "").toLowerCase();
       return name.includes(q) || sku.includes(q);
     });
-  }, [data.sheets, query]);
+  }, [sheets, query]);
 
-  function updateSheetById(id: string, updater: (sheet: CostSheet) => CostSheet) {
-    setData((prev) => {
-      const idx = prev.sheets.findIndex((s) => s.id === id);
-      if (idx < 0) return prev;
-      const now = new Date().toISOString();
-      const updated = { ...updater(prev.sheets[idx]), updatedAt: now };
-      const sheets = [...prev.sheets];
-      sheets[idx] = updated;
-      return { ...prev, sheets };
-    });
+  async function persistSheet(next: CostSheet): Promise<void> {
+    if (!supabase) return;
+    const payload = sheetToRowUpdate(next);
+    const { error } = await supabase.from("cost_sheets").update(payload).eq("id", next.id);
+    if (error) toast("error", `Save failed: ${error.message}`);
+  }
+
+  function schedulePersist(next: CostSheet): void {
+    const existing = saveTimersRef.current.get(next.id);
+    if (existing) window.clearTimeout(existing);
+    const t = window.setTimeout(() => void persistSheet(next), 450);
+    saveTimersRef.current.set(next.id, t);
   }
 
   function updateSelected(updater: (sheet: CostSheet) => CostSheet) {
     if (!selectedSheet) return;
-    updateSheetById(selectedSheet.id, updater);
+    const now = new Date().toISOString();
+    const next = { ...updater(selectedSheet), updatedAt: now };
+    setSheets((prev) =>
+      sortSheetsByUpdatedAtDesc(prev.map((s) => (s.id === next.id ? next : s))),
+    );
+    schedulePersist(next);
   }
 
   function selectSheet(id: string) {
-    setData((prev) => ({ ...prev, selectedId: id }));
+    setSelectedId(id);
   }
 
-  function newSheet() {
-    const id = makeId("sheet");
-    const sheet = makeBlankSheet(id);
-    setData((prev) => ({
-      version: 1,
-      sheets: [sheet, ...prev.sheets],
-      selectedId: id,
-    }));
+  async function signInWithGoogle() {
+    if (!supabase) {
+      toast("error", "Supabase is not configured.");
+      return;
+    }
+    try {
+      const origin = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${origin}/auth/callback` },
+      });
+      if (error) throw error;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Sign-in failed.";
+      toast("error", msg);
+    }
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast("error", error.message);
+      return;
+    }
+    toast("info", "Signed out.");
+  }
+
+  async function newSheet() {
+    if (!supabase || !user) return;
+
+    const insert = makeBlankSheetInsert(user.id);
+    const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+    if (error || !inserted?.[0]) {
+      toast("error", error?.message || "Could not create sheet.");
+      return;
+    }
+
+    const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+    setSheets((prev) => [sheet, ...prev]);
+    setSelectedId(sheet.id);
     toast("success", "New sheet created.");
   }
 
-  function duplicateSelected() {
-    if (!selectedSheet) return;
-    const id = makeId("sheet");
-    const now = new Date().toISOString();
-    const copy: CostSheet = {
-      ...selectedSheet,
-      id,
+  async function duplicateSelected() {
+    if (!supabase || !selectedSheet || !user) return;
+
+    const insert: DbCostSheetInsert = {
+      user_id: user.id,
       name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
-      createdAt: now,
-      updatedAt: now,
+      sku: selectedSheet.sku,
+      currency: selectedSheet.currency,
+      unit_name: selectedSheet.unitName,
+      batch_size: selectedSheet.batchSize,
+      waste_pct: selectedSheet.wastePct,
+      markup_pct: selectedSheet.markupPct,
+      tax_pct: selectedSheet.taxPct,
+      materials: selectedSheet.materials,
+      labor: selectedSheet.labor,
+      overhead: selectedSheet.overhead,
+      notes: selectedSheet.notes,
     };
-    setData((prev) => ({
-      version: 1,
-      sheets: [copy, ...prev.sheets],
-      selectedId: id,
-    }));
+
+    const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+    if (error || !inserted?.[0]) {
+      toast("error", error?.message || "Could not duplicate sheet.");
+      return;
+    }
+
+    const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+    setSheets((prev) => [sheet, ...prev]);
+    setSelectedId(sheet.id);
     toast("success", "Sheet duplicated.");
   }
 
-  function deleteSelected() {
-    if (!selectedSheet) return;
+  async function deleteSelected() {
+    if (!supabase || !selectedSheet || !user) return;
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
-    setData((prev) => {
-      const sheets = prev.sheets.filter((s) => s.id !== selectedSheet.id);
-      if (!sheets.length) {
-        const freshId = makeId("sheet");
-        const fresh = makeBlankSheet(freshId);
-        return { version: 1, sheets: [fresh], selectedId: freshId };
-      }
-      const nextId = sheets[0].id;
-      return { version: 1, sheets, selectedId: nextId };
-    });
+    const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
+    if (error) {
+      toast("error", error.message);
+      return;
+    }
+
+    const remaining = sheets.filter((s) => s.id !== selectedSheet.id);
+    setSheets(remaining);
+    if (selectedId === selectedSheet.id) setSelectedId(remaining[0]?.id ?? null);
     toast("info", "Sheet deleted.");
   }
 
   function exportAll() {
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadJson(`product-costing-${stamp}.json`, data);
+    const payload: StoredData = {
+      version: 1,
+      sheets,
+      selectedId: selectedId ?? undefined,
+    };
+    downloadJson(`product-costing-${stamp}.json`, payload);
     toast("success", "Export downloaded.");
   }
 
@@ -171,6 +368,8 @@ export default function CostingApp() {
   }
 
   async function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
+    if (!supabase || !user) return;
+
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -189,27 +388,177 @@ export default function CostingApp() {
       return;
     }
 
-    setData((prev) => {
-      const map = new Map<string, CostSheet>();
-      for (const s of prev.sheets) map.set(s.id, s);
-      for (const s of imported.sheets) map.set(s.id, s);
-      const sheets = Array.from(map.values());
-      const selectedId =
-        (imported.selectedId && map.has(imported.selectedId) && imported.selectedId) ||
-        prev.selectedId ||
-        sheets[0]?.id;
-      return { version: 1, sheets, selectedId };
-    });
-    toast("success", `Imported ${imported.sheets.length} sheet(s).`);
+    const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
+      user_id: user.id,
+      name: s.name || "Untitled",
+      sku: s.sku || "",
+      currency: s.currency || "USD",
+      unit_name: s.unitName || "unit",
+      batch_size: s.batchSize || 1,
+      waste_pct: s.wastePct || 0,
+      markup_pct: s.markupPct || 0,
+      tax_pct: s.taxPct || 0,
+      materials: s.materials || [],
+      labor: s.labor || [],
+      overhead: s.overhead || [],
+      notes: s.notes || "",
+    }));
+
+    const { data: inserted, error } = await supabase.from("cost_sheets").insert(rows).select("*");
+    if (error) {
+      toast("error", error.message);
+      return;
+    }
+
+    const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+    setSheets((prev) => sortSheetsByUpdatedAtDesc([...insertedSheets, ...prev]));
+    setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
+    toast("success", `Imported ${insertedSheets.length} sheet(s).`);
   }
 
   const totals = useMemo(() => (selectedSheet ? computeTotals(selectedSheet) : null), [selectedSheet]);
 
+  if (supabaseError || !supabase) {
+    const msg = supabaseError || "Supabase is not configured.";
+    return (
+      <div className="px-4 py-10">
+        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+          <div className={cardClassName() + " p-6"}>
+            <h1 className="font-serif text-3xl tracking-tight text-ink">Product Costing</h1>
+            <p className="mt-2 text-sm text-danger">{msg}</p>
+
+            <div className="mt-4 rounded-2xl border border-border bg-paper/55 p-4">
+              <p className="font-mono text-xs font-semibold text-ink">Setup</p>
+              <p className="mt-2 text-xs text-muted">
+                1) Create a Supabase project and run the SQL in{" "}
+                <code className="font-mono">supabase/schema.sql</code>.
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                2) Add these to <code className="font-mono">.env.local</code> and restart{" "}
+                <code className="font-mono">npm run dev</code>.
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded-xl bg-ink/5 p-3 font-mono text-xs text-ink">{`NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authReady) {
+    return (
+      <div className="px-4 py-10">
+        <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
+          <div className="h-6 w-40 rounded bg-ink/10" />
+          <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
+            <div className={cardClassName() + " h-[520px]"} />
+            <div className={cardClassName() + " h-[520px]"} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="px-4 py-10">
+        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+          <div className={cardClassName() + " p-6"}>
+            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
+              Product Costing
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Sign in with Google to sync cost sheets in Supabase.
+            </p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                onClick={() => void signInWithGoogle()}
+              >
+                Continue with Google
+              </button>
+            </div>
+
+            {notice ? (
+              <div
+                className={[
+                  "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
+                  notice.kind === "error"
+                    ? "bg-danger/10 text-danger"
+                    : notice.kind === "success"
+                      ? "bg-accent/10 text-ink"
+                      : "bg-paper/55 text-ink",
+                ].join(" ")}
+                role="status"
+                aria-live="polite"
+              >
+                {notice.message}
+              </div>
+            ) : null}
+
+            <div className="mt-6 rounded-2xl border border-border bg-paper/55 p-4">
+              <p className="text-xs text-muted">
+                Supabase setup checklist:
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                1) Enable the Google provider in Supabase Auth.
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                2) Add redirect URL:{" "}
+                <code className="select-all font-mono">
+                  {typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"}
+                </code>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingSheets && sheets.length === 0) {
+    return (
+      <div className="px-4 py-10">
+        <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
+          <p className="font-mono text-xs text-muted">Loading sheets...</p>
+          <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
+            <div className={cardClassName() + " h-[520px]"} />
+            <div className={cardClassName() + " h-[520px]"} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedSheet || !totals) {
     return (
       <div className="px-4 py-10">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm text-muted">No sheet selected.</p>
+        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+          <div className={cardClassName() + " p-6"}>
+            <h1 className="font-serif text-3xl tracking-tight text-ink">No sheets yet</h1>
+            <p className="mt-2 text-sm text-muted">
+              Create your first cost sheet to get started.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                onClick={() => void newSheet()}
+              >
+                New sheet
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                onClick={() => void signOut()}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -221,15 +570,15 @@ export default function CostingApp() {
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
-              Local-first cost sheets (stored in your browser) -{" "}
-              <span className="select-all">{STORAGE_KEY}</span>
+              Signed in as{" "}
+              <span className="select-all">{user?.email || user?.id}</span>{" "}
+              <span className="text-muted">- synced via Supabase</span>
             </p>
             <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">
               Product Costing
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Materials, labor, overhead, and pricing in one ledger. No account,
-              no database, just fast iteration.
+              Materials, labor, overhead, and pricing in one ledger. Your sheets live in Supabase and sync across devices.
             </p>
           </div>
 
@@ -237,7 +586,7 @@ export default function CostingApp() {
             <button
               type="button"
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-              onClick={newSheet}
+              onClick={() => void newSheet()}
             >
               New sheet
             </button>
@@ -254,6 +603,13 @@ export default function CostingApp() {
               onClick={exportAll}
             >
               Export
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+              onClick={() => void signOut()}
+            >
+              Sign out
             </button>
             <input
               ref={fileInputRef}
@@ -1119,7 +1475,7 @@ export default function CostingApp() {
         </div>
 
         <footer className="mt-10 text-center text-xs text-muted">
-          Built with Next.js. Your data stays in this browser unless you export it.
+          Built with Next.js + Supabase. Export JSON if you want an offline backup.
         </footer>
       </div>
     </div>

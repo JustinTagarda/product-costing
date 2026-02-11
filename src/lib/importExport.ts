@@ -1,8 +1,6 @@
 import type { CostSheet, StoredData } from "@/lib/costing";
 import { clampNumber } from "@/lib/costing";
 
-export const STORAGE_KEY = "product-costing:local:v1";
-
 function isRecord(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
@@ -135,21 +133,5 @@ export function parseStoredDataJson(jsonText: string): StoredData | null {
 
   const selectedOk = selectedId && sheets.some((s) => s.id === selectedId);
   return { version: 1, sheets, selectedId: selectedOk ? selectedId : sheets[0].id };
-}
-
-export function loadStoredData(): StoredData | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  return parseStoredDataJson(raw);
-}
-
-export function saveStoredData(data: StoredData): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // ignore quota / private mode errors
-  }
 }
 

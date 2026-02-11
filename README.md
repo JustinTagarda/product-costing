@@ -1,6 +1,6 @@
 # Product Costing
 
-Local-first product costing sheets for batches:
+Supabase-backed product costing sheets for batches:
 
 - Materials (with waste %)
 - Labor
@@ -8,7 +8,27 @@ Local-first product costing sheets for batches:
 - Cost per unit + pricing (markup % + optional tax %)
 - Import/export JSON
 
-Data is stored in your browser `localStorage` by default (no database required).
+Sheets are stored in your Supabase database and scoped per user (Google login).
+
+## Supabase Setup
+
+1) Create a Supabase project.
+
+2) Create the table + RLS policies by running:
+
+- `supabase/schema.sql`
+
+3) Enable **Google** as an Auth provider in Supabase Auth.
+
+4) Add redirect URL(s) in Supabase Auth settings:
+
+- `http://localhost:3000/auth/callback`
+- Your Vercel domain callback, e.g. `https://YOUR_APP.vercel.app/auth/callback`
+
+5) Set environment variables (see `.env.example`):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ## Dev
 
@@ -22,5 +42,4 @@ Open `http://localhost:3000`.
 ## Notes
 
 - Use **Export** to download a JSON backup.
-- Use **Import** to merge sheets from a JSON file.
-- Current storage key: `product-costing:local:v1` (see the header in the app).
+- Use **Import** to upload sheets from a JSON file.
