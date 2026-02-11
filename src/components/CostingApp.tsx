@@ -377,12 +377,14 @@ export default function CostingApp() {
   }
 
   async function signOut() {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast("error", error.message);
-      return;
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast("error", error.message);
+        return;
+      }
     }
+    setSession(null);
     setShowWelcomeGate(true);
     writeWelcomeGateDismissed(false);
     toast("info", "Signed out.");
@@ -687,36 +689,13 @@ export default function CostingApp() {
               >
                 New sheet
               </button>
-              {session ? (
-                <button
-                  type="button"
-                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                  onClick={() => void signOut()}
-                >
-                  Log out
-                </button>
-              ) : supabase ? (
-                <>
-                  <button
-                    type="button"
-                    className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                    onClick={() => void signInWithGoogle()}
-                  >
-                    Sign in with Google
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                    onClick={continueAsGuest}
-                  >
-                    Continue as guest
-                  </button>
-                </>
-              ) : (
-                <p className="text-xs text-muted">
-                  Cloud sync unavailable. Configure Supabase to enable Google login.
-                </p>
-              )}
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                onClick={() => void signOut()}
+              >
+                Log out
+              </button>
             </div>
           </div>
         </div>
@@ -778,32 +757,13 @@ export default function CostingApp() {
             >
               Export
             </button>
-            {session ? (
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                onClick={() => void signOut()}
-              >
-                Log out
-              </button>
-            ) : supabase ? (
-              <>
-                <button
-                  type="button"
-                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                  onClick={() => void signInWithGoogle()}
-                >
-                  Sign in with Google
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                  onClick={continueAsGuest}
-                >
-                  Continue as guest
-                </button>
-              </>
-            ) : null}
+            <button
+              type="button"
+              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+              onClick={() => void signOut()}
+            >
+              Log out
+            </button>
             <input
               ref={fileInputRef}
               type="file"
