@@ -358,11 +358,6 @@ export default function CostingApp() {
     }
   }
 
-  function continueToDashboard() {
-    setShowWelcomeGate(false);
-    writeWelcomeGateDismissed(true);
-  }
-
   async function continueAsGuest() {
     if (session && supabase) {
       const { error } = await supabase.auth.signOut();
@@ -578,7 +573,7 @@ export default function CostingApp() {
     );
   }
 
-  if (showWelcomeGate) {
+  if (showWelcomeGate && !session) {
     return (
       <div className="min-h-dvh px-6 py-8">
         <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-4xl flex-col">
@@ -592,15 +587,7 @@ export default function CostingApp() {
               </h1>
 
               <div className="mx-auto mt-10 w-full max-w-md space-y-4">
-                {session ? (
-                  <button
-                    type="button"
-                    className="w-full rounded-2xl bg-[#4f7de5] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
-                    onClick={continueToDashboard}
-                  >
-                    Continue to dashboard
-                  </button>
-                ) : supabase ? (
+                {supabase ? (
                   <button
                     type="button"
                     className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#4f7de5] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
