@@ -13,7 +13,6 @@ import {
 import {
   rowToSettings,
   settingsToInsert,
-  settingsToUpdate,
   type DbAppSettingsRow,
 } from "@/lib/supabase/settings";
 
@@ -56,23 +55,9 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
           setSettingsReady(true);
           return;
         }
-
-        const defaults = makeDefaultSettings();
-        const { data: inserted, error: insertError } = await supabase
-          .from("app_settings")
-          .insert(settingsToInsert(userId, defaults))
-          .select("*")
-          .single();
-
-        if (cancelled) return;
-        if (insertError) {
-          onError?.(insertError.message);
-          setSettings(defaults);
-          setSettingsReady(true);
-          return;
-        }
-
-        setSettings(rowToSettings(inserted as DbAppSettingsRow));
+        // First-time setup: use runtime-detected defaults in memory.
+        // We only persist after the user explicitly saves settings.
+        setSettings(makeDefaultSettings());
         setSettingsReady(true);
         return;
       }
@@ -98,8 +83,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
       if (isCloudMode && supabase && userId) {
         const { error } = await supabase
           .from("app_settings")
-          .update(settingsToUpdate(normalized))
-          .eq("user_id", userId);
+          .upsert(settingsToInsert(userId, normalized), { onConflict: "user_id" });
         if (error) {
           onError?.(error.message);
           return { ok: false, message: error.message };

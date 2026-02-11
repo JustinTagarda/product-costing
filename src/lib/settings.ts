@@ -40,6 +40,96 @@ export type AppSettings = {
 
 export const LOCAL_SETTINGS_KEY = "product-costing:settings:local:v1";
 
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  US: "USD",
+  CA: "CAD",
+  MX: "MXN",
+  BR: "BRL",
+  AR: "ARS",
+  CL: "CLP",
+  CO: "COP",
+  PE: "PEN",
+  GB: "GBP",
+  IE: "EUR",
+  DE: "EUR",
+  FR: "EUR",
+  ES: "EUR",
+  IT: "EUR",
+  PT: "EUR",
+  NL: "EUR",
+  BE: "EUR",
+  AT: "EUR",
+  FI: "EUR",
+  SE: "SEK",
+  NO: "NOK",
+  DK: "DKK",
+  CH: "CHF",
+  PL: "PLN",
+  CZ: "CZK",
+  HU: "HUF",
+  RO: "RON",
+  TR: "TRY",
+  RU: "RUB",
+  UA: "UAH",
+  AU: "AUD",
+  NZ: "NZD",
+  JP: "JPY",
+  KR: "KRW",
+  CN: "CNY",
+  HK: "HKD",
+  TW: "TWD",
+  SG: "SGD",
+  MY: "MYR",
+  TH: "THB",
+  VN: "VND",
+  ID: "IDR",
+  PH: "PHP",
+  IN: "INR",
+  PK: "PKR",
+  BD: "BDT",
+  AE: "AED",
+  SA: "SAR",
+  ZA: "ZAR",
+  NG: "NGN",
+  EG: "EGP",
+};
+
+function parseCountryFromLocale(locale: string): string | null {
+  try {
+    const lang = Intl.Locale ? new Intl.Locale(locale).maximize() : null;
+    const region = lang?.region;
+    if (region && /^[A-Z]{2}$/.test(region)) return region;
+  } catch {
+    // Ignore locale parse failures.
+  }
+  const match = locale.toUpperCase().match(/-([A-Z]{2})(?:-|$)/);
+  return match?.[1] ?? null;
+}
+
+function inferDateFormatFromLocale(locale: string): DateFormatOption {
+  const upper = locale.toUpperCase();
+  if (upper.includes("-US")) return "MM/dd/yyyy";
+  if (upper.includes("-CA")) return "yyyy-MM-dd";
+  return "dd/MM/yyyy";
+}
+
+export function detectRuntimeSettingsDefaults(): Partial<AppSettings> {
+  if (typeof window === "undefined") return {};
+  const nav = window.navigator;
+  const primaryLocale = nav.languages?.[0] || nav.language || "en-US";
+  const countryCode = parseCountryFromLocale(primaryLocale) || "US";
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const baseCurrency = COUNTRY_TO_CURRENCY[countryCode] || "USD";
+  const dateFormat = inferDateFormatFromLocale(primaryLocale);
+
+  return {
+    countryCode,
+    timezone,
+    baseCurrency,
+    dateFormat,
+  };
+}
+
 export function defaultUomConversions(): UomConversion[] {
   return [
     { id: "conv_kg_lb", fromUnit: "kg", toUnit: "lb", factor: 2.20462 },
@@ -52,12 +142,13 @@ export function defaultUomConversions(): UomConversion[] {
 }
 
 export function makeDefaultSettings(nowIso = new Date().toISOString()): AppSettings {
+  const runtime = detectRuntimeSettingsDefaults();
   return {
-    countryCode: "US",
-    timezone: "America/New_York",
-    dateFormat: "MM/dd/yyyy",
+    countryCode: runtime.countryCode || "US",
+    timezone: runtime.timezone || "America/New_York",
+    dateFormat: runtime.dateFormat || "MM/dd/yyyy",
 
-    baseCurrency: "USD",
+    baseCurrency: runtime.baseCurrency || "USD",
     currencyDisplay: "symbol",
     currencyRoundingIncrement: 1,
     currencyRoundingMode: "nearest",
