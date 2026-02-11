@@ -629,7 +629,7 @@ export default function CostingApp() {
                 Welcome to
               </p>
               <h1 className="mt-2 text-5xl font-bold tracking-tight text-ink md:text-6xl">
-                Biznes Costing
+                Small Business Costing
               </h1>
 
               <div className="mx-auto mt-10 w-full max-w-md space-y-4">

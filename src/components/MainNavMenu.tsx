@@ -78,7 +78,7 @@ export function MainNavMenu({
             <span aria-hidden="true" className="font-mono text-sm">
               {isOpen ? "x" : "\u2630"}
             </span>
-            <span className="text-[1.85rem] leading-none">Biznes Costing</span>
+            <span className="text-[1.85rem] leading-none">Small Business Costing</span>
           </button>
         </div>
       </div>
