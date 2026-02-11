@@ -1,6 +1,11 @@
 # Product Costing
 
-Supabase-backed product costing sheets for batches:
+Product costing sheets for batches with two storage modes:
+
+- Guest mode: local browser storage (`localStorage`)
+- Signed-in mode: Supabase database (Google login)
+
+Features:
 
 - Materials (with waste %)
 - Labor
@@ -8,7 +13,8 @@ Supabase-backed product costing sheets for batches:
 - Cost per unit + pricing (markup % + optional tax %)
 - Import/export JSON
 
-Sheets are stored in your Supabase database and scoped per user (Google login).
+When signed out, sheets stay on the current browser/device.  
+When signed in, sheets are stored in Supabase and scoped per user.
 
 ## Supabase Setup
 
@@ -43,3 +49,4 @@ Open `http://localhost:3000`.
 
 - Use **Export** to download a JSON backup.
 - Use **Import** to upload sheets from a JSON file.
+- Google login is optional. If Supabase env vars are missing, the app still works in local mode.

@@ -1,16 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  /* Light */
-  /* Apple-esque light gray */
-  --paper: #f5f5f7;
-  --ink: #121314;
-  --muted: #5a5e66;
-  --accent: #0f766e;
-  --accent2: #b45309;
+  --paper: #ffffff;
+  --ink: #000000;
+  --muted: #3f3f46;
+  --accent: #4f7de5;
+  --accent2: #1d4ed8;
   --danger: #b91c1c;
-  --card: color-mix(in srgb, white 78%, var(--paper));
-  --border: color-mix(in srgb, var(--ink) 12%, transparent);
+  --card: #ffffff;
+  --border: #d4d4d8;
 }
 
 @theme inline {
@@ -30,20 +28,6 @@
   --font-mono: var(--font-code);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark */
-    --paper: #0b0d10;
-    --ink: #f2f4f7;
-    --muted: #a7adba;
-    --accent: #2dd4bf;
-    --accent2: #fb923c;
-    --danger: #fb7185;
-    --card: color-mix(in srgb, #11151b 88%, var(--paper));
-    --border: color-mix(in srgb, var(--ink) 14%, transparent);
-  }
-}
-
 body {
   min-height: 100dvh;
   background-color: var(--paper);
@@ -54,7 +38,7 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 @keyframes fadeUp {

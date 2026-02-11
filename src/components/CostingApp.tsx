@@ -128,6 +128,7 @@ export default function CostingApp() {
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showWelcomeGate, setShowWelcomeGate] = useState(true);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -334,6 +335,22 @@ export default function CostingApp() {
     }
   }
 
+  function continueToDashboard() {
+    setShowWelcomeGate(false);
+  }
+
+  async function continueAsGuest() {
+    if (session && supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast("error", error.message);
+        return;
+      }
+    }
+    setShowWelcomeGate(false);
+    toast("info", "Continuing as guest. Data will be saved in this browser.");
+  }
+
   async function signOut() {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
@@ -341,6 +358,7 @@ export default function CostingApp() {
       toast("error", error.message);
       return;
     }
+    setShowWelcomeGate(true);
     toast("info", "Signed out.");
   }
 
@@ -532,6 +550,86 @@ export default function CostingApp() {
     );
   }
 
+  if (showWelcomeGate) {
+    return (
+      <div className="min-h-dvh px-6 py-8">
+        <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-4xl flex-col">
+          <main className="flex flex-1 items-center justify-center">
+            <section className="w-full max-w-xl text-center">
+              <p className="text-4xl font-semibold tracking-tight text-ink md:text-5xl">
+                Welcome to
+              </p>
+              <h1 className="mt-2 text-5xl font-bold tracking-tight text-ink md:text-6xl">
+                Biznes Costing
+              </h1>
+
+              <div className="mx-auto mt-10 w-full max-w-md space-y-4">
+                {session ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-[#4f7de5] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    onClick={continueToDashboard}
+                  >
+                    Continue to dashboard
+                  </button>
+                ) : supabase ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#4f7de5] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    onClick={() => void signInWithGoogle()}
+                  >
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white text-xl font-bold text-[#4f7de5]">
+                      G
+                    </span>
+                    <span>Sign in with Google</span>
+                  </button>
+                ) : (
+                  <div className="w-full rounded-2xl border border-border bg-paper px-5 py-4 text-sm text-muted">
+                    Google sign-in is unavailable in this environment.
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border border-ink bg-paper px-5 py-4 text-base font-semibold text-ink shadow-sm transition hover:bg-ink/[0.03] active:translate-y-px"
+                  onClick={() => void continueAsGuest()}
+                >
+                  Continue as guest
+                </button>
+              </div>
+
+              <p className="mx-auto mt-10 max-w-2xl text-base text-muted">
+                Guest data is saved in this browser only. Sign in with Google to sync and keep
+                your sheets persistent across devices.
+              </p>
+
+              {notice ? (
+                <div
+                  className={[
+                    "mx-auto mt-6 max-w-md rounded-2xl border px-4 py-3 text-sm",
+                    notice.kind === "error"
+                      ? "border-danger/40 bg-danger/10 text-danger"
+                      : notice.kind === "success"
+                        ? "border-accent/30 bg-accent/10 text-ink"
+                        : "border-border bg-paper text-ink",
+                  ].join(" ")}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {notice.message}
+                </div>
+              ) : null}
+            </section>
+          </main>
+
+          <footer className="pt-6 text-center text-sm text-ink">
+            {`© ${new Date().getFullYear()} JustinTagarda Software`}
+          </footer>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingSheets && sheets.length === 0) {
     return (
       <div className="px-4 py-10">
@@ -572,13 +670,22 @@ export default function CostingApp() {
                   Log out
                 </button>
               ) : supabase ? (
-                <button
-                  type="button"
-                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                  onClick={() => void signInWithGoogle()}
-                >
-                  Continue with Google
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                    onClick={() => void signInWithGoogle()}
+                  >
+                    Sign in with Google
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                    onClick={continueAsGuest}
+                  >
+                    Continue as guest
+                  </button>
+                </>
               ) : (
                 <p className="text-xs text-muted">
                   Cloud sync unavailable. Configure Supabase to enable Google login.
@@ -592,8 +699,8 @@ export default function CostingApp() {
   }
 
   return (
-    <div className="px-4 py-10">
-      <div className="mx-auto max-w-6xl animate-[fadeUp_.55s_ease-out]">
+    <div className="min-h-dvh px-4 py-10">
+      <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-6xl flex-col animate-[fadeUp_.55s_ease-out]">
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
@@ -654,13 +761,22 @@ export default function CostingApp() {
                 Log out
               </button>
             ) : supabase ? (
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                onClick={() => void signInWithGoogle()}
-              >
-                Continue with Google
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                  onClick={() => void signInWithGoogle()}
+                >
+                  Sign in with Google
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                  onClick={continueAsGuest}
+                >
+                  Continue as guest
+                </button>
+              </>
             ) : null}
             <input
               ref={fileInputRef}
@@ -1525,7 +1641,7 @@ export default function CostingApp() {
           </main>
         </div>
 
-        <footer className="mt-10 text-center text-xs text-muted">
+        <footer className="mt-auto pt-10 text-center text-xs text-muted">
           {session
             ? "Built with Next.js + Supabase. Export JSON if you want an offline backup."
             : "Built with Next.js. Guest mode uses localStorage; sign in with Google to sync via Supabase."}
