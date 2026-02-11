@@ -555,7 +555,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
                 className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
                 onClick={() => void signOut()}
               >
-                Sign out
+                Log out
               </button>
             </div>
           </div>
@@ -609,7 +609,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...`}</pre>
               className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
               onClick={() => void signOut()}
             >
-              Sign out
+              Log out
             </button>
             <input
               ref={fileInputRef}
