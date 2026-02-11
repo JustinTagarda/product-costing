@@ -94,6 +94,70 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
   EG: "EGP",
 };
 
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+  "Asia/Manila": "PH",
+  "Asia/Singapore": "SG",
+  "Asia/Tokyo": "JP",
+  "Asia/Seoul": "KR",
+  "Asia/Shanghai": "CN",
+  "Asia/Hong_Kong": "HK",
+  "Asia/Taipei": "TW",
+  "Asia/Bangkok": "TH",
+  "Asia/Kuala_Lumpur": "MY",
+  "Asia/Jakarta": "ID",
+  "Asia/Kolkata": "IN",
+  "Asia/Dubai": "AE",
+  "Asia/Riyadh": "SA",
+  "Europe/London": "GB",
+  "Europe/Berlin": "DE",
+  "Europe/Paris": "FR",
+  "Europe/Madrid": "ES",
+  "Europe/Rome": "IT",
+  "Europe/Amsterdam": "NL",
+  "Europe/Zurich": "CH",
+  "Europe/Stockholm": "SE",
+  "Europe/Copenhagen": "DK",
+  "Europe/Oslo": "NO",
+  "Europe/Warsaw": "PL",
+  "Europe/Prague": "CZ",
+  "Europe/Budapest": "HU",
+  "Europe/Bucharest": "RO",
+  "Europe/Istanbul": "TR",
+  "Europe/Kyiv": "UA",
+  "Europe/Moscow": "RU",
+  "Australia/Sydney": "AU",
+  "Australia/Melbourne": "AU",
+  "Australia/Brisbane": "AU",
+  "Australia/Perth": "AU",
+  "Pacific/Auckland": "NZ",
+  "America/New_York": "US",
+  "America/Chicago": "US",
+  "America/Denver": "US",
+  "America/Los_Angeles": "US",
+  "America/Toronto": "CA",
+  "America/Vancouver": "CA",
+  "America/Montreal": "CA",
+  "America/Mexico_City": "MX",
+  "America/Sao_Paulo": "BR",
+  "America/Argentina/Buenos_Aires": "AR",
+  "America/Santiago": "CL",
+  "America/Bogota": "CO",
+  "America/Lima": "PE",
+  "Africa/Johannesburg": "ZA",
+  "Africa/Lagos": "NG",
+  "Africa/Cairo": "EG",
+};
+
+const COUNTRY_TO_DATE_FORMAT: Partial<Record<string, DateFormatOption>> = {
+  US: "MM/dd/yyyy",
+  PH: "MM/dd/yyyy",
+  CA: "yyyy-MM-dd",
+  CN: "yyyy-MM-dd",
+  JP: "yyyy-MM-dd",
+  KR: "yyyy-MM-dd",
+  TW: "yyyy-MM-dd",
+};
+
 function parseCountryFromLocale(locale: string): string | null {
   try {
     const lang = Intl.Locale ? new Intl.Locale(locale).maximize() : null;
@@ -106,6 +170,20 @@ function parseCountryFromLocale(locale: string): string | null {
   return match?.[1] ?? null;
 }
 
+function inferCountryFromTimezone(timezone: string): string | null {
+  if (!timezone) return null;
+  const exact = TIMEZONE_TO_COUNTRY[timezone];
+  if (exact) return exact;
+  const normalized = timezone.trim();
+  if (!normalized.includes("/")) return null;
+  const [region] = normalized.split("/");
+  if (region === "America") return "US";
+  if (region === "Europe") return null;
+  if (region === "Asia") return null;
+  if (region === "Australia") return "AU";
+  return null;
+}
+
 function inferDateFormatFromLocale(locale: string): DateFormatOption {
   const upper = locale.toUpperCase();
   if (upper.includes("-US")) return "MM/dd/yyyy";
@@ -113,14 +191,22 @@ function inferDateFormatFromLocale(locale: string): DateFormatOption {
   return "dd/MM/yyyy";
 }
 
+function inferDateFormat(locale: string, countryCode: string): DateFormatOption {
+  const byCountry = COUNTRY_TO_DATE_FORMAT[countryCode];
+  if (byCountry) return byCountry;
+  return inferDateFormatFromLocale(locale);
+}
+
 export function detectRuntimeSettingsDefaults(): Partial<AppSettings> {
   if (typeof window === "undefined") return {};
   const nav = window.navigator;
   const primaryLocale = nav.languages?.[0] || nav.language || "en-US";
-  const countryCode = parseCountryFromLocale(primaryLocale) || "US";
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const timezoneCountry = inferCountryFromTimezone(timezone);
+  const localeCountry = parseCountryFromLocale(primaryLocale);
+  const countryCode = timezoneCountry || localeCountry || "US";
   const baseCurrency = COUNTRY_TO_CURRENCY[countryCode] || "USD";
-  const dateFormat = inferDateFormatFromLocale(primaryLocale);
+  const dateFormat = inferDateFormat(primaryLocale, countryCode);
 
   return {
     countryCode,
