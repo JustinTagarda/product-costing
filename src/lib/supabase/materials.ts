@@ -66,14 +66,19 @@ export function materialToRowUpdate(material: MaterialRecord): DbMaterialUpdate 
   };
 }
 
-export function makeBlankMaterialInsert(userId: string): DbMaterialInsert {
+type MaterialDefaults = {
+  defaultUnit?: string;
+};
+
+export function makeBlankMaterialInsert(userId: string, defaults?: MaterialDefaults): DbMaterialInsert {
   const blank = makeBlankMaterial("tmp");
+  const unit = defaults?.defaultUnit ? String(defaults.defaultUnit) : blank.unit;
   return {
     user_id: userId,
     name: blank.name,
     code: blank.code,
     category: blank.category,
-    unit: blank.unit,
+    unit,
     unit_cost_cents: blank.unitCostCents,
     supplier: blank.supplier,
     last_purchase_cost_cents: blank.lastPurchaseCostCents,

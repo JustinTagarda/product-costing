@@ -115,7 +115,10 @@ export function MainNavMenu({
             <div className="border-t border-zinc-400/70 px-2 py-2">
               <button
                 type="button"
-                className="w-full rounded-md px-3 py-2 text-left text-[1.05rem] font-semibold transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+                className={[
+                  "w-full rounded-md px-3 py-2 text-left text-[1.05rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+                  activeItem === "Settings" ? "bg-zinc-200/85" : "hover:bg-zinc-200/70",
+                ].join(" ")}
                 onClick={() => runAndClose(onSettings)}
               >
                 Settings

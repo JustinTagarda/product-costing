@@ -9,6 +9,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { formatCents, formatShortDate } from "@/lib/format";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { useAppSettings } from "@/lib/useAppSettings";
 import {
   makeBlankSheetInsert,
   rowToSheet,
@@ -158,6 +159,37 @@ export default function CostingApp() {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
+
+  const { settings } = useAppSettings({
+    supabase,
+    userId,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const formatAppDate = useCallback(
+    (iso: string) =>
+      formatShortDate(iso, {
+        dateFormat: settings.dateFormat,
+        timezone: settings.timezone,
+      }),
+    [settings.dateFormat, settings.timezone],
+  );
+
+  const formatMoney = useCallback(
+    (cents: number, currency = settings.baseCurrency) =>
+      formatCents(cents, currency, {
+        currencyDisplay: settings.currencyDisplay,
+        roundingIncrementCents: settings.currencyRoundingIncrement,
+        roundingMode: settings.currencyRoundingMode,
+      }),
+    [
+      settings.baseCurrency,
+      settings.currencyDisplay,
+      settings.currencyRoundingIncrement,
+      settings.currencyRoundingMode,
+    ],
+  );
 
   useEffect(() => {
     if (!supabase) {
@@ -387,12 +419,17 @@ export default function CostingApp() {
   }
 
   function openSettings() {
-    toast("info", "Settings panel coming soon.");
+    window.location.assign("/settings");
   }
 
   async function newSheet() {
     if (isCloudMode && supabase && user) {
-      const insert = makeBlankSheetInsert(user.id);
+      const insert = makeBlankSheetInsert(user.id, {
+        currency: settings.baseCurrency,
+        wastePct: settings.defaultWastePct,
+        markupPct: settings.defaultMarkupPct,
+        taxPct: settings.defaultTaxPct,
+      });
       const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
       if (error || !inserted?.[0]) {
         toast("error", error?.message || "Could not create sheet.");
@@ -407,6 +444,10 @@ export default function CostingApp() {
     }
 
     const sheet = makeBlankSheet(makeId("sheet"));
+    sheet.currency = settings.baseCurrency;
+    sheet.wastePct = settings.defaultWastePct;
+    sheet.markupPct = settings.defaultMarkupPct;
+    sheet.taxPct = settings.defaultTaxPct;
     setSheets((prev) => [sheet, ...prev]);
     setSelectedId(sheet.id);
     toast("success", "New local sheet created.");
@@ -831,15 +872,15 @@ export default function CostingApp() {
                               {sheet.batchSize === 1 ? "" : "s"}
                             </p>
                           </div>
-                          <p className="shrink-0 font-mono text-[11px] text-muted">{formatShortDate(sheet.updatedAt)}</p>
+                          <p className="shrink-0 font-mono text-[11px] text-muted">{formatAppDate(sheet.updatedAt)}</p>
                         </div>
 
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className="rounded-full border border-border bg-paper/60 px-2 py-0.5 font-mono text-[11px] text-ink">
-                            CPU {t.costPerUnitCents === null ? "--" : formatCents(t.costPerUnitCents, sheet.currency)}
+                            CPU {t.costPerUnitCents === null ? "--" : formatMoney(t.costPerUnitCents, sheet.currency)}
                           </span>
                           <span className="rounded-full border border-border bg-paper/60 px-2 py-0.5 font-mono text-[11px] text-ink">
-                            Price {t.pricePerUnitCents === null ? "--" : formatCents(t.pricePerUnitCents, sheet.currency)}
+                            Price {t.pricePerUnitCents === null ? "--" : formatMoney(t.pricePerUnitCents, sheet.currency)}
                           </span>
                         </div>
                       </button>
@@ -886,7 +927,7 @@ export default function CostingApp() {
                     <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                       <h2 className="font-serif text-lg tracking-tight text-ink">Details</h2>
                       <span className="font-mono text-[11px] text-muted">
-                        updated {formatShortDate(selectedSheet.updatedAt)}
+                        updated {formatAppDate(selectedSheet.updatedAt)}
                       </span>
                     </div>
                     <div className="grid gap-4 p-4 sm:grid-cols-2">
@@ -1065,7 +1106,7 @@ export default function CostingApp() {
                                 <td className="p-2">
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="font-mono text-sm tabular-nums text-ink">
-                                      {formatCents(Math.round(it.qty * it.unitCostCents), selectedSheet.currency)}
+                                      {formatMoney(Math.round(it.qty * it.unitCostCents), selectedSheet.currency)}
                                     </span>
                                     <button
                                       type="button"
@@ -1111,9 +1152,9 @@ export default function CostingApp() {
                         <div className="min-w-[240px]">
                           <p className="font-mono text-xs text-muted">Materials subtotal</p>
                           <p className="mt-1 font-mono text-sm tabular-nums text-ink">
-                            {formatCents(totals.materialsSubtotalCents, selectedSheet.currency)}{" "}
+                            {formatMoney(totals.materialsSubtotalCents, selectedSheet.currency)}{" "}
                             <span className="text-muted">
-                              -&gt; {formatCents(totals.materialsWithWasteCents, selectedSheet.currency)} with waste
+                              -&gt; {formatMoney(totals.materialsWithWasteCents, selectedSheet.currency)} with waste
                             </span>
                           </p>
                         </div>
@@ -1224,7 +1265,7 @@ export default function CostingApp() {
                                 <td className="p-2">
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="font-mono text-sm tabular-nums text-ink">
-                                      {formatCents(Math.round(it.hours * it.rateCents), selectedSheet.currency)}
+                                      {formatMoney(Math.round(it.hours * it.rateCents), selectedSheet.currency)}
                                     </span>
                                     <button
                                       type="button"
@@ -1256,7 +1297,7 @@ export default function CostingApp() {
                       <div className="border-t border-border px-4 py-3">
                         <p className="font-mono text-xs text-muted">Labor subtotal</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
-                          {formatCents(totals.laborSubtotalCents, selectedSheet.currency)}
+                          {formatMoney(totals.laborSubtotalCents, selectedSheet.currency)}
                         </p>
                       </div>
                     </div>
@@ -1404,7 +1445,7 @@ export default function CostingApp() {
                                   <td className="p-2">
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="font-mono text-sm tabular-nums text-ink">
-                                        {formatCents(lineTotal, selectedSheet.currency)}
+                                        {formatMoney(lineTotal, selectedSheet.currency)}
                                       </span>
                                       <button
                                         type="button"
@@ -1430,10 +1471,10 @@ export default function CostingApp() {
                       <div className="border-t border-border px-4 py-3">
                         <p className="font-mono text-xs text-muted">Overhead total</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
-                          {formatCents(totals.overheadTotalCents, selectedSheet.currency)}{" "}
+                          {formatMoney(totals.overheadTotalCents, selectedSheet.currency)}{" "}
                           <span className="text-muted">
-                            ({formatCents(totals.overheadFlatCents, selectedSheet.currency)} flat +{" "}
-                            {formatCents(totals.overheadPercentCents, selectedSheet.currency)} percent)
+                            ({formatMoney(totals.overheadFlatCents, selectedSheet.currency)} flat +{" "}
+                            {formatMoney(totals.overheadPercentCents, selectedSheet.currency)} percent)
                           </span>
                         </p>
                       </div>
@@ -1462,21 +1503,21 @@ export default function CostingApp() {
                     <div className="space-y-3 p-4">
                       <SummaryRow
                         label="Materials (with waste)"
-                        value={formatCents(totals.materialsWithWasteCents, selectedSheet.currency)}
-                        hint={formatCents(totals.materialsSubtotalCents, selectedSheet.currency)}
+                        value={formatMoney(totals.materialsWithWasteCents, selectedSheet.currency)}
+                        hint={formatMoney(totals.materialsSubtotalCents, selectedSheet.currency)}
                       />
                       <SummaryRow
                         label="Labor"
-                        value={formatCents(totals.laborSubtotalCents, selectedSheet.currency)}
+                        value={formatMoney(totals.laborSubtotalCents, selectedSheet.currency)}
                       />
                       <SummaryRow
                         label="Overhead"
-                        value={formatCents(totals.overheadTotalCents, selectedSheet.currency)}
+                        value={formatMoney(totals.overheadTotalCents, selectedSheet.currency)}
                       />
                       <div className="my-2 border-t border-border" />
                       <SummaryRow
                         label="Batch total"
-                        value={formatCents(totals.batchTotalCents, selectedSheet.currency)}
+                        value={formatMoney(totals.batchTotalCents, selectedSheet.currency)}
                         bold
                       />
                       <SummaryRow
@@ -1484,7 +1525,7 @@ export default function CostingApp() {
                         value={
                           totals.costPerUnitCents === null
                             ? "--"
-                            : formatCents(totals.costPerUnitCents, selectedSheet.currency)
+                            : formatMoney(totals.costPerUnitCents, selectedSheet.currency)
                         }
                         bold
                       />
@@ -1535,7 +1576,7 @@ export default function CostingApp() {
                           value={
                             totals.pricePerUnitCents === null
                               ? "--"
-                              : formatCents(totals.pricePerUnitCents, selectedSheet.currency)
+                              : formatMoney(totals.pricePerUnitCents, selectedSheet.currency)
                           }
                           bold
                         />
@@ -1544,7 +1585,7 @@ export default function CostingApp() {
                           value={
                             totals.profitPerUnitCents === null
                               ? "--"
-                              : formatCents(totals.profitPerUnitCents, selectedSheet.currency)
+                              : formatMoney(totals.profitPerUnitCents, selectedSheet.currency)
                           }
                           hint={totals.marginPct === null ? "" : `${totals.marginPct}% margin`}
                         />
@@ -1553,7 +1594,7 @@ export default function CostingApp() {
                           value={
                             totals.pricePerUnitWithTaxCents === null
                               ? "--"
-                              : formatCents(totals.pricePerUnitWithTaxCents, selectedSheet.currency)
+                              : formatMoney(totals.pricePerUnitWithTaxCents, selectedSheet.currency)
                           }
                         />
                       </div>
@@ -1589,18 +1630,18 @@ export default function CostingApp() {
                             ["Product", selectedSheet.name || "Untitled"],
                             ["SKU", selectedSheet.sku || ""],
                             ["Batch size", `${selectedSheet.batchSize} ${selectedSheet.unitName}`],
-                            ["Batch total", formatCents(totals.batchTotalCents, selectedSheet.currency)],
+                            ["Batch total", formatMoney(totals.batchTotalCents, selectedSheet.currency)],
                             [
                               "Cost per unit",
                               totals.costPerUnitCents === null
                                 ? ""
-                                : formatCents(totals.costPerUnitCents, selectedSheet.currency),
+                                : formatMoney(totals.costPerUnitCents, selectedSheet.currency),
                             ],
                             [
                               "Suggested price",
                               totals.pricePerUnitCents === null
                                 ? ""
-                                : formatCents(totals.pricePerUnitCents, selectedSheet.currency),
+                                : formatMoney(totals.pricePerUnitCents, selectedSheet.currency),
                             ],
                           ];
                           const text = lines.map((r) => r.join("\t")).join("\n");

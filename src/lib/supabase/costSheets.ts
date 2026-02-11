@@ -28,6 +28,13 @@ export type DbCostSheetInsert = Omit<DbCostSheetRow, "id" | "created_at" | "upda
 
 export type DbCostSheetUpdate = Partial<Omit<DbCostSheetRow, "id" | "user_id" | "created_at">>;
 
+type SheetDefaults = {
+  currency?: string;
+  wastePct?: number;
+  markupPct?: number;
+  taxPct?: number;
+};
+
 function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
@@ -112,22 +119,26 @@ export function sheetToRowUpdate(sheet: CostSheet): DbCostSheetUpdate {
   };
 }
 
-export function makeBlankSheetInsert(userId: string): DbCostSheetInsert {
+export function makeBlankSheetInsert(userId: string, defaults?: SheetDefaults): DbCostSheetInsert {
   const blank = makeBlankSheet("temp");
+  const currency = defaults?.currency ? String(defaults.currency).toUpperCase() : blank.currency;
+  const wastePct = clampNumber(asNumber(defaults?.wastePct, blank.wastePct), 0, 1000);
+  const markupPct = clampNumber(asNumber(defaults?.markupPct, blank.markupPct), 0, 10000);
+  const taxPct = clampNumber(asNumber(defaults?.taxPct, blank.taxPct), 0, 1000);
+
   return {
     user_id: userId,
     name: blank.name,
     sku: blank.sku,
-    currency: blank.currency,
+    currency,
     unit_name: blank.unitName,
     batch_size: blank.batchSize,
-    waste_pct: blank.wastePct,
-    markup_pct: blank.markupPct,
-    tax_pct: blank.taxPct,
+    waste_pct: wastePct,
+    markup_pct: markupPct,
+    tax_pct: taxPct,
     materials: blank.materials,
     labor: blank.labor,
     overhead: blank.overhead,
     notes: blank.notes,
   };
 }
-

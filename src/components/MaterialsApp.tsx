@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { formatCents, formatShortDate } from "@/lib/format";
+import { currencySymbol, formatCents, formatShortDate } from "@/lib/format";
 import {
   createDemoMaterials,
   makeBlankMaterial,
@@ -12,6 +12,7 @@ import {
   type MaterialRecord,
 } from "@/lib/materials";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { useAppSettings } from "@/lib/useAppSettings";
 import {
   makeBlankMaterialInsert,
   materialToRowUpdate,
@@ -125,6 +126,45 @@ export default function MaterialsApp() {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
+
+  const { settings } = useAppSettings({
+    supabase,
+    userId,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const formatAppDate = useCallback(
+    (iso: string) =>
+      formatShortDate(iso, {
+        dateFormat: settings.dateFormat,
+        timezone: settings.timezone,
+      }),
+    [settings.dateFormat, settings.timezone],
+  );
+
+  const currencyPrefix = useMemo(
+    () =>
+      settings.currencyDisplay === "code"
+        ? settings.baseCurrency
+        : currencySymbol(settings.baseCurrency),
+    [settings.baseCurrency, settings.currencyDisplay],
+  );
+
+  const formatSettingsMoney = useCallback(
+    (cents: number) =>
+      formatCents(cents, settings.baseCurrency, {
+        currencyDisplay: settings.currencyDisplay,
+        roundingIncrementCents: settings.currencyRoundingIncrement,
+        roundingMode: settings.currencyRoundingMode,
+      }),
+    [
+      settings.baseCurrency,
+      settings.currencyDisplay,
+      settings.currencyRoundingIncrement,
+      settings.currencyRoundingMode,
+    ],
+  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -243,7 +283,9 @@ export default function MaterialsApp() {
 
   async function addMaterial() {
     if (isCloudMode && supabase && userId) {
-      const insert = makeBlankMaterialInsert(userId);
+      const insert = makeBlankMaterialInsert(userId, {
+        defaultUnit: settings.defaultMaterialUnit,
+      });
       const { data, error } = await supabase.from("materials").insert(insert).select("*");
       if (error || !data?.[0]) {
         toast("error", error?.message || "Could not create material.");
@@ -256,6 +298,7 @@ export default function MaterialsApp() {
     }
 
     const row = makeBlankMaterial(makeId("mat"));
+    row.unit = settings.defaultMaterialUnit;
     setMaterials((prev) => sortMaterialsByUpdatedAtDesc([row, ...prev]));
     toast("success", "Local material created.");
   }
@@ -285,7 +328,7 @@ export default function MaterialsApp() {
   }
 
   function openSettings() {
-    toast("info", "Settings panel coming soon.");
+    window.location.assign("/settings");
   }
 
   const filteredMaterials = useMemo(() => {
@@ -463,7 +506,7 @@ export default function MaterialsApp() {
                       <td className="p-2">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                            $
+                            {currencyPrefix}
                           </span>
                           <input
                             className={inputBase + " pl-7 " + inputMono}
@@ -491,7 +534,7 @@ export default function MaterialsApp() {
                       <td className="p-2">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                            $
+                            {currencyPrefix}
                           </span>
                           <input
                             className={inputBase + " pl-7 " + inputMono}
@@ -530,7 +573,7 @@ export default function MaterialsApp() {
                           {row.isActive ? "Yes" : "No"}
                         </label>
                       </td>
-                      <td className="p-2 font-mono text-xs text-muted">{formatShortDate(row.updatedAt)}</td>
+                      <td className="p-2 font-mono text-xs text-muted">{formatAppDate(row.updatedAt)}</td>
                       <td className="p-2">
                         <button
                           type="button"
@@ -557,7 +600,7 @@ export default function MaterialsApp() {
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
               Average unit cost (active only):{" "}
               <span className="font-mono text-ink">
-                {formatCents(
+                {formatSettingsMoney(
                   (() => {
                     const active = materials.filter((row) => row.isActive);
                     if (!active.length) return 0;
