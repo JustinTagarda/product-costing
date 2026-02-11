@@ -23,6 +23,7 @@ const inputBase =
 
 const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:local:v1";
+const WELCOME_GATE_DISMISSED_KEY = "product-costing:welcome-gate:dismissed";
 
 function parseNumber(value: string): number {
   const n = Number(value);
@@ -95,6 +96,28 @@ function writeLocalSheets(sheets: CostSheet[], selectedId: string | null): void 
   }
 }
 
+function readWelcomeGateDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(WELCOME_GATE_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeWelcomeGateDismissed(dismissed: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (dismissed) {
+      window.localStorage.setItem(WELCOME_GATE_DISMISSED_KEY, "1");
+      return;
+    }
+    window.localStorage.removeItem(WELCOME_GATE_DISMISSED_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export default function CostingApp() {
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -128,7 +151,7 @@ export default function CostingApp() {
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showWelcomeGate, setShowWelcomeGate] = useState(true);
+  const [showWelcomeGate, setShowWelcomeGate] = useState(() => !readWelcomeGateDismissed());
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -337,6 +360,7 @@ export default function CostingApp() {
 
   function continueToDashboard() {
     setShowWelcomeGate(false);
+    writeWelcomeGateDismissed(true);
   }
 
   async function continueAsGuest() {
@@ -348,6 +372,7 @@ export default function CostingApp() {
       }
     }
     setShowWelcomeGate(false);
+    writeWelcomeGateDismissed(true);
     toast("info", "Continuing as guest. Data will be saved in this browser.");
   }
 
@@ -359,6 +384,7 @@ export default function CostingApp() {
       return;
     }
     setShowWelcomeGate(true);
+    writeWelcomeGateDismissed(false);
     toast("info", "Signed out.");
   }
 
