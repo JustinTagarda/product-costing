@@ -665,24 +665,28 @@ export default function CostingApp() {
 
   if (!selectedSheet || !totals) {
     return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
-          <div className="mb-4 flex justify-end">
-            <TopBarMenu onSettings={openSettings} onLogout={() => void signOut()} />
-          </div>
-          <div className={cardClassName() + " p-6"}>
-            <h1 className="font-serif text-3xl tracking-tight text-ink">No sheets yet</h1>
-            <p className="mt-2 text-sm text-muted">
-              Create your first cost sheet to get started.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => void newSheet()}
-              >
-                New sheet
-              </button>
+      <div className="min-h-dvh">
+        <MainPageTopMenu
+          onNavigate={(section) => toast("info", `${section} section coming soon.`)}
+          onSettings={openSettings}
+          onLogout={() => void signOut()}
+        />
+        <div className="px-4 py-10">
+          <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+            <div className={cardClassName() + " p-6"}>
+              <h1 className="font-serif text-3xl tracking-tight text-ink">No sheets yet</h1>
+              <p className="mt-2 text-sm text-muted">
+                Create your first cost sheet to get started.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                  onClick={() => void newSheet()}
+                >
+                  New sheet
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -691,12 +695,15 @@ export default function CostingApp() {
   }
 
   return (
-    <div className="min-h-dvh px-4 py-10">
-      <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-6xl flex-col animate-[fadeUp_.55s_ease-out]">
-        <div className="mb-4 flex justify-end">
-          <TopBarMenu onSettings={openSettings} onLogout={() => void signOut()} />
-        </div>
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="min-h-dvh">
+      <MainPageTopMenu
+        onNavigate={(section) => toast("info", `${section} section coming soon.`)}
+        onSettings={openSettings}
+        onLogout={() => void signOut()}
+      />
+      <div className="px-4 py-10">
+        <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-6xl flex-col animate-[fadeUp_.55s_ease-out]">
+          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
               {session ? (
@@ -755,27 +762,27 @@ export default function CostingApp() {
               onChange={handleImportFile}
             />
           </div>
-        </header>
+          </header>
 
-        {notice ? (
-          <div
-            className={[
-              "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-              notice.kind === "error"
-                ? "bg-danger/10 text-danger"
-                : notice.kind === "success"
-                  ? "bg-accent/10 text-ink"
-                  : "bg-paper/55 text-ink",
-            ].join(" ")}
-            role="status"
-            aria-live="polite"
-          >
-            {notice.message}
-          </div>
-        ) : null}
+          {notice ? (
+            <div
+              className={[
+                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
+                notice.kind === "error"
+                  ? "bg-danger/10 text-danger"
+                  : notice.kind === "success"
+                    ? "bg-accent/10 text-ink"
+                    : "bg-paper/55 text-ink",
+              ].join(" ")}
+              role="status"
+              aria-live="polite"
+            >
+              {notice.message}
+            </div>
+          ) : null}
 
-        <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className={cardClassName()}>
+          <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
+            <aside className={cardClassName()}>
             <div className="p-3">
               <div className="flex items-center gap-2">
                 <input
@@ -838,9 +845,9 @@ export default function CostingApp() {
                 })}
               </ul>
             </div>
-          </aside>
+            </aside>
 
-          <main className={cardClassName() + " min-w-0"}>
+            <main className={cardClassName() + " min-w-0"}>
             <div className="p-4 md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex-1">
@@ -1607,14 +1614,15 @@ export default function CostingApp() {
                 </div>
               </div>
             </div>
-          </main>
-        </div>
+            </main>
+          </div>
 
-        <footer className="mt-auto pt-10 text-center text-xs text-muted">
-          {session
-            ? "Built with Next.js + Supabase. Export JSON if you want an offline backup."
-            : "Built with Next.js. Guest mode uses localStorage; sign in with Google to sync via Supabase."}
-        </footer>
+          <footer className="mt-auto pt-10 text-center text-xs text-muted">
+            {session
+              ? "Built with Next.js + Supabase. Export JSON if you want an offline backup."
+              : "Built with Next.js. Guest mode uses localStorage; sign in with Google to sync via Supabase."}
+          </footer>
+        </div>
       </div>
     </div>
   );
@@ -1651,35 +1659,110 @@ function SummaryRow({
   );
 }
 
-function TopBarMenu({
+const MAIN_NAV_ITEMS = [
+  "Dashboard",
+  "Materials",
+  "Purchases",
+  "Components",
+  "BOM",
+  "Products",
+  "Labor",
+  "Overheads",
+  "Reports",
+] as const;
+
+function MainPageTopMenu({
+  onNavigate,
   onSettings,
   onLogout,
 }: {
+  onNavigate: (section: string) => void;
   onSettings: () => void;
   onLogout: () => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
+
+  function runAndClose(action: () => void) {
+    action();
+    setIsOpen(false);
+  }
+
   return (
-    <nav
-      aria-label="Top bar menu"
-      className="inline-flex items-center gap-3 rounded-xl border border-border bg-paper/70 px-3 py-2 text-sm font-semibold text-ink shadow-sm"
-    >
-      <button
-        type="button"
-        className="transition hover:text-accent"
-        onClick={onSettings}
-      >
-        Settings
-      </button>
-      <span aria-hidden="true" className="text-muted">
-        |
-      </span>
-      <button
-        type="button"
-        className="transition hover:text-accent"
-        onClick={onLogout}
-      >
-        Log out
-      </button>
-    </nav>
+    <div className="sticky top-0 z-50">
+      {isOpen ? (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]"
+          onClick={() => setIsOpen(false)}
+        />
+      ) : null}
+
+      <div className="relative z-50 border-b border-zinc-300 bg-zinc-200/95 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          <button
+            type="button"
+            aria-expanded={isOpen}
+            aria-haspopup="menu"
+            aria-controls="main-nav-dropdown"
+            className="inline-flex items-center gap-2 rounded-lg px-1 py-0.5 text-left font-semibold text-ink transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            onClick={() => setIsOpen((prev) => !prev)}
+          >
+            <span aria-hidden="true" className="font-mono text-sm">
+              {isOpen ? "x" : "\u2630"}
+            </span>
+            <span className="text-[1.85rem] leading-none">Biznes Costing</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="relative z-50 mx-auto max-w-6xl px-4">
+        {isOpen ? (
+          <nav
+            id="main-nav-dropdown"
+            aria-label="Main menu"
+            className="absolute left-4 top-2 w-[220px] overflow-hidden rounded-xl border border-zinc-400/70 bg-zinc-300 text-ink shadow-[0_18px_45px_rgba(0,0,0,.18)] animate-[popIn_.18s_ease-out]"
+          >
+            <div className="px-2 py-2">
+              {MAIN_NAV_ITEMS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="w-full rounded-md px-3 py-2 text-left text-[1.05rem] font-semibold transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+                  onClick={() => runAndClose(() => onNavigate(item))}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-zinc-400/70 px-2 py-2">
+              <button
+                type="button"
+                className="w-full rounded-md px-3 py-2 text-left text-[1.05rem] font-semibold transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+                onClick={() => runAndClose(onSettings)}
+              >
+                Settings
+              </button>
+              <button
+                type="button"
+                className="mt-1 w-full rounded-md px-3 py-2 text-left text-[1.05rem] font-semibold transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+                onClick={() => runAndClose(onLogout)}
+              >
+                Log out
+              </button>
+            </div>
+          </nav>
+        ) : null}
+      </div>
+    </div>
   );
 }
