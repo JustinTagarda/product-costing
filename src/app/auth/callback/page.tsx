@@ -12,10 +12,10 @@ export default function AuthCallbackPage() {
     async function run() {
       try {
         const supabase = getSupabaseClient();
-        const url = window.location.href;
-        const hasCode = url.includes("code=");
-        if (hasCode) {
-          const { error } = await supabase.auth.exchangeCodeForSession(url);
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         }
         if (!cancelled) window.location.replace("/");
@@ -41,4 +41,3 @@ export default function AuthCallbackPage() {
     </div>
   );
 }
-
