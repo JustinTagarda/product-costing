@@ -385,6 +385,10 @@ export default function CostingApp() {
     toast("info", "Signed out.");
   }
 
+  function openSettings() {
+    toast("info", "Settings panel coming soon.");
+  }
+
   async function newSheet() {
     if (isCloudMode && supabase && user) {
       const insert = makeBlankSheetInsert(user.id);
@@ -663,6 +667,9 @@ export default function CostingApp() {
     return (
       <div className="px-4 py-10">
         <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+          <div className="mb-4 flex justify-end">
+            <TopBarMenu onSettings={openSettings} onLogout={() => void signOut()} />
+          </div>
           <div className={cardClassName() + " p-6"}>
             <h1 className="font-serif text-3xl tracking-tight text-ink">No sheets yet</h1>
             <p className="mt-2 text-sm text-muted">
@@ -676,13 +683,6 @@ export default function CostingApp() {
               >
                 New sheet
               </button>
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                onClick={() => void signOut()}
-              >
-                Log out
-              </button>
             </div>
           </div>
         </div>
@@ -693,6 +693,9 @@ export default function CostingApp() {
   return (
     <div className="min-h-dvh px-4 py-10">
       <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-6xl flex-col animate-[fadeUp_.55s_ease-out]">
+        <div className="mb-4 flex justify-end">
+          <TopBarMenu onSettings={openSettings} onLogout={() => void signOut()} />
+        </div>
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
@@ -743,13 +746,6 @@ export default function CostingApp() {
               onClick={exportAll}
             >
               Export
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-              onClick={() => void signOut()}
-            >
-              Log out
             </button>
             <input
               ref={fileInputRef}
@@ -1652,5 +1648,38 @@ function SummaryRow({
         {value}
       </p>
     </div>
+  );
+}
+
+function TopBarMenu({
+  onSettings,
+  onLogout,
+}: {
+  onSettings: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <nav
+      aria-label="Top bar menu"
+      className="inline-flex items-center gap-3 rounded-xl border border-border bg-paper/70 px-3 py-2 text-sm font-semibold text-ink shadow-sm"
+    >
+      <button
+        type="button"
+        className="transition hover:text-accent"
+        onClick={onSettings}
+      >
+        Settings
+      </button>
+      <span aria-hidden="true" className="text-muted">
+        |
+      </span>
+      <button
+        type="button"
+        className="transition hover:text-accent"
+        onClick={onLogout}
+      >
+        Log out
+      </button>
+    </nav>
   );
 }
