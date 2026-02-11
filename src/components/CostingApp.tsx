@@ -564,7 +564,7 @@ export default function CostingApp() {
       <div className="px-4 py-10">
         <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
           <div className="h-6 w-40 rounded bg-ink/10" />
-          <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
+          <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
             <div className={cardClassName() + " h-[520px]"} />
           </div>
@@ -650,7 +650,7 @@ export default function CostingApp() {
       <div className="px-4 py-10">
         <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
           <p className="font-mono text-xs text-muted">Loading sheets...</p>
-          <div className="mt-6 grid gap-6 md:grid-cols-[320px_1fr]">
+          <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
             <div className={cardClassName() + " h-[520px]"} />
           </div>
@@ -778,7 +778,7 @@ export default function CostingApp() {
           </div>
         ) : null}
 
-        <div className="mt-8 grid gap-6 md:grid-cols-[320px_1fr]">
+        <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
           <aside className={cardClassName()}>
             <div className="p-3">
               <div className="flex items-center gap-2">
@@ -844,7 +844,7 @@ export default function CostingApp() {
             </div>
           </aside>
 
-          <main className={cardClassName()}>
+          <main className={cardClassName() + " min-w-0"}>
             <div className="p-4 md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex-1">
@@ -874,8 +874,8 @@ export default function CostingApp() {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-                <div className="space-y-6">
+              <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="min-w-0 space-y-6">
                   <section className={panelClassName()}>
                     <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                       <h2 className="font-serif text-lg tracking-tight text-ink">Details</h2>
