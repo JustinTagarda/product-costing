@@ -6,7 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainNavMenu } from "@/components/MainNavMenu";
-import { formatCents, formatShortDate } from "@/lib/format";
+import { currencySymbol, formatCents, formatShortDate } from "@/lib/format";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -334,6 +334,11 @@ export default function CostingApp() {
     const found = selectedId ? sheets.find((s) => s.id === selectedId) : null;
     return found ?? sheets[0];
   }, [selectedId, sheets]);
+
+  const selectedCurrencyPrefix = useMemo(() => {
+    const currency = (selectedSheet?.currency || settings.baseCurrency || "USD").toUpperCase();
+    return settings.currencyDisplay === "code" ? currency : currencySymbol(currency);
+  }, [selectedSheet?.currency, settings.baseCurrency, settings.currencyDisplay]);
 
   const filteredSheets = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -947,11 +952,23 @@ export default function CostingApp() {
                           value={selectedSheet.currency}
                           onChange={(e) => updateSelected((s) => ({ ...s, currency: e.target.value }))}
                         >
-                          <option value="USD">USD</option>
-                          <option value="CAD">CAD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="AUD">AUD</option>
+                          {Array.from(
+                            new Set([
+                              selectedSheet.currency.toUpperCase(),
+                              settings.baseCurrency.toUpperCase(),
+                              "USD",
+                              "CAD",
+                              "EUR",
+                              "GBP",
+                              "AUD",
+                              "PHP",
+                              "JPY",
+                            ]),
+                          ).map((currencyCode) => (
+                            <option key={currencyCode} value={currencyCode}>
+                              {currencyCode}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -1083,7 +1100,7 @@ export default function CostingApp() {
                                 <td className="p-2">
                                   <div className="relative">
                                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                      $
+                                      {selectedCurrencyPrefix}
                                     </span>
                                     <input
                                       className={inputBase + " pl-7 " + inputMono}
@@ -1241,7 +1258,7 @@ export default function CostingApp() {
                                 <td className="p-2">
                                   <div className="relative">
                                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                      $
+                                      {selectedCurrencyPrefix}
                                     </span>
                                     <input
                                       className={inputBase + " pl-7 " + inputMono}
@@ -1397,7 +1414,7 @@ export default function CostingApp() {
                                     {it.kind === "flat" ? (
                                       <div className="relative">
                                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                          $
+                                          {selectedCurrencyPrefix}
                                         </span>
                                         <input
                                           className={inputBase + " pl-7 " + inputMono}

@@ -63,9 +63,11 @@ export function makeBlankPurchase(id: string, defaults?: BlankPurchaseDefaults):
 
 export function createDemoPurchases(
   seed?: Array<{ id: string; name: string; supplier?: string; unit?: string }>,
+  options?: { currency?: string },
 ): PurchaseRecord[] {
   const t = "2026-02-10T00:00:00.000Z";
   const base = seed?.[0];
+  const currency = options?.currency ? options.currency.toUpperCase() : "USD";
   return [
     {
       id: "purchase_demo_1",
@@ -77,7 +79,7 @@ export function createDemoPurchases(
       unit: base?.unit ?? "yd",
       unitCostCents: 600,
       totalCostCents: computePurchaseTotalCents(10, 600),
-      currency: "USD",
+      currency,
       referenceNo: "PO-1001",
       notes: "Initial stock order",
       createdAt: t,

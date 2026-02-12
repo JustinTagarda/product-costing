@@ -273,7 +273,9 @@ export default function PurchasesApp() {
           toast("error", purchasesRes.error.message);
           setPurchases([]);
         } else {
-          const rows = (purchasesRes.data ?? []).map((row) => rowToPurchase(row as DbPurchaseRow));
+          const rows = (purchasesRes.data ?? [])
+            .map((row) => rowToPurchase(row as DbPurchaseRow))
+            .map((row) => ({ ...row, currency: settings.baseCurrency }));
           setPurchases(sortPurchasesByDateDesc(rows));
         }
 
@@ -306,9 +308,11 @@ export default function PurchasesApp() {
       if (!localMaterialRecords.length) writeLocalMaterialRecords(baseMaterialRecords);
 
       const localPurchases = readLocalPurchases();
-      const nextPurchases = localPurchases.length
-        ? sortPurchasesByDateDesc(localPurchases)
-        : createDemoPurchases(baseMaterials);
+      const nextPurchases = (
+        localPurchases.length
+          ? sortPurchasesByDateDesc(localPurchases)
+          : createDemoPurchases(baseMaterials, { currency: settings.baseCurrency })
+      ).map((row) => ({ ...row, currency: settings.baseCurrency }));
       if (!localPurchases.length) writeLocalPurchases(nextPurchases);
 
       if (cancelled) return;
@@ -322,7 +326,7 @@ export default function PurchasesApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [authReady, isCloudMode, settings.baseCurrency, supabase, toast, userId]);
 
   useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedRef.current) return;
@@ -415,6 +419,7 @@ export default function PurchasesApp() {
           quantity: Math.max(0, updated.quantity),
           unitCostCents: Math.max(0, Math.round(updated.unitCostCents)),
           totalCostCents: total,
+          currency: settings.baseCurrency,
           updatedAt: now,
         };
         changed = normalized;
@@ -719,7 +724,7 @@ export default function PurchasesApp() {
                       </td>
                       <td className="p-2">
                         <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
-                          {formatMoney(row.totalCostCents, row.currency || settings.baseCurrency)}
+                          {formatMoney(row.totalCostCents, settings.baseCurrency)}
                         </p>
                       </td>
                       <td className="p-2">
