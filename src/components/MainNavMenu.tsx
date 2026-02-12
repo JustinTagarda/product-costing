@@ -15,7 +15,7 @@ const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Materials", href: "/materials" },
   { label: "Purchases", href: "/purchases" },
   { label: "Components" },
-  { label: "BOM" },
+  { label: "BOM", href: "/bom" },
   { label: "Products" },
   { label: "Labor" },
   { label: "Overheads" },

@@ -129,6 +129,84 @@ create trigger purchases_set_updated_at
 before update on public.purchases
 for each row execute function public.set_updated_at();
 
+create table if not exists public.bom_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+
+  name text not null default '',
+  code text not null default '',
+  item_type text not null default 'part' check (item_type in ('part', 'product')),
+  output_qty numeric(14,4) not null default 1 check (output_qty >= 0),
+  output_unit text not null default 'ea',
+  is_active boolean not null default true,
+  notes text not null default '',
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists bom_items_user_id_updated_at_idx
+  on public.bom_items (user_id, updated_at desc);
+
+create index if not exists bom_items_user_id_type_active_name_idx
+  on public.bom_items (user_id, item_type, is_active, name);
+
+alter table public.bom_items enable row level security;
+
+drop policy if exists "bom_items_owner_all" on public.bom_items;
+create policy "bom_items_owner_all"
+  on public.bom_items
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists bom_items_set_updated_at on public.bom_items;
+create trigger bom_items_set_updated_at
+before update on public.bom_items
+for each row execute function public.set_updated_at();
+
+create table if not exists public.bom_item_lines (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  bom_item_id uuid not null references public.bom_items(id) on delete cascade,
+
+  sort_order integer not null default 0 check (sort_order >= 0),
+  component_type text not null default 'material' check (component_type in ('material', 'bom_item')),
+  material_id uuid references public.materials(id) on delete set null,
+  component_bom_item_id uuid references public.bom_items(id) on delete set null,
+  component_name text not null default '',
+  quantity numeric(14,4) not null default 1 check (quantity >= 0),
+  unit text not null default 'ea',
+  unit_cost_cents integer not null default 0 check (unit_cost_cents >= 0),
+  notes text not null default '',
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists bom_item_lines_user_id_bom_item_sort_idx
+  on public.bom_item_lines (user_id, bom_item_id, sort_order, created_at);
+
+create index if not exists bom_item_lines_user_id_material_id_idx
+  on public.bom_item_lines (user_id, material_id);
+
+create index if not exists bom_item_lines_user_id_component_bom_item_id_idx
+  on public.bom_item_lines (user_id, component_bom_item_id);
+
+alter table public.bom_item_lines enable row level security;
+
+drop policy if exists "bom_item_lines_owner_all" on public.bom_item_lines;
+create policy "bom_item_lines_owner_all"
+  on public.bom_item_lines
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists bom_item_lines_set_updated_at on public.bom_item_lines;
+create trigger bom_item_lines_set_updated_at
+before update on public.bom_item_lines
+for each row execute function public.set_updated_at();
+
 create table if not exists public.app_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
 
