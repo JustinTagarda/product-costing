@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   makeDefaultSettings,
@@ -29,6 +29,11 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
   const [settings, setSettings] = useState<AppSettings>(() => makeDefaultSettings());
   const [settingsReady, setSettingsReady] = useState(false);
   const isCloudMode = Boolean(supabase && userId);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -44,7 +49,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
 
         if (cancelled) return;
         if (error) {
-          onError?.(error.message);
+          onErrorRef.current?.(error.message);
           setSettings(makeDefaultSettings());
           setSettingsReady(true);
           return;
@@ -73,7 +78,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, onError, supabase, userId]);
+  }, [authReady, isCloudMode, supabase, userId]);
 
   const saveSettings = useCallback(
     async (next: AppSettings): Promise<SaveResult> => {
@@ -85,7 +90,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
           .from("app_settings")
           .upsert(settingsToInsert(userId, normalized), { onConflict: "user_id" });
         if (error) {
-          onError?.(error.message);
+          onErrorRef.current?.(error.message);
           return { ok: false, message: error.message };
         }
         return { ok: true };
@@ -94,7 +99,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
       writeLocalSettings(normalized);
       return { ok: true };
     },
-    [isCloudMode, onError, supabase, userId],
+    [isCloudMode, supabase, userId],
   );
 
   return {
