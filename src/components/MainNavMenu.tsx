@@ -72,10 +72,10 @@ export function MainNavMenu({
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-controls="main-nav-dropdown"
-            className="inline-flex items-center gap-2 rounded-lg px-1 py-0.5 text-left font-semibold text-ink transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex items-center gap-2 rounded-lg py-0.5 text-left font-semibold text-ink transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsOpen((prev) => !prev)}
           >
-            <span aria-hidden="true" className="font-mono text-sm">
+            <span aria-hidden="true" className="font-mono text-[1.85rem] leading-none">
               {isOpen ? "x" : "\u2630"}
             </span>
             <span className="text-[1.85rem] leading-none">Small Business Costing</span>
