@@ -1,3 +1,5 @@
+import { makeId } from "@/lib/costing";
+
 export type MaterialRecord = {
   id: string;
   name: string;
@@ -12,6 +14,8 @@ export type MaterialRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export const MATERIALS_LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
 
 export function makeBlankMaterial(id: string): MaterialRecord {
   const now = new Date().toISOString();
@@ -67,4 +71,51 @@ export function createDemoMaterials(): MaterialRecord[] {
 
 export function sortMaterialsByUpdatedAtDesc(items: MaterialRecord[]): MaterialRecord[] {
   return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+}
+
+export function parseMaterialRecords(raw: unknown): MaterialRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const row = item as Partial<MaterialRecord>;
+      const fallback = makeBlankMaterial(typeof row.id === "string" ? row.id : makeId("mat"));
+      const unitCostRaw = Number(row.unitCostCents);
+      const lastPurchaseCostRaw = Number(row.lastPurchaseCostCents);
+      return {
+        ...fallback,
+        ...row,
+        unitCostCents: Number.isFinite(unitCostRaw)
+          ? Math.max(0, Math.round(unitCostRaw))
+          : fallback.unitCostCents,
+        lastPurchaseCostCents: Number.isFinite(lastPurchaseCostRaw)
+          ? Math.max(0, Math.round(lastPurchaseCostRaw))
+          : fallback.lastPurchaseCostCents,
+        isActive: row.isActive !== undefined ? Boolean(row.isActive) : true,
+      };
+    });
+}
+
+export function readLocalMaterialRecords(): MaterialRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(MATERIALS_LOCAL_STORAGE_KEY);
+    if (!raw) return [];
+    return parseMaterialRecords(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+export function writeLocalMaterialRecords(materials: MaterialRecord[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (!materials.length) {
+      window.localStorage.removeItem(MATERIALS_LOCAL_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(MATERIALS_LOCAL_STORAGE_KEY, JSON.stringify(materials));
+  } catch {
+    // Ignore storage failures.
+  }
 }

@@ -89,6 +89,46 @@ create trigger materials_set_updated_at
 before update on public.materials
 for each row execute function public.set_updated_at();
 
+create table if not exists public.purchases (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  purchase_date date not null default current_date,
+  material_id uuid references public.materials(id) on delete set null,
+
+  material_name text not null default '',
+  supplier text not null default '',
+  quantity numeric(14,4) not null default 0 check (quantity >= 0),
+  unit text not null default 'ea',
+  unit_cost_cents integer not null default 0 check (unit_cost_cents >= 0),
+  total_cost_cents bigint not null default 0 check (total_cost_cents >= 0),
+  currency text not null default 'USD',
+  reference_no text not null default '',
+  notes text not null default '',
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists purchases_user_id_purchase_date_idx
+  on public.purchases (user_id, purchase_date desc, updated_at desc);
+
+create index if not exists purchases_user_id_material_id_idx
+  on public.purchases (user_id, material_id);
+
+alter table public.purchases enable row level security;
+
+drop policy if exists "purchases_owner_all" on public.purchases;
+create policy "purchases_owner_all"
+  on public.purchases
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop trigger if exists purchases_set_updated_at on public.purchases;
+create trigger purchases_set_updated_at
+before update on public.purchases
+for each row execute function public.set_updated_at();
+
 create table if not exists public.app_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
 

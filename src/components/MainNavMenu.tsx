@@ -13,7 +13,7 @@ type MainNavMenuProps = {
 const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Dashboard", href: "/" },
   { label: "Materials", href: "/materials" },
-  { label: "Purchases" },
+  { label: "Purchases", href: "/purchases" },
   { label: "Components" },
   { label: "BOM" },
   { label: "Products" },
