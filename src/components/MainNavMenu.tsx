@@ -36,7 +36,6 @@ export function MainNavMenu({
   activeItem,
   onSettings,
   onLogout,
-  onUnimplementedNavigate,
   searchValue,
   onSearchChange,
   searchPlaceholder,
@@ -126,7 +125,7 @@ export function MainNavMenu({
       if (pathname !== item.href) router.push(item.href);
       return;
     }
-    onUnimplementedNavigate?.(item.label);
+    router.push(`/coming-soon?section=${encodeURIComponent(item.label)}`);
   }
 
   function isMainItemActive(item: { label: string; href?: string }): boolean {
