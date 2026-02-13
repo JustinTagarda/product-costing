@@ -19,20 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} antialiased`}>
-        {children}
-        <footer className="app-global-footer" aria-label="Site footer">
-          <div className="app-global-footer__row">
-            <span>Created by: Justiniano Tagarda</span>
-            <a href="mailto:justintagarda@gmail.com">Email: justintagarda@gmail.com</a>
-          </div>
-          <div className="app-global-footer__row">
-            <span>Stack: Next.js, React, TypeScript, Tailwind CSS</span>
-            <span>Hosting: Vercel</span>
-            <span>Database/Auth: Supabase (Postgres + Google OAuth)</span>
-          </div>
-        </footer>
-      </body>
+      <body className={`${inter.variable} antialiased`}>{children}</body>
     </html>
   );
 }

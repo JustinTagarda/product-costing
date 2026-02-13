@@ -365,6 +365,27 @@ function SidebarSections({
           <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Log out</span>
           {compact ? <span className={compactLabelClasses || "md:hidden"}>L</span> : null}
         </button>
+
+        <div className="mt-3 border-t border-zinc-300/80 pt-3">
+          {compact ? (
+            <p className="text-center font-mono text-[10px] text-muted" title="Created by Justiniano Tagarda">
+              JT
+            </p>
+          ) : (
+            <div className="space-y-1 text-[10px] leading-4 text-muted">
+              <p>Created by: Justiniano Tagarda</p>
+              <a
+                href="mailto:justintagarda@gmail.com"
+                className="block w-fit text-ink hover:underline"
+              >
+                justintagarda@gmail.com
+              </a>
+              <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
+              <p>Hosting: Vercel</p>
+              <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

@@ -11,7 +11,6 @@
   --border: #d4d4d8;
   --app-shell-sidebar-offset: 0px;
   --app-shell-topbar-height: 72px;
-  --app-shell-footer-height: 94px;
 }
 
 @theme inline {
@@ -33,56 +32,10 @@
 
 body {
   min-height: 100dvh;
-  padding-bottom: calc(var(--app-shell-footer-height) + env(safe-area-inset-bottom));
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
   text-rendering: geometricPrecision;
-}
-
-.app-global-footer {
-  position: fixed;
-  left: var(--app-shell-sidebar-offset);
-  right: 0;
-  bottom: 0;
-  z-index: 35;
-  border-top: 1px solid var(--border);
-  background-color: color-mix(in srgb, var(--paper) 95%, #f4f4f5 5%);
-  backdrop-filter: blur(8px);
-  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
-  display: grid;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  line-height: 1.35;
-  color: var(--muted);
-}
-
-.app-global-footer__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.85rem;
-  align-items: center;
-}
-
-.app-global-footer a {
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.app-global-footer a:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 1023px) {
-  :root {
-    --app-shell-footer-height: 116px;
-  }
-}
-
-@media (max-width: 640px) {
-  :root {
-    --app-shell-footer-height: 140px;
-  }
 }
 
 :where([class*="rounded"], [style*="border-radius"]) {
