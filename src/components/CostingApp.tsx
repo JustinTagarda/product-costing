@@ -688,9 +688,6 @@ export default function CostingApp() {
             </section>
           </main>
 
-          <footer className="pt-6 text-center text-sm text-ink">
-            {`© ${new Date().getFullYear()} JustinTagarda Software`}
-          </footer>
         </div>
       </div>
     );
@@ -1690,11 +1687,6 @@ export default function CostingApp() {
             </main>
           </div>
 
-          <footer className="mt-auto pt-10 text-center text-xs text-muted">
-            {session
-              ? "Built with Next.js + Supabase. Export JSON if you want an offline backup."
-              : "Built with Next.js. Guest mode uses localStorage; sign in with Google to sync via Supabase."}
-          </footer>
         </div>
       </div>
     </div>

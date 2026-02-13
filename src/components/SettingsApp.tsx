@@ -101,7 +101,7 @@ export default function SettingsApp() {
     };
   }, [supabase, toast]);
 
-  const { settings, setSettings, settingsReady, saveSettings, isCloudMode } = useAppSettings({
+  const { settings, setSettings, settingsReady, saveSettings } = useAppSettings({
     supabase,
     userId,
     authReady,
@@ -640,11 +640,6 @@ export default function SettingsApp() {
             </section>
           </div>
 
-          <footer className="mt-8 text-center text-xs text-muted">
-            {isCloudMode
-              ? "Settings are stored in Supabase per user account."
-              : "Settings are stored in localStorage for this browser only."}
-          </footer>
         </div>
       </div>
     </div>

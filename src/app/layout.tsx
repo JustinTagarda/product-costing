@@ -21,6 +21,25 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.variable} antialiased`}>
         {children}
+        <footer className="app-global-footer" aria-label="Site footer">
+          <div className="app-global-footer__row">
+            <span>Created by: Justiniano Tagarda</span>
+            <a href="mailto:justintagarda@gmail.com">Email: justintagarda@gmail.com</a>
+            <span>Portfolio project showcasing software developer skills</span>
+          </div>
+          <div className="app-global-footer__row">
+            <span>Stack: Next.js, React, TypeScript, Tailwind CSS</span>
+            <a
+              href="https://github.com/JustinTagarda/product-costing"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Repo: github.com/JustinTagarda/product-costing
+            </a>
+            <span>Hosting: Vercel</span>
+            <span>Database/Auth: Supabase (Postgres + Google OAuth)</span>
+          </div>
+        </footer>
       </body>
     </html>
   );
