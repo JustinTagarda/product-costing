@@ -38,6 +38,43 @@ body {
   text-rendering: geometricPrecision;
 }
 
+:where([class*="rounded"], [style*="border-radius"]) {
+  border-radius: 6px !important;
+}
+
+table[data-input-layout] {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table[data-input-layout] th,
+table[data-input-layout] td {
+  border-right: 1px solid var(--border);
+}
+
+table[data-input-layout] th:last-child,
+table[data-input-layout] td:last-child {
+  border-right: 0;
+}
+
+table[data-input-layout] td {
+  padding: 0.35rem;
+}
+
+table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  width: 100%;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent) !important;
+  background-color: color-mix(in srgb, var(--paper) 92%, var(--accent) 8%) !important;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }

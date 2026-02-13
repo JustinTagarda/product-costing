@@ -783,7 +783,7 @@ export default function BomApp() {
               </div>
 
               <div className="overflow-x-auto p-2">
-                <table className="min-w-[1200px] w-full text-left text-sm">
+                <table data-input-layout className="min-w-[1200px] w-full text-left text-sm">
                   <thead>
                     <tr>
                       <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Type</th>

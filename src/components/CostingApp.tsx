@@ -1040,7 +1040,7 @@ export default function CostingApp() {
 
                     <div className="p-2">
                       <div className="overflow-x-auto px-2 pb-2">
-                        <table className="min-w-[740px] w-full text-left text-sm">
+                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
@@ -1213,7 +1213,7 @@ export default function CostingApp() {
 
                     <div className="p-2">
                       <div className="overflow-x-auto px-2 pb-2">
-                        <table className="min-w-[740px] w-full text-left text-sm">
+                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
@@ -1359,7 +1359,7 @@ export default function CostingApp() {
 
                     <div className="p-2">
                       <div className="overflow-x-auto px-2 pb-2">
-                        <table className="min-w-[740px] w-full text-left text-sm">
+                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
