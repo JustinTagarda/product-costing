@@ -697,7 +697,7 @@ export default function BomApp() {
                     return (
                       <tr
                         key={item.id}
-                        className={["border-t border-border", selectedBom?.id === item.id ? "bg-ink/5" : ""].join(" ")}
+                        className={selectedBom?.id === item.id ? "bg-ink/5" : ""}
                       >
                         <td className="p-2">
                           <button className="text-left font-semibold text-ink hover:underline" onClick={() => setSelectedId(item.id)}>
@@ -798,7 +798,7 @@ export default function BomApp() {
                       const lineUnitCost = resolveLineUnitCost(selectedBom.id, line, materialById, bomCosts);
                       const lineTotal = Math.round(Math.max(0, line.quantity) * lineUnitCost);
                       return (
-                        <tr key={line.id} className="border-t border-border align-top">
+                        <tr key={line.id} className="align-top">
                           <td className="p-2">
                             <select className={inputBase} value={line.componentType} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, componentType: e.target.value === "bom_item" ? "bom_item" : "material", materialId: null, componentBomId: null, componentName: "", unit: settings.defaultMaterialUnit, unitCostCents: 0 }))}>
                               <option value="material">Material</option>

@@ -396,7 +396,7 @@ export default function ProductDetailsApp() {
                         </thead>
                         <tbody>
                           {breakdownRows.map((row, index) => (
-                            <tr key={`${row.category}-${row.label}-${index}`} className="border-t border-border">
+                            <tr key={`${row.category}-${row.label}-${index}`}>
                               <td className="p-2 font-mono text-xs text-muted">{row.category}</td>
                               <td className="p-2 text-ink">{row.label}</td>
                               <td className="p-2 font-mono text-xs text-muted">{row.quantity}</td>

@@ -431,7 +431,7 @@ export default function DashboardApp() {
                 </thead>
                 <tbody>
                   {recentProducts.map((row) => (
-                    <tr key={row.sheet.id} className="border-t border-border">
+                    <tr key={row.sheet.id}>
                       <td className="p-2 font-semibold text-ink">{row.sheet.name || "Untitled"}</td>
                       <td className="p-2 font-mono text-xs text-muted">{row.sheet.sku || "-"}</td>
                       <td className="p-2 font-mono text-xs text-ink">

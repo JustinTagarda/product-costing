@@ -271,7 +271,7 @@ export default function ProductsApp() {
                   {filteredProducts.map((sheet) => {
                     const totals = computeTotals(sheet);
                     return (
-                      <tr key={sheet.id} className="border-t border-border">
+                      <tr key={sheet.id}>
                         <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
                         <td className="p-2 font-mono text-xs text-muted">{sheet.sku || "-"}</td>
                         <td className="p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>

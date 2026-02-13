@@ -89,6 +89,20 @@ body {
   border-radius: 6px !important;
 }
 
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table > thead > tr > th {
+  border-bottom: 1px solid var(--border);
+}
+
+table > tbody > tr + tr > th,
+table > tbody > tr + tr > td {
+  border-top: 1px solid var(--border);
+}
+
 table[data-input-layout] {
   border-collapse: separate;
   border-spacing: 0;

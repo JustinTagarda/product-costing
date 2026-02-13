@@ -617,7 +617,7 @@ export default function PurchasesApp() {
                 </thead>
                 <tbody>
                   {filteredPurchases.map((row) => (
-                    <tr key={row.id} className="border-t border-border align-top">
+                    <tr key={row.id} className="align-top">
                       <td className="p-2">
                         <input
                           className={inputBase + " " + inputMono}
