@@ -94,28 +94,18 @@ table {
   border-spacing: 0;
 }
 
-table > thead > tr > th {
-  border-bottom: 1px solid var(--border);
+table > tbody > tr > th,
+table > tbody > tr > td {
+  border-top: 1px solid var(--border);
 }
 
-table > tbody > tr + tr > th,
-table > tbody > tr + tr > td {
-  border-top: 1px solid var(--border);
+table > :is(thead, tbody, tfoot) > tr > :not(:last-child) {
+  border-right: 1px solid var(--border);
 }
 
 table[data-input-layout] {
   border-collapse: separate;
   border-spacing: 0;
-}
-
-table[data-input-layout] th,
-table[data-input-layout] td {
-  border-right: 1px solid var(--border);
-}
-
-table[data-input-layout] th:last-child,
-table[data-input-layout] td:last-child {
-  border-right: 0;
 }
 
 table[data-input-layout] td {
