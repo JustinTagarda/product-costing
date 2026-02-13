@@ -368,34 +368,27 @@ function SidebarSections({
 
         <footer className="mt-3 border-t border-zinc-300/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
-            <p className="text-center font-mono text-[10px] text-muted" title="Created by Justiniano Tagarda">
+            <p
+              className="text-center text-[10px] font-normal leading-4 text-muted"
+              title="© 2026 Justiniano Tagarda · Full-Stack Developer"
+            >
               JT
-              <span className="sr-only">Created by Justiniano Tagarda</span>
+              <span className="sr-only">© 2026 Justiniano Tagarda · Full-Stack Developer</span>
             </p>
           ) : (
-            <div className="space-y-1 text-[10px] leading-4 text-muted">
-              <p>
-                <span className="font-semibold text-ink">Created by:</span> Justiniano Tagarda
-              </p>
+            <div className="space-y-1 text-[10px] font-normal leading-4 text-muted">
+              <p>© 2026 Justiniano Tagarda · Full-Stack Developer</p>
               <address className="not-italic">
                 <a
                   href="mailto:justintagarda@gmail.com"
-                  className="text-ink hover:underline"
+                  className="hover:underline"
                 >
                   Email: justintagarda@gmail.com
                 </a>
               </address>
-              <p>
-                <span className="font-semibold text-ink">Stack:</span> Next.js, React, TypeScript,
-                Tailwind CSS
-              </p>
-              <p>
-                <span className="font-semibold text-ink">Hosting:</span> Vercel
-              </p>
-              <p>
-                <span className="font-semibold text-ink">Database/Auth:</span> Supabase (Postgres +
-                Google OAuth)
-              </p>
+              <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
+              <p>Hosting: Vercel</p>
+              <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
             </div>
           )}
         </footer>
