@@ -9,6 +9,8 @@
   --danger: #b91c1c;
   --card: #ffffff;
   --border: #d4d4d8;
+  --app-shell-sidebar-offset: 0px;
+  --app-shell-topbar-height: 72px;
 }
 
 @theme inline {

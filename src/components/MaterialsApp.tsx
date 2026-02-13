@@ -349,7 +349,7 @@ export default function MaterialsApp() {
   if (!authReady) {
     return (
       <div className="px-4 py-10">
-        <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
+        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
           <div className="h-6 w-40 rounded bg-ink/10" />
           <div className={cardClassName() + " mt-6 h-[420px]"} />
         </div>
@@ -364,10 +364,16 @@ export default function MaterialsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search materials..."
+        onQuickAdd={() => void addMaterial()}
+        quickAddLabel="+ New Material"
+        profileLabel={session?.user?.email || "Profile"}
       />
 
       <div className="px-4 py-10">
-        <div className="mx-auto max-w-6xl animate-[fadeUp_.55s_ease-out]">
+        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs text-muted">

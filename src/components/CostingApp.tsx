@@ -613,7 +613,7 @@ export default function CostingApp() {
   if (!authReady) {
     return (
       <div className="px-4 py-10">
-        <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
+        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
           <div className="h-6 w-40 rounded bg-ink/10" />
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
@@ -699,7 +699,7 @@ export default function CostingApp() {
   if (loadingSheets && sheets.length === 0) {
     return (
       <div className="px-4 py-10">
-        <div className="mx-auto max-w-6xl animate-[fadeUp_.45s_ease-out]">
+        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
           <p className="font-mono text-xs text-muted">Loading sheets...</p>
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
@@ -714,10 +714,16 @@ export default function CostingApp() {
     return (
       <div className="min-h-dvh">
         <MainNavMenu
-          activeItem="Dashboard"
+          activeItem="Cost Calculator"
           onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
           onSettings={openSettings}
           onLogout={() => void signOut()}
+          searchValue={query}
+          onSearchChange={setQuery}
+          searchPlaceholder="Search sheets..."
+          onQuickAdd={() => void newSheet()}
+          quickAddLabel="+ New Product"
+          profileLabel={session?.user?.email || "Profile"}
         />
         <div className="px-4 py-10">
           <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
@@ -745,13 +751,19 @@ export default function CostingApp() {
   return (
     <div className="min-h-dvh">
       <MainNavMenu
-        activeItem="Dashboard"
+        activeItem="Cost Calculator"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search sheets..."
+        onQuickAdd={() => void newSheet()}
+        quickAddLabel="+ New Product"
+        profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-4 py-10">
-        <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-6xl flex-col animate-[fadeUp_.55s_ease-out]">
+        <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-[1400px] flex-col animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
