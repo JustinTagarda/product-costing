@@ -25,7 +25,6 @@ export default function RootLayout({
           <div className="app-global-footer__row">
             <span>Created by: Justiniano Tagarda</span>
             <a href="mailto:justintagarda@gmail.com">Email: justintagarda@gmail.com</a>
-            <span>Portfolio project showcasing software developer skills</span>
           </div>
           <div className="app-global-footer__row">
             <span>Stack: Next.js, React, TypeScript, Tailwind CSS</span>
