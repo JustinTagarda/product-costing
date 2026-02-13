@@ -612,8 +612,8 @@ export default function CostingApp() {
 
   if (!authReady) {
     return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
+      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+        <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <div className="h-6 w-40 rounded bg-ink/10" />
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
@@ -698,8 +698,8 @@ export default function CostingApp() {
 
   if (loadingSheets && sheets.length === 0) {
     return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
+      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+        <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <p className="font-mono text-xs text-muted">Loading sheets...</p>
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px]"} />
@@ -725,8 +725,8 @@ export default function CostingApp() {
           quickAddLabel="+ New Product"
           profileLabel={session?.user?.email || "Profile"}
         />
-        <div className="px-4 py-10">
-          <div className="mx-auto max-w-2xl animate-[fadeUp_.55s_ease-out]">
+        <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+          <div className="w-full animate-[fadeUp_.55s_ease-out]">
             <div className={cardClassName() + " p-6"}>
               <h1 className="font-serif text-3xl tracking-tight text-ink">No sheets yet</h1>
               <p className="mt-2 text-sm text-muted">
@@ -762,8 +762,8 @@ export default function CostingApp() {
         quickAddLabel="+ New Product"
         profileLabel={session?.user?.email || "Profile"}
       />
-      <div className="px-4 py-10">
-        <div className="mx-auto flex min-h-[calc(100dvh-5rem)] max-w-[1400px] flex-col animate-[fadeUp_.55s_ease-out]">
+      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+        <div className="flex min-h-[calc(100dvh-5rem)] w-full flex-col animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-xs text-muted">
@@ -1731,3 +1731,4 @@ function SummaryRow({
     </div>
   );
 }
+

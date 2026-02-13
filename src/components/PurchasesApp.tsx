@@ -507,8 +507,8 @@ export default function PurchasesApp() {
 
   if (!authReady) {
     return (
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
+      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+        <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <div className="h-6 w-40 rounded bg-ink/10" />
           <div className={cardClassName() + " mt-6 h-[420px]"} />
         </div>
@@ -531,8 +531,8 @@ export default function PurchasesApp() {
         profileLabel={session?.user?.email || "Profile"}
       />
 
-      <div className="px-4 py-10">
-        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.55s_ease-out]">
+      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+        <div className="w-full animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs text-muted">
@@ -790,3 +790,4 @@ export default function PurchasesApp() {
     </div>
   );
 }
+

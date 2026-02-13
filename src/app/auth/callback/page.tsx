@@ -29,7 +29,7 @@ export default function AuthCallbackPage() {
   }, []);
 
   return (
-    <div className="px-4 py-10">
+    <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
       <div className="mx-auto max-w-xl rounded-2xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur-md">
         <h1 className="font-serif text-2xl tracking-tight text-ink">Signing you in</h1>
         <p className="mt-2 text-sm text-muted">You can close this tab if it does not redirect.</p>
@@ -38,3 +38,4 @@ export default function AuthCallbackPage() {
     </div>
   );
 }
+

@@ -297,8 +297,8 @@ export default function DashboardApp() {
         profileLabel={session?.user?.email || "Profile"}
       />
 
-      <div className="px-4 pb-10 pt-6 sm:px-5 lg:px-8">
-        <div className="mx-auto max-w-[1400px] animate-[fadeUp_.45s_ease-out]">
+      <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
+        <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <header className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
               <p className="font-mono text-xs text-muted">
@@ -509,3 +509,4 @@ function LegendRow({
     </div>
   );
 }
+
