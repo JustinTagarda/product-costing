@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals, createDemoSheet } from "@/lib/costing";
 import type { CostSheet, StoredData } from "@/lib/costing";
-import { formatCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
+import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -103,18 +104,14 @@ export default function DashboardApp() {
   );
 
   const formatMoney = useCallback(
-    (cents: number, currency = settings.baseCurrency) =>
-      formatCents(cents, currency, {
-        currencyDisplay: settings.currencyDisplay,
-        roundingIncrementCents: settings.currencyRoundingIncrement,
-        roundingMode: settings.currencyRoundingMode,
-      }),
-    [
-      settings.baseCurrency,
-      settings.currencyDisplay,
-      settings.currencyRoundingIncrement,
-      settings.currencyRoundingMode,
-    ],
+    (cents: number) =>
+      formatCentsWithSettingsSymbol(
+        cents,
+        settings.baseCurrency,
+        settings.currencyRoundingIncrement,
+        settings.currencyRoundingMode,
+      ),
+    [settings.baseCurrency, settings.currencyRoundingIncrement, settings.currencyRoundingMode],
   );
 
   useEffect(() => {
@@ -438,7 +435,7 @@ export default function DashboardApp() {
                       <td className="p-2 font-semibold text-ink">{row.sheet.name || "Untitled"}</td>
                       <td className="p-2 font-mono text-xs text-muted">{row.sheet.sku || "-"}</td>
                       <td className="p-2 font-mono text-xs text-ink">
-                        {formatMoney(row.totals.batchTotalCents, row.sheet.currency)}
+                        {formatMoney(row.totals.batchTotalCents)}
                       </td>
                       <td className="p-2 font-mono text-xs text-muted">
                         {row.totals.marginPct === null ? "--" : `${row.totals.marginPct.toFixed(1)}%`}

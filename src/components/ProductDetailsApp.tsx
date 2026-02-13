@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals } from "@/lib/costing";
 import type { CostSheet, StoredData } from "@/lib/costing";
-import { formatCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
+import { currencyCodeFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -88,18 +89,19 @@ export default function ProductDetailsApp() {
   );
 
   const formatMoney = useCallback(
-    (cents: number, currency = settings.baseCurrency) =>
-      formatCents(cents, currency, {
-        currencyDisplay: settings.currencyDisplay,
-        roundingIncrementCents: settings.currencyRoundingIncrement,
-        roundingMode: settings.currencyRoundingMode,
-      }),
-    [
-      settings.baseCurrency,
-      settings.currencyDisplay,
-      settings.currencyRoundingIncrement,
-      settings.currencyRoundingMode,
-    ],
+    (cents: number) =>
+      formatCentsWithSettingsSymbol(
+        cents,
+        settings.baseCurrency,
+        settings.currencyRoundingIncrement,
+        settings.currencyRoundingMode,
+      ),
+    [settings.baseCurrency, settings.currencyRoundingIncrement, settings.currencyRoundingMode],
+  );
+
+  const settingsCurrencyCode = useMemo(
+    () => currencyCodeFromSettings(settings.baseCurrency),
+    [settings.baseCurrency],
   );
 
   useEffect(() => {
@@ -324,19 +326,19 @@ export default function ProductDetailsApp() {
                     </div>
                     <div className="rounded-xl border border-border bg-paper/55 px-3 py-2">
                       <p className="font-mono text-xs">Currency</p>
-                      <p className="mt-1 font-semibold text-ink">{sheet.currency}</p>
+                      <p className="mt-1 font-semibold text-ink">{settingsCurrencyCode}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <KpiCard label="Batch Total" value={formatMoney(totals.batchTotalCents, sheet.currency)} />
+                  <KpiCard label="Batch Total" value={formatMoney(totals.batchTotalCents)} />
                   <KpiCard
                     label="Unit Cost"
                     value={
                       totals.costPerUnitCents === null
                         ? "--"
-                        : formatMoney(totals.costPerUnitCents, sheet.currency)
+                        : formatMoney(totals.costPerUnitCents)
                     }
                   />
                   <KpiCard
@@ -344,7 +346,7 @@ export default function ProductDetailsApp() {
                     value={
                       totals.pricePerUnitCents === null
                         ? "--"
-                        : formatMoney(totals.pricePerUnitCents, sheet.currency)
+                        : formatMoney(totals.pricePerUnitCents)
                     }
                   />
                   <KpiCard
@@ -368,9 +370,9 @@ export default function ProductDetailsApp() {
 
                 {activeTab === "overview" ? (
                   <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <InfoCard label="Materials + Waste" value={formatMoney(totals.materialsWithWasteCents, sheet.currency)} />
-                    <InfoCard label="Labor" value={formatMoney(totals.laborSubtotalCents, sheet.currency)} />
-                    <InfoCard label="Overhead" value={formatMoney(totals.overheadTotalCents, sheet.currency)} />
+                    <InfoCard label="Materials + Waste" value={formatMoney(totals.materialsWithWasteCents)} />
+                    <InfoCard label="Labor" value={formatMoney(totals.laborSubtotalCents)} />
+                    <InfoCard label="Overhead" value={formatMoney(totals.overheadTotalCents)} />
                     <InfoCard label="Markup %" value={`${sheet.markupPct}%`} />
                     <InfoCard label="Tax %" value={`${sheet.taxPct}%`} />
                     <InfoCard label="Waste %" value={`${sheet.wastePct}%`} />
@@ -398,7 +400,7 @@ export default function ProductDetailsApp() {
                               <td className="p-2 font-mono text-xs text-muted">{row.category}</td>
                               <td className="p-2 text-ink">{row.label}</td>
                               <td className="p-2 font-mono text-xs text-muted">{row.quantity}</td>
-                              <td className="p-2 font-mono text-xs text-ink">{formatMoney(row.totalCents, sheet.currency)}</td>
+                              <td className="p-2 font-mono text-xs text-ink">{formatMoney(row.totalCents)}</td>
                             </tr>
                           ))}
 

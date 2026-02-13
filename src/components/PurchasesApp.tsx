@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { currencySymbol, formatCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
+import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
   readLocalMaterialRecords,
@@ -192,26 +193,19 @@ export default function PurchasesApp() {
   );
 
   const formatMoney = useCallback(
-    (cents: number, currency = settings.baseCurrency) =>
-      formatCents(cents, currency, {
-        currencyDisplay: settings.currencyDisplay,
-        roundingIncrementCents: settings.currencyRoundingIncrement,
-        roundingMode: settings.currencyRoundingMode,
-      }),
-    [
-      settings.baseCurrency,
-      settings.currencyDisplay,
-      settings.currencyRoundingIncrement,
-      settings.currencyRoundingMode,
-    ],
+    (cents: number) =>
+      formatCentsWithSettingsSymbol(
+        cents,
+        settings.baseCurrency,
+        settings.currencyRoundingIncrement,
+        settings.currencyRoundingMode,
+      ),
+    [settings.baseCurrency, settings.currencyRoundingIncrement, settings.currencyRoundingMode],
   );
 
   const currencyPrefix = useMemo(
-    () =>
-      settings.currencyDisplay === "code"
-        ? settings.baseCurrency
-        : currencySymbol(settings.baseCurrency),
-    [settings.baseCurrency, settings.currencyDisplay],
+    () => currencySymbolFromSettings(settings.baseCurrency),
+    [settings.baseCurrency],
   );
 
   useEffect(() => {
@@ -730,7 +724,7 @@ export default function PurchasesApp() {
                       </td>
                       <td className="p-2">
                         <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
-                          {formatMoney(row.totalCostCents, settings.baseCurrency)}
+                          {formatMoney(row.totalCostCents)}
                         </p>
                       </td>
                       <td className="p-2">
@@ -778,10 +772,7 @@ export default function PurchasesApp() {
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
               Total purchases value:{" "}
               <span className="font-mono text-ink">
-                {formatMoney(
-                  filteredPurchases.reduce((sum, row) => sum + row.totalCostCents, 0),
-                  settings.baseCurrency,
-                )}
+                {formatMoney(filteredPurchases.reduce((sum, row) => sum + row.totalCostCents, 0))}
               </span>
             </div>
           </section>

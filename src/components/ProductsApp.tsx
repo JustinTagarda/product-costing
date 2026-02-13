@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals, createDemoSheet } from "@/lib/costing";
 import type { CostSheet, StoredData } from "@/lib/costing";
-import { formatCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
+import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -86,18 +87,14 @@ export default function ProductsApp() {
   );
 
   const formatMoney = useCallback(
-    (cents: number, currency = settings.baseCurrency) =>
-      formatCents(cents, currency, {
-        currencyDisplay: settings.currencyDisplay,
-        roundingIncrementCents: settings.currencyRoundingIncrement,
-        roundingMode: settings.currencyRoundingMode,
-      }),
-    [
-      settings.baseCurrency,
-      settings.currencyDisplay,
-      settings.currencyRoundingIncrement,
-      settings.currencyRoundingMode,
-    ],
+    (cents: number) =>
+      formatCentsWithSettingsSymbol(
+        cents,
+        settings.baseCurrency,
+        settings.currencyRoundingIncrement,
+        settings.currencyRoundingMode,
+      ),
+    [settings.baseCurrency, settings.currencyRoundingIncrement, settings.currencyRoundingMode],
   );
 
   useEffect(() => {
@@ -277,11 +274,11 @@ export default function ProductsApp() {
                       <tr key={sheet.id} className="border-t border-border">
                         <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
                         <td className="p-2 font-mono text-xs text-muted">{sheet.sku || "-"}</td>
-                        <td className="p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents, sheet.currency)}</td>
+                        <td className="p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>
                         <td className="p-2 font-mono text-xs text-ink">
                           {totals.costPerUnitCents === null
                             ? "--"
-                            : formatMoney(totals.costPerUnitCents, sheet.currency)}
+                            : formatMoney(totals.costPerUnitCents)}
                         </td>
                         <td className="p-2 font-mono text-xs text-muted">
                           {totals.marginPct === null ? "--" : `${totals.marginPct.toFixed(1)}%`}

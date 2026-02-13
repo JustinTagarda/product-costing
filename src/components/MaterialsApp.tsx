@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { currencySymbol, formatCents, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
+import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
   makeBlankMaterial,
@@ -144,23 +145,20 @@ export default function MaterialsApp() {
   );
 
   const currencyPrefix = useMemo(
-    () =>
-      settings.currencyDisplay === "code"
-        ? settings.baseCurrency
-        : currencySymbol(settings.baseCurrency),
-    [settings.baseCurrency, settings.currencyDisplay],
+    () => currencySymbolFromSettings(settings.baseCurrency),
+    [settings.baseCurrency],
   );
 
   const formatSettingsMoney = useCallback(
     (cents: number) =>
-      formatCents(cents, settings.baseCurrency, {
-        currencyDisplay: settings.currencyDisplay,
-        roundingIncrementCents: settings.currencyRoundingIncrement,
-        roundingMode: settings.currencyRoundingMode,
-      }),
+      formatCentsWithSettingsSymbol(
+        cents,
+        settings.baseCurrency,
+        settings.currencyRoundingIncrement,
+        settings.currencyRoundingMode,
+      ),
     [
       settings.baseCurrency,
-      settings.currencyDisplay,
       settings.currencyRoundingIncrement,
       settings.currencyRoundingMode,
     ],
