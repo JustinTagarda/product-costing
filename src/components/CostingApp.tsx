@@ -1030,9 +1030,8 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="p-2">
-                      <div className="overflow-x-auto px-2 pb-2">
-                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
+                    <div className="overflow-x-auto">
+                      <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
@@ -1153,10 +1152,10 @@ export default function CostingApp() {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
-                      </div>
+                      </table>
+                    </div>
 
-                      <div className="flex flex-wrap gap-3 border-t border-border px-4 py-3">
+                    <div className="flex flex-wrap gap-3 border-t border-border px-4 py-3">
                         <div className="flex-1">
                           <label className="block font-mono text-xs text-muted">Waste %</label>
                           <input
@@ -1180,7 +1179,6 @@ export default function CostingApp() {
                           </p>
                         </div>
                       </div>
-                    </div>
                   </section>
 
                   <section className={panelClassName()}>
@@ -1203,9 +1201,8 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="p-2">
-                      <div className="overflow-x-auto px-2 pb-2">
-                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
+                    <div className="overflow-x-auto">
+                      <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
@@ -1312,16 +1309,15 @@ export default function CostingApp() {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
-                      </div>
+                      </table>
+                    </div>
 
-                      <div className="border-t border-border px-4 py-3">
+                    <div className="border-t border-border px-4 py-3">
                         <p className="font-mono text-xs text-muted">Labor subtotal</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                           {formatMoney(totals.laborSubtotalCents)}
                         </p>
                       </div>
-                    </div>
                   </section>
 
                   <section className={panelClassName()}>
@@ -1349,9 +1345,8 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="p-2">
-                      <div className="overflow-x-auto px-2 pb-2">
-                        <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
+                    <div className="overflow-x-auto">
+                      <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
@@ -1486,10 +1481,10 @@ export default function CostingApp() {
                               );
                             })}
                           </tbody>
-                        </table>
-                      </div>
+                      </table>
+                    </div>
 
-                      <div className="border-t border-border px-4 py-3">
+                    <div className="border-t border-border px-4 py-3">
                         <p className="font-mono text-xs text-muted">Overhead total</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                           {formatMoney(totals.overheadTotalCents)}{" "}
@@ -1499,7 +1494,6 @@ export default function CostingApp() {
                           </span>
                         </p>
                       </div>
-                    </div>
                   </section>
 
                   <section className={panelClassName()}>
