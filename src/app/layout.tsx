@@ -28,13 +28,6 @@ export default function RootLayout({
           </div>
           <div className="app-global-footer__row">
             <span>Stack: Next.js, React, TypeScript, Tailwind CSS</span>
-            <a
-              href="https://github.com/JustinTagarda/product-costing"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Repo: github.com/JustinTagarda/product-costing
-            </a>
             <span>Hosting: Vercel</span>
             <span>Database/Auth: Supabase (Postgres + Google OAuth)</span>
           </div>
