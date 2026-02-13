@@ -366,26 +366,39 @@ function SidebarSections({
           {compact ? <span className={compactLabelClasses || "md:hidden"}>L</span> : null}
         </button>
 
-        <div className="mt-3 border-t border-zinc-300/80 pt-3">
+        <footer className="mt-3 border-t border-zinc-300/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
             <p className="text-center font-mono text-[10px] text-muted" title="Created by Justiniano Tagarda">
               JT
+              <span className="sr-only">Created by Justiniano Tagarda</span>
             </p>
           ) : (
             <div className="space-y-1 text-[10px] leading-4 text-muted">
-              <p>Created by: Justiniano Tagarda</p>
-              <a
-                href="mailto:justintagarda@gmail.com"
-                className="block w-fit text-ink hover:underline"
-              >
-                justintagarda@gmail.com
-              </a>
-              <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
-              <p>Hosting: Vercel</p>
-              <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
+              <p>
+                <span className="font-semibold text-ink">Created by:</span> Justiniano Tagarda
+              </p>
+              <address className="not-italic">
+                <a
+                  href="mailto:justintagarda@gmail.com"
+                  className="text-ink hover:underline"
+                >
+                  Email: justintagarda@gmail.com
+                </a>
+              </address>
+              <p>
+                <span className="font-semibold text-ink">Stack:</span> Next.js, React, TypeScript,
+                Tailwind CSS
+              </p>
+              <p>
+                <span className="font-semibold text-ink">Hosting:</span> Vercel
+              </p>
+              <p>
+                <span className="font-semibold text-ink">Database/Auth:</span> Supabase (Postgres +
+                Google OAuth)
+              </p>
             </div>
           )}
-        </div>
+        </footer>
       </div>
     </>
   );
