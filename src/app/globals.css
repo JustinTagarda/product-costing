@@ -23,17 +23,16 @@
   --color-border: var(--border);
 
   /* Fonts */
-  --font-sans: var(--font-body);
-  --font-serif: var(--font-display);
-  --font-mono: var(--font-code);
+  --font-sans: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 body {
   min-height: 100dvh;
   background-color: var(--paper);
   color: var(--ink);
-  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", sans-serif;
+  font-family: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
   text-rendering: geometricPrecision;
 }
 
