@@ -90,26 +90,26 @@ body {
 }
 
 table {
-  border-collapse: separate;
+  border-collapse: collapse;
   border-spacing: 0;
 }
 
-table > tbody > tr > th,
-table > tbody > tr > td {
+table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
   border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  padding: 0.625rem 0.75rem !important;
 }
 
-table > :is(thead, tbody, tfoot) > tr > :not(:last-child) {
-  border-right: 1px solid var(--border);
+table > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child {
+  border-left: 0;
 }
 
-table[data-input-layout] {
-  border-collapse: separate;
-  border-spacing: 0;
+table > thead > tr:first-child > :is(th, td) {
+  border-top: 0;
 }
 
-table[data-input-layout] td {
-  padding: 0.35rem;
+table > thead > tr > th {
+  background-color: color-mix(in srgb, var(--paper) 92%, #f4f4f5 8%);
 }
 
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
