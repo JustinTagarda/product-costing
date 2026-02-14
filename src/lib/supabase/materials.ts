@@ -24,7 +24,7 @@ export type DbMaterialInsert = {
   name: string;
   code: string;
   category: string;
-  usable_unit: string;
+  unit: string;
   weighted_average_cost_cents: number;
   supplier: string;
   last_purchase_cost_cents: number;
@@ -39,7 +39,7 @@ export type DbMaterialUpdate = Partial<{
   name: string;
   code: string;
   category: string;
-  usable_unit: string;
+  unit: string;
   weighted_average_cost_cents: number | string;
   supplier: string;
   last_purchase_cost_cents: number | string;
@@ -54,7 +54,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export function rowToMaterial(row: DbMaterialRow): MaterialRecord {
-  const usableUnit = row.usable_unit ?? row.unit ?? "ea";
+  const unit = row.unit ?? row.usable_unit ?? "ea";
   const weightedAverageCostCents =
     row.weighted_average_cost_cents ?? row.unit_cost_cents ?? 0;
 
@@ -63,7 +63,7 @@ export function rowToMaterial(row: DbMaterialRow): MaterialRecord {
     name: row.name ?? "",
     code: row.code ?? "",
     category: row.category ?? "",
-    unit: usableUnit,
+    unit,
     unitCostCents: Math.max(0, Math.round(asNumber(weightedAverageCostCents, 0))),
     supplier: row.supplier ?? "",
     lastPurchaseCostCents: Math.max(0, Math.round(asNumber(row.last_purchase_cost_cents, 0))),
@@ -79,7 +79,7 @@ export function materialToRowUpdate(material: MaterialRecord): DbMaterialUpdate 
     name: material.name,
     code: material.code,
     category: material.category,
-    usable_unit: material.unit,
+    unit: material.unit,
     weighted_average_cost_cents: material.unitCostCents,
     supplier: material.supplier,
     last_purchase_cost_cents: material.lastPurchaseCostCents,
@@ -101,7 +101,7 @@ export function makeBlankMaterialInsert(userId: string, defaults?: MaterialDefau
     name: blank.name,
     code: blank.code,
     category: blank.category,
-    usable_unit: unit,
+    unit,
     weighted_average_cost_cents: blank.unitCostCents,
     supplier: blank.supplier,
     last_purchase_cost_cents: blank.lastPurchaseCostCents,

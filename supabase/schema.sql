@@ -58,7 +58,7 @@ create table if not exists public.materials (
   name text not null default '',
   code text not null default '',
   category text not null default '',
-  usable_unit text not null default 'ea',
+  unit text not null default 'ea',
   weighted_average_cost_cents integer not null default 0 check (weighted_average_cost_cents >= 0),
   supplier text not null default '',
   last_purchase_cost_cents integer not null default 0 check (last_purchase_cost_cents >= 0),
@@ -76,15 +76,15 @@ begin
     from information_schema.columns
     where table_schema = 'public'
       and table_name = 'materials'
-      and column_name = 'unit'
+      and column_name = 'usable_unit'
   ) and not exists (
     select 1
     from information_schema.columns
     where table_schema = 'public'
       and table_name = 'materials'
-      and column_name = 'usable_unit'
+      and column_name = 'unit'
   ) then
-    alter table public.materials rename column unit to usable_unit;
+    alter table public.materials rename column usable_unit to unit;
   end if;
 
   if not exists (
@@ -92,9 +92,27 @@ begin
     from information_schema.columns
     where table_schema = 'public'
       and table_name = 'materials'
-      and column_name = 'usable_unit'
+      and column_name = 'unit'
   ) then
-    alter table public.materials add column usable_unit text not null default 'ea';
+    alter table public.materials add column unit text not null default 'ea';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'usable_unit'
+  ) and exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'unit'
+  ) then
+    update public.materials
+      set unit = coalesce(nullif(unit, ''), usable_unit, 'ea');
+    alter table public.materials drop column usable_unit;
   end if;
 
   if exists (
@@ -114,7 +132,7 @@ begin
   end if;
 end $$;
 
-comment on column public.materials.usable_unit is 'UI: Usable Unit';
+comment on column public.materials.unit is 'UI: Unit';
 
 create index if not exists materials_user_id_updated_at_idx
   on public.materials (user_id, updated_at desc);

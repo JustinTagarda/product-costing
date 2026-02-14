@@ -338,7 +338,7 @@ export default function PurchasesApp() {
         .from("materials")
         .update({
           supplier: next.supplier,
-          usable_unit: next.unit,
+          unit: next.unit,
           last_purchase_cost_cents: next.unitCostCents,
           last_purchase_date: next.purchaseDate || null,
           updated_at: updatedAt,
