@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { formatShortDate } from "@/lib/format";
 import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
@@ -136,15 +135,6 @@ export default function MaterialsApp() {
     authReady,
     onError: (message) => toast("error", message),
   });
-
-  const formatAppDate = useCallback(
-    (iso: string) =>
-      formatShortDate(iso, {
-        dateFormat: settings.dateFormat,
-        timezone: settings.timezone,
-      }),
-    [settings.dateFormat, settings.timezone],
-  );
 
   const currencyPrefix = useMemo(
     () => currencySymbolFromSettings(settings.baseCurrency),
@@ -490,21 +480,13 @@ export default function MaterialsApp() {
             </div>
 
             <div className="overflow-x-auto">
-              <table data-input-layout className="min-w-[1160px] w-full text-left text-sm">
+              <table data-input-layout className="min-w-[760px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Category</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Usable Unit</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Supplier</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
-                      Last Purchase Cost
-                    </th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Last Purchase Date</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Active</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
@@ -513,27 +495,10 @@ export default function MaterialsApp() {
                     <tr key={row.id} className="align-top">
                       <td className="p-2">
                         <input
-                          className={inputBase + " " + inputMono}
-                          value={row.code}
-                          placeholder="-"
-                          readOnly
-                          aria-label="Material code"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
                           className={inputBase}
                           value={row.name}
                           onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, name: e.target.value }))}
                           placeholder="e.g., Canvas fabric"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          className={inputBase}
-                          value={row.category}
-                          onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, category: e.target.value }))}
-                          placeholder="e.g., Fabric"
                         />
                       </td>
                       <td className="p-2">
@@ -565,44 +530,6 @@ export default function MaterialsApp() {
                         </div>
                       </td>
                       <td className="p-2">
-                        <input
-                          className={inputBase}
-                          value={row.supplier}
-                          onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, supplier: e.target.value }))}
-                          placeholder="Supplier"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                            {currencyPrefix}
-                          </span>
-                          <input
-                            className={inputBase + " pl-7 " + inputMono}
-                            type="number"
-                            step={0.01}
-                            min={0}
-                            value={centsToMoneyString(row.lastPurchaseCostCents)}
-                            onChange={(e) =>
-                              updateMaterial(row.id, (x) => ({
-                                ...x,
-                                lastPurchaseCostCents: parseMoneyToCents(e.target.value),
-                              }))
-                            }
-                          />
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <input
-                          className={inputBase + " " + inputMono}
-                          type="date"
-                          value={row.lastPurchaseDate}
-                          onChange={(e) =>
-                            updateMaterial(row.id, (x) => ({ ...x, lastPurchaseDate: e.target.value }))
-                          }
-                        />
-                      </td>
-                      <td className="p-2">
                         <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/55 px-2 py-1.5 text-xs text-ink">
                           <input
                             type="checkbox"
@@ -614,7 +541,6 @@ export default function MaterialsApp() {
                           {row.isActive ? "Yes" : "No"}
                         </label>
                       </td>
-                      <td className="p-2 font-mono text-xs text-muted">{formatAppDate(row.updatedAt)}</td>
                       <td className="p-2">
                         <button
                           type="button"
@@ -629,7 +555,7 @@ export default function MaterialsApp() {
 
                   {!loading && filteredMaterials.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted">
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">
                         No materials found. Create one using <span className="font-semibold">New material</span>.
                       </td>
                     </tr>
