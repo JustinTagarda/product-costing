@@ -87,6 +87,16 @@ begin
     alter table public.materials rename column unit to usable_unit;
   end if;
 
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'usable_unit'
+  ) then
+    alter table public.materials add column usable_unit text not null default 'ea';
+  end if;
+
   if exists (
     select 1
     from information_schema.columns
@@ -103,6 +113,8 @@ begin
     alter table public.materials rename column unit_cost_cents to weighted_average_cost_cents;
   end if;
 end $$;
+
+comment on column public.materials.usable_unit is 'UI: Usable Unit';
 
 create index if not exists materials_user_id_updated_at_idx
   on public.materials (user_id, updated_at desc);
