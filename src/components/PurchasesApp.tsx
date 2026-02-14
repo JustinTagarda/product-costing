@@ -37,6 +37,17 @@ import { goToWelcomePage } from "@/lib/navigation";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
+type DraftPurchaseRow = {
+  materialId: string | null;
+  description: string;
+  variation: string;
+  quantity: number;
+  unitCostCents: number;
+  usableQuantity: number;
+  purchaseDate: string;
+  marketplace: PurchaseMarketplace;
+  store: string;
+};
 
 type MaterialOption = Pick<
   MaterialRecord,
@@ -52,6 +63,23 @@ const marketplaceLabels: Record<PurchaseMarketplace, string> = {
   local: "Local",
   other: "Other",
 };
+
+function makeDraftPurchase(defaults?: {
+  purchaseDate?: string;
+  marketplace?: PurchaseMarketplace;
+}): DraftPurchaseRow {
+  return {
+    materialId: null,
+    description: "",
+    variation: "",
+    quantity: 0,
+    unitCostCents: 0,
+    usableQuantity: 0,
+    purchaseDate: defaults?.purchaseDate || currentDateInputValue(),
+    marketplace: defaults?.marketplace || "local",
+    store: "",
+  };
+}
 
 function parseNumber(value: string): number {
   const n = Number(value);
@@ -198,6 +226,10 @@ export default function PurchasesApp() {
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [query, setQuery] = useState("");
+  const [draftPurchase, setDraftPurchase] = useState<DraftPurchaseRow>(() =>
+    makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }),
+  );
+  const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -205,6 +237,9 @@ export default function PurchasesApp() {
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
+  const savingDraftPurchaseRef = useRef(false);
+  const draftRowRef = useRef<HTMLTableRowElement | null>(null);
+  const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -237,6 +272,20 @@ export default function PurchasesApp() {
     () => currencySymbolFromSettings(settings.baseCurrency),
     [settings.baseCurrency],
   );
+
+  const focusDraftMaterialSelect = useCallback((scrollBehavior: ScrollBehavior = "smooth") => {
+    const row = draftRowRef.current;
+    if (row) {
+      const rect = row.getBoundingClientRect();
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      if (!isVisible) {
+        row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+      }
+    }
+    window.requestAnimationFrame(() => {
+      draftMaterialSelectRef.current?.focus();
+    });
+  }, []);
 
   function normalizePurchaseRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
     const quantity = Number.isFinite(row.quantity) ? Math.max(0, row.quantity) : 0;
@@ -479,43 +528,145 @@ export default function PurchasesApp() {
     });
   }
 
-  async function addPurchase() {
-    const firstMaterial = materials[0] ?? null;
-    const defaults = {
-      currency: settings.baseCurrency,
-      purchaseDate: currentDateInputValue(),
-      materialId: firstMaterial?.id ?? null,
-      materialName: firstMaterial?.name ?? "",
-      store: firstMaterial?.supplier ?? "",
-      supplier: firstMaterial?.supplier ?? "",
-      marketplace: "local",
-      unit: firstMaterial?.unit ?? settings.defaultMaterialUnit,
-    };
+  function hasDraftPurchaseValues(): boolean {
+    return (
+      draftPurchase.materialId !== null ||
+      draftPurchase.description.trim().length > 0 ||
+      draftPurchase.variation.trim().length > 0 ||
+      draftPurchase.store.trim().length > 0 ||
+      draftPurchase.quantity > 0 ||
+      draftPurchase.unitCostCents > 0 ||
+      draftPurchase.usableQuantity > 0
+    );
+  }
 
-    if (isCloudMode && supabase && userId) {
-      const insert = makeBlankPurchaseInsert(userId, defaults);
-      const { data, error } = await supabase.from("purchases").insert(insert).select("*");
-      if (error || !data?.[0]) {
-        toast("error", error?.message || "Could not create purchase.");
+  function buildPurchaseFromDraft(id: string): PurchaseRecord {
+    const material = draftPurchase.materialId ? (materialById.get(draftPurchase.materialId) ?? null) : null;
+    const quantity = Math.max(0, draftPurchase.quantity);
+    const unitCostCents = Math.max(0, Math.round(draftPurchase.unitCostCents));
+    const usableQuantity = draftPurchase.usableQuantity > 0
+      ? Math.max(0, draftPurchase.usableQuantity)
+      : quantity;
+    const purchaseDate = draftPurchase.purchaseDate || currentDateInputValue();
+    const store = draftPurchase.store.trim() || material?.supplier || "";
+    const materialName = material?.name ?? "";
+    const unit = material?.unit ?? settings.defaultMaterialUnit;
+    const total = computePurchaseTotalCents(quantity, unitCostCents);
+
+    const base = makeBlankPurchase(id, {
+      currency: settings.baseCurrency,
+      purchaseDate,
+      materialId: draftPurchase.materialId,
+      materialName,
+      store,
+      supplier: store,
+      marketplace: draftPurchase.marketplace,
+      unit,
+    });
+
+    return normalizePurchaseRow(
+      {
+        ...base,
+        materialId: draftPurchase.materialId,
+        materialName,
+        description: draftPurchase.description.trim(),
+        variation: draftPurchase.variation.trim(),
+        quantity,
+        usableQuantity,
+        unit,
+        unitCostCents,
+        costCents: total,
+        totalCostCents: total,
+        purchaseDate,
+        marketplace: draftPurchase.marketplace,
+        store,
+        supplier: store,
+      },
+      new Date().toISOString(),
+    );
+  }
+
+  async function commitDraftPurchase(): Promise<void> {
+    if (savingDraftPurchaseRef.current) return;
+    if (!hasDraftPurchaseValues()) return;
+
+    savingDraftPurchaseRef.current = true;
+    setSavingDraftPurchase(true);
+
+    try {
+      const draftRecord = buildPurchaseFromDraft("tmp");
+
+      if (isCloudMode && supabase && userId) {
+        const insert = makeBlankPurchaseInsert(userId, {
+          currency: draftRecord.currency,
+          purchaseDate: draftRecord.purchaseDate,
+          materialId: draftRecord.materialId,
+          materialName: draftRecord.materialName,
+          description: draftRecord.description,
+          variation: draftRecord.variation,
+          usableQuantity: draftRecord.usableQuantity,
+          costCents: draftRecord.costCents,
+          marketplace: draftRecord.marketplace,
+          store: draftRecord.store,
+          supplier: draftRecord.supplier,
+          unit: draftRecord.unit,
+        });
+        insert.purchase_date = draftRecord.purchaseDate;
+        insert.material_id = draftRecord.materialId;
+        insert.material_name = draftRecord.materialName;
+        insert.description = draftRecord.description;
+        insert.variation = draftRecord.variation;
+        insert.supplier = draftRecord.supplier;
+        insert.store = draftRecord.store;
+        insert.quantity = draftRecord.quantity;
+        insert.usable_quantity = draftRecord.usableQuantity;
+        insert.unit = draftRecord.unit;
+        insert.unit_cost_cents = draftRecord.unitCostCents;
+        insert.total_cost_cents = draftRecord.totalCostCents;
+        insert.cost_cents = draftRecord.costCents;
+        insert.currency = draftRecord.currency;
+        insert.marketplace = draftRecord.marketplace;
+
+        const { data, error } = await supabase.from("purchases").insert(insert).select("*");
+        if (error || !data?.[0]) {
+          toast("error", error?.message || "Could not create purchase.");
+          return;
+        }
+        const row = normalizePurchaseRow(
+          {
+            ...rowToPurchase(data[0] as DbPurchaseRow),
+            currency: settings.baseCurrency,
+          },
+          new Date().toISOString(),
+        );
+        setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
+        await syncMaterialFromPurchase(row);
+        setDraftPurchase(
+          makeDraftPurchase({
+            purchaseDate: currentDateInputValue(),
+            marketplace: draftPurchase.marketplace,
+          }),
+        );
+        window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
+        toast("success", "Purchase created.");
         return;
       }
-      const row = normalizePurchaseRow(
-        {
-          ...rowToPurchase(data[0] as DbPurchaseRow),
-          currency: settings.baseCurrency,
-        },
-        new Date().toISOString(),
-      );
+
+      const row = buildPurchaseFromDraft(makeId("pur"));
       setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
       await syncMaterialFromPurchase(row);
-      toast("success", "Purchase created.");
-      return;
+      setDraftPurchase(
+        makeDraftPurchase({
+          purchaseDate: currentDateInputValue(),
+          marketplace: draftPurchase.marketplace,
+        }),
+      );
+      window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
+      toast("success", "Local purchase created.");
+    } finally {
+      savingDraftPurchaseRef.current = false;
+      setSavingDraftPurchase(false);
     }
-
-    const row = normalizePurchaseRow(makeBlankPurchase(makeId("pur"), defaults), new Date().toISOString());
-    setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
-    await syncMaterialFromPurchase(row);
-    toast("success", "Local purchase created.");
   }
 
   async function deletePurchase(id: string) {
@@ -585,7 +736,7 @@ export default function PurchasesApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
-        onQuickAdd={() => void addPurchase()}
+        onQuickAdd={() => focusDraftMaterialSelect()}
         quickAddLabel="+ New Purchase"
         profileLabel={session?.user?.email || "Profile"}
       />
@@ -610,7 +761,7 @@ export default function PurchasesApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => void addPurchase()}
+                onClick={() => focusDraftMaterialSelect()}
               >
                 New purchase
               </button>
@@ -841,6 +992,176 @@ export default function PurchasesApp() {
                       </td>
                     </tr>
                   ) : null}
+
+                  <tr
+                    ref={draftRowRef}
+                    className="align-middle"
+                    onBlurCapture={(e) => {
+                      const nextFocus = e.relatedTarget as Node | null;
+                      if (nextFocus && e.currentTarget.contains(nextFocus)) return;
+                      void commitDraftPurchase();
+                    }}
+                    onKeyDownCapture={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      void commitDraftPurchase();
+                    }}
+                  >
+                    <td className="p-2 align-middle">
+                      <select
+                        ref={draftMaterialSelectRef}
+                        className={inputBase}
+                        value={draftPurchase.materialId ?? ""}
+                        onChange={(e) => {
+                          const materialId = e.target.value || null;
+                          const material = materialId ? materialById.get(materialId) ?? null : null;
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            materialId,
+                            store: prev.store || material?.supplier || "",
+                          }));
+                        }}
+                        disabled={savingDraftPurchase}
+                      >
+                        <option value="">Select material</option>
+                        {materials.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                            {item.isActive ? "" : " (inactive)"}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="p-2 align-middle">
+                      <input
+                        className={inputBase}
+                        value={draftPurchase.description}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, description: e.target.value }))
+                        }
+                        placeholder="Description"
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="p-2 align-middle">
+                      <input
+                        className={inputBase}
+                        value={draftPurchase.variation}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, variation: e.target.value }))
+                        }
+                        placeholder="Variation"
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="w-[80px] p-2 align-middle">
+                      <input
+                        className={inputBase + " " + inputMono}
+                        type="number"
+                        step={0.001}
+                        min={0}
+                        value={draftPurchase.quantity}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            quantity: Math.max(0, parseNumber(e.target.value)),
+                          }))
+                        }
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="w-[100px] p-2 align-middle">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
+                          {currencyPrefix}
+                        </span>
+                        <input
+                          className={inputBase + " pl-7 " + inputMono}
+                          type="number"
+                          step={0.01}
+                          min={0}
+                          value={centsToMoneyString(draftPurchase.unitCostCents)}
+                          onChange={(e) =>
+                            setDraftPurchase((prev) => ({
+                              ...prev,
+                              unitCostCents: parseMoneyToCents(e.target.value),
+                            }))
+                          }
+                          disabled={savingDraftPurchase}
+                        />
+                      </div>
+                    </td>
+                    <td className="w-[120px] p-2 align-middle">
+                      <p className="px-3 py-2 font-mono text-sm text-ink">
+                        {formatMoney(computePurchaseTotalCents(draftPurchase.quantity, draftPurchase.unitCostCents))}
+                      </p>
+                    </td>
+                    <td className="w-[80px] p-2 align-middle">
+                      <input
+                        className={inputBase + " " + inputMono}
+                        type="number"
+                        step={0.001}
+                        min={0}
+                        value={draftPurchase.usableQuantity}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            usableQuantity: Math.max(0, parseNumber(e.target.value)),
+                          }))
+                        }
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle">
+                      <input
+                        className={inputBase + " " + inputMono}
+                        type="date"
+                        value={draftPurchase.purchaseDate}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            purchaseDate: e.target.value || currentDateInputValue(),
+                          }))
+                        }
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="w-[120px] p-2 align-middle">
+                      <select
+                        className={inputBase}
+                        value={draftPurchase.marketplace}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            marketplace: normalizePurchaseMarketplace(e.target.value, "other"),
+                          }))
+                        }
+                        disabled={savingDraftPurchase}
+                      >
+                        {PURCHASE_MARKETPLACES.map((item) => (
+                          <option key={item} value={item}>
+                            {marketplaceLabels[item]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="w-[120px] p-2 align-middle">
+                      <input
+                        className={inputBase}
+                        value={draftPurchase.store}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, store: e.target.value }))
+                        }
+                        placeholder="Store"
+                        disabled={savingDraftPurchase}
+                      />
+                    </td>
+                    <td className="w-[75px] p-2 align-middle">
+                      <span className="font-mono text-[11px] text-muted">
+                        {savingDraftPurchase ? "Saving..." : "Auto"}
+                      </span>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
