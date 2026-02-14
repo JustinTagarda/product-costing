@@ -7,8 +7,10 @@ export type DbMaterialRow = {
   name: string;
   code: string;
   category: string;
-  unit: string;
-  unit_cost_cents: number | string;
+  usable_unit?: string | null;
+  weighted_average_cost_cents?: number | string | null;
+  unit?: string | null;
+  unit_cost_cents?: number | string | null;
   supplier: string;
   last_purchase_cost_cents: number | string;
   last_purchase_date: string | null;
@@ -17,17 +19,34 @@ export type DbMaterialRow = {
   updated_at: string;
 };
 
-export type DbMaterialInsert = Omit<DbMaterialRow, "id" | "created_at" | "updated_at"> & {
+export type DbMaterialInsert = {
+  user_id: string;
+  name: string;
+  code: string;
+  category: string;
+  usable_unit: string;
+  weighted_average_cost_cents: number;
+  supplier: string;
+  last_purchase_cost_cents: number;
+  last_purchase_date: string | null;
+  is_active: boolean;
   id?: string;
   created_at?: string;
   updated_at?: string;
 };
 
-export type DbMaterialUpdate = Partial<
-  Omit<DbMaterialRow, "id" | "user_id" | "created_at" | "updated_at">
-> & {
+export type DbMaterialUpdate = Partial<{
+  name: string;
+  code: string;
+  category: string;
+  usable_unit: string;
+  weighted_average_cost_cents: number | string;
+  supplier: string;
+  last_purchase_cost_cents: number | string;
+  last_purchase_date: string | null;
+  is_active: boolean;
   updated_at?: string;
-};
+}>;
 
 function asNumber(value: unknown, fallback = 0): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -35,13 +54,17 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export function rowToMaterial(row: DbMaterialRow): MaterialRecord {
+  const usableUnit = row.usable_unit ?? row.unit ?? "ea";
+  const weightedAverageCostCents =
+    row.weighted_average_cost_cents ?? row.unit_cost_cents ?? 0;
+
   return {
     id: row.id,
     name: row.name ?? "",
     code: row.code ?? "",
     category: row.category ?? "",
-    unit: row.unit ?? "ea",
-    unitCostCents: Math.max(0, Math.round(asNumber(row.unit_cost_cents, 0))),
+    unit: usableUnit,
+    unitCostCents: Math.max(0, Math.round(asNumber(weightedAverageCostCents, 0))),
     supplier: row.supplier ?? "",
     lastPurchaseCostCents: Math.max(0, Math.round(asNumber(row.last_purchase_cost_cents, 0))),
     lastPurchaseDate: row.last_purchase_date ?? "",
@@ -56,8 +79,8 @@ export function materialToRowUpdate(material: MaterialRecord): DbMaterialUpdate 
     name: material.name,
     code: material.code,
     category: material.category,
-    unit: material.unit,
-    unit_cost_cents: material.unitCostCents,
+    usable_unit: material.unit,
+    weighted_average_cost_cents: material.unitCostCents,
     supplier: material.supplier,
     last_purchase_cost_cents: material.lastPurchaseCostCents,
     last_purchase_date: material.lastPurchaseDate || null,
@@ -78,8 +101,8 @@ export function makeBlankMaterialInsert(userId: string, defaults?: MaterialDefau
     name: blank.name,
     code: blank.code,
     category: blank.category,
-    unit,
-    unit_cost_cents: blank.unitCostCents,
+    usable_unit: unit,
+    weighted_average_cost_cents: blank.unitCostCents,
     supplier: blank.supplier,
     last_purchase_cost_cents: blank.lastPurchaseCostCents,
     last_purchase_date: blank.lastPurchaseDate || null,

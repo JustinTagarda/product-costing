@@ -58,8 +58,8 @@ create table if not exists public.materials (
   name text not null default '',
   code text not null default '',
   category text not null default '',
-  unit text not null default 'ea',
-  unit_cost_cents integer not null default 0 check (unit_cost_cents >= 0),
+  usable_unit text not null default 'ea',
+  weighted_average_cost_cents integer not null default 0 check (weighted_average_cost_cents >= 0),
   supplier text not null default '',
   last_purchase_cost_cents integer not null default 0 check (last_purchase_cost_cents >= 0),
   last_purchase_date date,
@@ -68,6 +68,41 @@ create table if not exists public.materials (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'unit'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'usable_unit'
+  ) then
+    alter table public.materials rename column unit to usable_unit;
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'unit_cost_cents'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'materials'
+      and column_name = 'weighted_average_cost_cents'
+  ) then
+    alter table public.materials rename column unit_cost_cents to weighted_average_cost_cents;
+  end if;
+end $$;
 
 create index if not exists materials_user_id_updated_at_idx
   on public.materials (user_id, updated_at desc);

@@ -426,7 +426,7 @@ export default function MaterialsApp() {
               </p>
               <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">Materials</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-                Central material list for costing. Maintain standard unit costs, last purchase prices, suppliers, and
+                Central material list for costing. Maintain weighted average costs, last purchase prices, suppliers, and
                 active status.
               </p>
               {!supabase ? (
@@ -496,8 +496,8 @@ export default function MaterialsApp() {
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Category</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Usable Unit</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Supplier</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Last Purchase Cost
@@ -639,7 +639,7 @@ export default function MaterialsApp() {
             </div>
 
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
-              Average unit cost (active only):{" "}
+              Average weighted average cost (active only):{" "}
               <span className="font-mono text-ink">
                 {formatSettingsMoney(
                   (() => {
