@@ -638,7 +638,7 @@ export default function MaterialsApp() {
                       </td>
                       <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
                         <div className="flex justify-center">
-                          <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/55 px-2 py-1.5 text-xs text-ink">
+                          <label className="inline-flex items-center gap-2 rounded-lg bg-paper/55 px-2 py-1.5 text-xs text-ink">
                             <input
                               type="checkbox"
                               checked={row.isActive}
