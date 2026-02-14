@@ -60,7 +60,7 @@ table > :is(thead, tbody, tfoot) > tr > th {
 table > :is(thead, tbody, tfoot) > tr > td {
   padding-top: 2px !important;
   padding-bottom: 2px !important;
-  padding-left: 4px !important;
+  padding-left: 8px !important;
   padding-right: 4px !important;
 }
 

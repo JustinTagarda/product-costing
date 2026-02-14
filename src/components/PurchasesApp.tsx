@@ -663,7 +663,9 @@ export default function PurchasesApp() {
                     <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Usable Quantity
                     </th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Purchased Date</th>
+                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                      Purchased Date
+                    </th>
                     <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
                     <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
                     <th className="w-[75px] px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
@@ -756,7 +758,7 @@ export default function PurchasesApp() {
                         </div>
                       </td>
                       <td className="w-[120px] p-2 align-middle">
-                        <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
+                        <p className="px-3 py-2 font-mono text-sm text-ink">
                           {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
                         </p>
                       </td>
@@ -775,7 +777,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle">
+                      <td className="w-[100px] p-2 align-middle">
                         <input
                           className={inputBase + " " + inputMono}
                           type="date"
