@@ -896,14 +896,7 @@ export default function CostingApp() {
           <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <aside className={cardClassName()}>
             <div className="p-3">
-              <div className="flex items-center gap-2">
-                <input
-                  className={inputBase}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search sheets..."
-                  aria-label="Search sheets"
-                />
+              <div className="flex justify-end">
                 <button
                   type="button"
                   className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"

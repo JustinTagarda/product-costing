@@ -431,13 +431,6 @@ export default function MaterialsApp() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <input
-                className={inputBase + " w-[220px]"}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search materials..."
-                aria-label="Search materials"
-              />
               <label className="inline-flex items-center gap-2 rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm text-ink">
                 <input
                   type="checkbox"

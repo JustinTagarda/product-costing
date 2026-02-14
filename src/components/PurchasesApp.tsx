@@ -544,13 +544,6 @@ export default function PurchasesApp() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <input
-                className={inputBase + " w-[240px]"}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search purchases..."
-                aria-label="Search purchases"
-              />
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
