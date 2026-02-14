@@ -98,6 +98,17 @@ table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([typ
   padding-bottom: 8px !important;
 }
 
+table input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+table input[type="number"]::-webkit-outer-spin-button,
+table input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
   outline: none;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent) !important;
