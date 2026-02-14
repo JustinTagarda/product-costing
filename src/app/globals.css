@@ -88,11 +88,15 @@ table
   > :is(thead, tbody, tfoot)
   > tr
   > td
-  input:not([type="checkbox"]):not([type="radio"]):not([class*="pl-"]) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([class*="pl-"]) {
   padding: 8px !important;
 }
 
-table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([type="radio"])[class*="pl-"] {
+table
+  > :is(thead, tbody, tfoot)
+  > tr
+  > td
+  input:not([type="checkbox"]):not([type="radio"]):not([type="date"])[class*="pl-"] {
   padding-top: 8px !important;
   padding-right: 8px !important;
   padding-bottom: 8px !important;
