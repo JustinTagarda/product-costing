@@ -1,7 +1,9 @@
 import {
+  computeUnitCostCentsFromCost,
   computePurchaseTotalCents,
   currentDateInputValue,
   makeBlankPurchase,
+  normalizePurchaseMarketplace,
   type PurchaseRecord,
 } from "@/lib/purchases";
 
@@ -11,12 +13,18 @@ export type DbPurchaseRow = {
   purchase_date: string;
   material_id: string | null;
   material_name: string;
+  description: string | null;
+  variation: string | null;
   supplier: string;
+  store: string | null;
   quantity: number | string;
+  usable_quantity: number | string | null;
   unit: string;
   unit_cost_cents: number | string;
   total_cost_cents: number | string;
+  cost_cents: number | string | null;
   currency: string;
+  marketplace: string | null;
   reference_no: string;
   notes: string;
   created_at: string;
@@ -40,6 +48,12 @@ type PurchaseDefaults = {
   purchaseDate?: string;
   materialId?: string | null;
   materialName?: string;
+  description?: string;
+  variation?: string;
+  usableQuantity?: number;
+  costCents?: number;
+  marketplace?: string;
+  store?: string;
   supplier?: string;
   unit?: string;
 };
@@ -51,19 +65,31 @@ function asNumber(value: unknown, fallback = 0): number {
 
 export function rowToPurchase(row: DbPurchaseRow): PurchaseRecord {
   const quantity = Math.max(0, asNumber(row.quantity, 0));
-  const unitCostCents = Math.max(0, Math.round(asNumber(row.unit_cost_cents, 0)));
+  const usableQuantity = Math.max(0, asNumber(row.usable_quantity, quantity));
   const storedTotal = Math.max(0, Math.round(asNumber(row.total_cost_cents, 0)));
+  const storedCost = Math.max(0, Math.round(asNumber(row.cost_cents, storedTotal)));
+  const fallbackUnitCost = computeUnitCostCentsFromCost(quantity, storedCost);
+  const unitCostCents = Math.max(0, Math.round(asNumber(row.unit_cost_cents, fallbackUnitCost)));
+  const costCents = storedCost || storedTotal || computePurchaseTotalCents(quantity, unitCostCents);
+  const store = row.store ?? row.supplier ?? "";
+  const supplier = row.supplier ?? row.store ?? "";
   return {
     id: row.id,
     purchaseDate: row.purchase_date || currentDateInputValue(),
     materialId: row.material_id ?? null,
     materialName: row.material_name ?? "",
-    supplier: row.supplier ?? "",
+    description: row.description ?? "",
+    variation: row.variation ?? "",
     quantity,
+    usableQuantity,
     unit: row.unit ?? "ea",
     unitCostCents,
-    totalCostCents: storedTotal || computePurchaseTotalCents(quantity, unitCostCents),
+    costCents,
+    totalCostCents: costCents,
     currency: row.currency ?? "USD",
+    marketplace: normalizePurchaseMarketplace(row.marketplace, "other"),
+    store,
+    supplier,
     referenceNo: row.reference_no ?? "",
     notes: row.notes ?? "",
     createdAt: new Date(row.created_at).toISOString(),
@@ -72,17 +98,30 @@ export function rowToPurchase(row: DbPurchaseRow): PurchaseRecord {
 }
 
 export function purchaseToRowUpdate(purchase: PurchaseRecord): DbPurchaseUpdate {
-  const total = computePurchaseTotalCents(purchase.quantity, purchase.unitCostCents);
+  const quantity = Math.max(0, purchase.quantity);
+  const usableQuantity = Math.max(0, purchase.usableQuantity);
+  const costCents = Math.max(0, Math.round(asNumber(purchase.costCents, purchase.totalCostCents)));
+  const unitCostCents = quantity > 0
+    ? computeUnitCostCentsFromCost(quantity, costCents)
+    : Math.max(0, Math.round(asNumber(purchase.unitCostCents, 0)));
+  const supplier = purchase.supplier || purchase.store;
+  const store = purchase.store || purchase.supplier;
   return {
     purchase_date: purchase.purchaseDate || currentDateInputValue(),
     material_id: purchase.materialId,
     material_name: purchase.materialName,
-    supplier: purchase.supplier,
-    quantity: purchase.quantity,
+    description: purchase.description,
+    variation: purchase.variation,
+    supplier,
+    store,
+    quantity,
+    usable_quantity: usableQuantity,
     unit: purchase.unit,
-    unit_cost_cents: purchase.unitCostCents,
-    total_cost_cents: total,
+    unit_cost_cents: unitCostCents,
+    total_cost_cents: costCents,
+    cost_cents: costCents,
     currency: purchase.currency.toUpperCase() || "USD",
+    marketplace: normalizePurchaseMarketplace(purchase.marketplace, "other"),
     reference_no: purchase.referenceNo,
     notes: purchase.notes,
     updated_at: new Date().toISOString(),
@@ -95,6 +134,12 @@ export function makeBlankPurchaseInsert(userId: string, defaults?: PurchaseDefau
     purchaseDate: defaults?.purchaseDate,
     materialId: defaults?.materialId,
     materialName: defaults?.materialName,
+    description: defaults?.description,
+    variation: defaults?.variation,
+    usableQuantity: defaults?.usableQuantity,
+    costCents: defaults?.costCents,
+    marketplace: defaults?.marketplace,
+    store: defaults?.store,
     supplier: defaults?.supplier,
     unit: defaults?.unit,
   });
@@ -103,12 +148,18 @@ export function makeBlankPurchaseInsert(userId: string, defaults?: PurchaseDefau
     purchase_date: blank.purchaseDate,
     material_id: blank.materialId,
     material_name: blank.materialName,
+    description: blank.description,
+    variation: blank.variation,
     supplier: blank.supplier,
+    store: blank.store,
     quantity: blank.quantity,
+    usable_quantity: blank.usableQuantity,
     unit: blank.unit,
     unit_cost_cents: blank.unitCostCents,
     total_cost_cents: blank.totalCostCents,
+    cost_cents: blank.costCents,
     currency: blank.currency,
+    marketplace: blank.marketplace,
     reference_no: blank.referenceNo,
     notes: blank.notes,
   };

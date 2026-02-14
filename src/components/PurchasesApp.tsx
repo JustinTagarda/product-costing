@@ -14,12 +14,16 @@ import {
   type MaterialRecord,
 } from "@/lib/materials";
 import {
+  computeUnitCostCentsFromCost,
   computePurchaseTotalCents,
   createDemoPurchases,
   currentDateInputValue,
   LOCAL_PURCHASES_STORAGE_KEY,
   makeBlankPurchase,
+  normalizePurchaseMarketplace,
+  PURCHASE_MARKETPLACES,
   sortPurchasesByDateDesc,
+  type PurchaseMarketplace,
   type PurchaseRecord,
 } from "@/lib/purchases";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -43,6 +47,12 @@ type MaterialOption = Pick<
 const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 const inputMono = "tabular-nums font-mono tracking-tight";
+const marketplaceLabels: Record<PurchaseMarketplace, string> = {
+  shopee: "Shopee",
+  lazada: "Lazada",
+  local: "Local",
+  other: "Other",
+};
 
 function parseNumber(value: string): number {
   const n = Number(value);
@@ -89,11 +99,31 @@ function parseLocalPurchases(raw: unknown): PurchaseRecord[] {
       const id = typeof row.id === "string" ? row.id : makeId("pur");
       const fallback = makeBlankPurchase(id);
       const quantityRaw = Number(row.quantity);
-      const unitCostRaw = Number(row.unitCostCents);
       const quantity = Number.isFinite(quantityRaw) ? Math.max(0, quantityRaw) : fallback.quantity;
-      const unitCostCents = Number.isFinite(unitCostRaw)
+      const usableQuantityRaw = Number(row.usableQuantity);
+      const usableQuantity = Number.isFinite(usableQuantityRaw)
+        ? Math.max(0, usableQuantityRaw)
+        : quantity;
+      const unitCostRaw = Number(row.unitCostCents);
+      const legacyUnitCostCents = Number.isFinite(unitCostRaw)
         ? Math.max(0, Math.round(unitCostRaw))
         : fallback.unitCostCents;
+      const totalCostRaw = Number(row.totalCostCents);
+      const explicitCostRaw = Number(row.costCents);
+      const computedLegacyCost = computePurchaseTotalCents(quantity, legacyUnitCostCents);
+      const costCents = Number.isFinite(explicitCostRaw)
+        ? Math.max(0, Math.round(explicitCostRaw))
+        : Number.isFinite(totalCostRaw)
+          ? Math.max(0, Math.round(totalCostRaw))
+          : computedLegacyCost;
+      const unitCostCents = quantity > 0
+        ? computeUnitCostCentsFromCost(quantity, costCents)
+        : legacyUnitCostCents;
+      const store = typeof row.store === "string"
+        ? row.store
+        : typeof row.supplier === "string"
+          ? row.supplier
+          : fallback.store;
       return {
         ...fallback,
         ...row,
@@ -104,12 +134,21 @@ function parseLocalPurchases(raw: unknown): PurchaseRecord[] {
             : fallback.purchaseDate,
         materialId: typeof row.materialId === "string" ? row.materialId : null,
         materialName: typeof row.materialName === "string" ? row.materialName : fallback.materialName,
-        supplier: typeof row.supplier === "string" ? row.supplier : fallback.supplier,
+        description: typeof row.description === "string" ? row.description : fallback.description,
+        variation: typeof row.variation === "string" ? row.variation : fallback.variation,
         quantity,
+        usableQuantity,
         unit: typeof row.unit === "string" ? row.unit : fallback.unit,
         unitCostCents,
-        totalCostCents: computePurchaseTotalCents(quantity, unitCostCents),
+        costCents,
+        totalCostCents: costCents,
         currency: typeof row.currency === "string" ? row.currency.toUpperCase() : fallback.currency,
+        marketplace: normalizePurchaseMarketplace(
+          typeof row.marketplace === "string" ? row.marketplace : fallback.marketplace,
+          "other",
+        ),
+        store,
+        supplier: store,
         referenceNo: typeof row.referenceNo === "string" ? row.referenceNo : fallback.referenceNo,
         notes: typeof row.notes === "string" ? row.notes : fallback.notes,
       };
@@ -209,6 +248,30 @@ export default function PurchasesApp() {
     () => currencySymbolFromSettings(settings.baseCurrency),
     [settings.baseCurrency],
   );
+
+  function normalizePurchaseRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
+    const quantity = Number.isFinite(row.quantity) ? Math.max(0, row.quantity) : 0;
+    const usableQuantity = Number.isFinite(row.usableQuantity)
+      ? Math.max(0, row.usableQuantity)
+      : quantity;
+    const costRaw = Number.isFinite(row.costCents) ? row.costCents : row.totalCostCents;
+    const costCents = Math.max(0, Math.round(costRaw));
+    const unitCostCents = quantity > 0 ? computeUnitCostCentsFromCost(quantity, costCents) : 0;
+    const store = (row.store || row.supplier || "").trim();
+    return {
+      ...row,
+      quantity,
+      usableQuantity,
+      unitCostCents,
+      costCents,
+      totalCostCents: costCents,
+      currency: settings.baseCurrency,
+      marketplace: normalizePurchaseMarketplace(row.marketplace, "other"),
+      store,
+      supplier: store,
+      updatedAt,
+    };
+  }
 
   useEffect(() => {
     if (!supabase) return;
@@ -337,7 +400,7 @@ export default function PurchasesApp() {
       const { error } = await supabase
         .from("materials")
         .update({
-          supplier: next.supplier,
+          supplier: next.store,
           unit: next.unit,
           last_purchase_cost_cents: next.unitCostCents,
           last_purchase_date: next.purchaseDate || null,
@@ -355,7 +418,7 @@ export default function PurchasesApp() {
         item.id === next.materialId
           ? {
               ...item,
-              supplier: next.supplier,
+              supplier: next.store,
               unit: next.unit,
               lastPurchaseCostCents: next.unitCostCents,
               lastPurchaseDate: next.purchaseDate,
@@ -371,7 +434,7 @@ export default function PurchasesApp() {
       item.id === next.materialId
         ? {
             ...item,
-            supplier: next.supplier,
+            supplier: next.store,
             unit: next.unit,
             lastPurchaseCostCents: next.unitCostCents,
             lastPurchaseDate: next.purchaseDate,
@@ -409,15 +472,7 @@ export default function PurchasesApp() {
       const next = prev.map((row) => {
         if (row.id !== id) return row;
         const updated = updater(row);
-        const total = computePurchaseTotalCents(updated.quantity, updated.unitCostCents);
-        const normalized: PurchaseRecord = {
-          ...updated,
-          quantity: Math.max(0, updated.quantity),
-          unitCostCents: Math.max(0, Math.round(updated.unitCostCents)),
-          totalCostCents: total,
-          currency: settings.baseCurrency,
-          updatedAt: now,
-        };
+        const normalized = normalizePurchaseRow(updated, now);
         changed = normalized;
         return normalized;
       });
@@ -435,7 +490,9 @@ export default function PurchasesApp() {
       purchaseDate: currentDateInputValue(),
       materialId: firstMaterial?.id ?? null,
       materialName: firstMaterial?.name ?? "",
+      store: firstMaterial?.supplier ?? "",
       supplier: firstMaterial?.supplier ?? "",
+      marketplace: "local",
       unit: firstMaterial?.unit ?? settings.defaultMaterialUnit,
     };
 
@@ -446,14 +503,20 @@ export default function PurchasesApp() {
         toast("error", error?.message || "Could not create purchase.");
         return;
       }
-      const row = rowToPurchase(data[0] as DbPurchaseRow);
+      const row = normalizePurchaseRow(
+        {
+          ...rowToPurchase(data[0] as DbPurchaseRow),
+          currency: settings.baseCurrency,
+        },
+        new Date().toISOString(),
+      );
       setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
       await syncMaterialFromPurchase(row);
       toast("success", "Purchase created.");
       return;
     }
 
-    const row = makeBlankPurchase(makeId("pur"), defaults);
+    const row = normalizePurchaseRow(makeBlankPurchase(makeId("pur"), defaults), new Date().toISOString());
     setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
     await syncMaterialFromPurchase(row);
     toast("success", "Local purchase created.");
@@ -491,10 +554,14 @@ export default function PurchasesApp() {
     const q = query.trim().toLowerCase();
     if (!q) return purchases;
     return purchases.filter((row) => {
+      const marketplaceLabel = marketplaceLabels[row.marketplace].toLowerCase();
       return (
         row.purchaseDate.toLowerCase().includes(q) ||
         row.materialName.toLowerCase().includes(q) ||
-        row.supplier.toLowerCase().includes(q) ||
+        row.description.toLowerCase().includes(q) ||
+        row.variation.toLowerCase().includes(q) ||
+        row.store.toLowerCase().includes(q) ||
+        marketplaceLabel.includes(q) ||
         row.referenceNo.toLowerCase().includes(q) ||
         row.notes.toLowerCase().includes(q)
       );
@@ -533,8 +600,8 @@ export default function PurchasesApp() {
             <div>
               <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Purchases</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-                Record material purchases with supplier, quantity, unit cost, and references. Total cost is calculated
-                automatically.
+                Track purchases with material, description, variation, quantity, cost, usable quantity, marketplace,
+                and store.
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
@@ -582,18 +649,20 @@ export default function PurchasesApp() {
             </div>
 
             <div className="overflow-x-auto">
-              <table data-input-layout className="min-w-[1360px] w-full text-left text-sm">
+              <table data-input-layout className="min-w-[1480px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Date</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Material</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Supplier</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Description</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Variation</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Quantity</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Total Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Reference No</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Notes</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Cost</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                      Usable Quantity
+                    </th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Purchased Date</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
@@ -602,63 +671,51 @@ export default function PurchasesApp() {
                   {filteredPurchases.map((row) => (
                     <tr key={row.id} className="align-top">
                       <td className="p-2">
-                        <input
-                          className={inputBase + " " + inputMono}
-                          type="date"
-                          value={row.purchaseDate}
-                          onChange={(e) =>
+                        <select
+                          className={inputBase}
+                          value={row.materialId ?? ""}
+                          onChange={(e) => {
+                            const materialId = e.target.value || null;
+                            const material = materialId ? materialById.get(materialId) : null;
                             updatePurchase(row.id, (x) => ({
                               ...x,
-                              purchaseDate: e.target.value || currentDateInputValue(),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="p-2">
-                        <div className="space-y-2">
-                          <select
-                            className={inputBase}
-                            value={row.materialId ?? ""}
-                            onChange={(e) => {
-                              const materialId = e.target.value || null;
-                              const material = materialId ? materialById.get(materialId) : null;
-                              updatePurchase(row.id, (x) => ({
-                                ...x,
-                                materialId,
-                                materialName: material ? material.name : x.materialName,
-                                supplier: material ? material.supplier : x.supplier,
-                                unit: material ? material.unit : x.unit,
-                              }));
-                            }}
-                          >
-                            <option value="">Unlinked material</option>
-                            {materials.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.name}
-                                {item.isActive ? "" : " (inactive)"}
-                              </option>
-                            ))}
-                          </select>
-                          {row.materialId ? null : (
-                            <input
-                              className={inputBase}
-                              value={row.materialName}
-                              onChange={(e) =>
-                                updatePurchase(row.id, (x) => ({ ...x, materialName: e.target.value }))
-                              }
-                              placeholder="Material name"
-                            />
-                          )}
-                        </div>
+                              materialId,
+                              materialName: material ? material.name : x.materialName,
+                              store: material ? x.store || material.supplier : x.store,
+                              supplier: material ? x.store || material.supplier : x.supplier,
+                              unit: material ? material.unit : x.unit,
+                            }));
+                          }}
+                        >
+                          <option value="">
+                            {row.materialName ? `Unlinked (${row.materialName})` : "Select material"}
+                          </option>
+                          {materials.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                              {item.isActive ? "" : " (inactive)"}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-2">
                         <input
                           className={inputBase}
-                          value={row.supplier}
+                          value={row.description}
                           onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({ ...x, supplier: e.target.value }))
+                            updatePurchase(row.id, (x) => ({ ...x, description: e.target.value }))
                           }
-                          placeholder="Supplier"
+                          placeholder="Description"
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          className={inputBase}
+                          value={row.variation}
+                          onChange={(e) =>
+                            updatePurchase(row.id, (x) => ({ ...x, variation: e.target.value }))
+                          }
+                          placeholder="Variation"
                         />
                       </td>
                       <td className="p-2">
@@ -677,14 +734,6 @@ export default function PurchasesApp() {
                         />
                       </td>
                       <td className="p-2">
-                        <input
-                          className={inputBase}
-                          value={row.unit}
-                          onChange={(e) => updatePurchase(row.id, (x) => ({ ...x, unit: e.target.value }))}
-                          placeholder="ea / kg / yd"
-                        />
-                      </td>
-                      <td className="p-2">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
@@ -694,38 +743,75 @@ export default function PurchasesApp() {
                             type="number"
                             step={0.01}
                             min={0}
-                            value={centsToMoneyString(row.unitCostCents)}
+                            value={centsToMoneyString(row.costCents)}
                             onChange={(e) =>
                               updatePurchase(row.id, (x) => ({
                                 ...x,
-                                unitCostCents: parseMoneyToCents(e.target.value),
-                                currency: settings.baseCurrency,
+                                costCents: parseMoneyToCents(e.target.value),
+                                totalCostCents: parseMoneyToCents(e.target.value),
                               }))
                             }
                           />
                         </div>
                       </td>
                       <td className="p-2">
-                        <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
-                          {formatMoney(row.totalCostCents)}
-                        </p>
-                      </td>
-                      <td className="p-2">
                         <input
                           className={inputBase + " " + inputMono}
-                          value={row.referenceNo}
+                          type="number"
+                          step={0.001}
+                          min={0}
+                          value={row.usableQuantity}
                           onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({ ...x, referenceNo: e.target.value }))
+                            updatePurchase(row.id, (x) => ({
+                              ...x,
+                              usableQuantity: Math.max(0, parseNumber(e.target.value)),
+                            }))
                           }
-                          placeholder="PO-1001"
                         />
                       </td>
                       <td className="p-2">
                         <input
+                          className={inputBase + " " + inputMono}
+                          type="date"
+                          value={row.purchaseDate}
+                          onChange={(e) =>
+                            updatePurchase(row.id, (x) => ({
+                              ...x,
+                              purchaseDate: e.target.value || currentDateInputValue(),
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="p-2">
+                        <select
                           className={inputBase}
-                          value={row.notes}
-                          onChange={(e) => updatePurchase(row.id, (x) => ({ ...x, notes: e.target.value }))}
-                          placeholder="Optional notes"
+                          value={row.marketplace}
+                          onChange={(e) =>
+                            updatePurchase(row.id, (x) => ({
+                              ...x,
+                              marketplace: normalizePurchaseMarketplace(e.target.value, "other"),
+                            }))
+                          }
+                        >
+                          {PURCHASE_MARKETPLACES.map((item) => (
+                            <option key={item} value={item}>
+                              {marketplaceLabels[item]}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <input
+                          className={inputBase}
+                          value={row.store}
+                          onChange={(e) =>
+                            updatePurchase(row.id, (x) => ({
+                              ...x,
+                              store: e.target.value,
+                              supplier: e.target.value,
+                            }))
+                          }
+                          placeholder="Store"
                         />
                       </td>
                       <td className="p-2 font-mono text-xs text-muted">{formatAppDate(row.updatedAt)}</td>
@@ -755,7 +841,7 @@ export default function PurchasesApp() {
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
               Total purchases value:{" "}
               <span className="font-mono text-ink">
-                {formatMoney(filteredPurchases.reduce((sum, row) => sum + row.totalCostCents, 0))}
+                {formatMoney(filteredPurchases.reduce((sum, row) => sum + row.costCents, 0))}
               </span>
             </div>
           </section>

@@ -161,18 +161,121 @@ create table if not exists public.purchases (
   material_id uuid references public.materials(id) on delete set null,
 
   material_name text not null default '',
+  description text not null default '',
+  variation text not null default '',
   supplier text not null default '',
+  store text not null default '',
   quantity numeric(14,4) not null default 0 check (quantity >= 0),
+  usable_quantity numeric(14,4) not null default 0 check (usable_quantity >= 0),
   unit text not null default 'ea',
   unit_cost_cents integer not null default 0 check (unit_cost_cents >= 0),
   total_cost_cents bigint not null default 0 check (total_cost_cents >= 0),
+  cost_cents bigint not null default 0 check (cost_cents >= 0),
   currency text not null default 'USD',
+  marketplace text not null default 'other',
   reference_no text not null default '',
   notes text not null default '',
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'description'
+  ) then
+    alter table public.purchases add column description text not null default '';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'variation'
+  ) then
+    alter table public.purchases add column variation text not null default '';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'store'
+  ) then
+    alter table public.purchases add column store text not null default '';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'usable_quantity'
+  ) then
+    alter table public.purchases add column usable_quantity numeric(14,4) not null default 0 check (usable_quantity >= 0);
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'cost_cents'
+  ) then
+    alter table public.purchases add column cost_cents bigint not null default 0 check (cost_cents >= 0);
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'purchases'
+      and column_name = 'marketplace'
+  ) then
+    alter table public.purchases add column marketplace text not null default 'other';
+  end if;
+
+  update public.purchases
+    set marketplace = lower(trim(marketplace))
+    where marketplace is not null;
+
+  update public.purchases
+    set marketplace = 'other'
+    where marketplace not in ('shopee', 'lazada', 'local', 'other');
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'purchases_marketplace_check'
+      and conrelid = 'public.purchases'::regclass
+  ) then
+    alter table public.purchases
+      add constraint purchases_marketplace_check
+      check (marketplace in ('shopee', 'lazada', 'local', 'other'));
+  end if;
+
+  update public.purchases
+    set store = supplier
+    where trim(coalesce(store, '')) = ''
+      and trim(coalesce(supplier, '')) <> '';
+
+  update public.purchases
+    set usable_quantity = quantity
+    where coalesce(usable_quantity, 0) = 0
+      and coalesce(quantity, 0) > 0;
+
+  update public.purchases
+    set cost_cents = greatest(0, coalesce(total_cost_cents, 0))
+    where coalesce(cost_cents, 0) = 0
+      and coalesce(total_cost_cents, 0) > 0;
+end $$;
 
 create index if not exists purchases_user_id_purchase_date_idx
   on public.purchases (user_id, purchase_date desc, updated_at desc);
