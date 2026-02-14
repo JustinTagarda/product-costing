@@ -85,12 +85,7 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
 }
 
 table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([type="radio"]) {
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-}
-
-table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([type="radio"])[class*="pl-7"] {
-  padding-left: 1.75rem !important;
+  padding: 8px !important;
 }
 
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
