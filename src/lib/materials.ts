@@ -73,6 +73,17 @@ export function sortMaterialsByUpdatedAtDesc(items: MaterialRecord[]): MaterialR
   return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
+export function sortMaterialsByNameAsc(items: MaterialRecord[]): MaterialRecord[] {
+  return [...items].sort((a, b) => {
+    const byName = (a.name || "").localeCompare((b.name || ""), undefined, {
+      sensitivity: "base",
+      numeric: true,
+    });
+    if (byName !== 0) return byName;
+    return (a.id || "").localeCompare((b.id || ""));
+  });
+}
+
 export function parseMaterialRecords(raw: unknown): MaterialRecord[] {
   if (!Array.isArray(raw)) return [];
   return raw

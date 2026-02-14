@@ -8,7 +8,7 @@ import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib
 import {
   createDemoMaterials,
   makeBlankMaterial,
-  sortMaterialsByUpdatedAtDesc,
+  sortMaterialsByNameAsc,
   type MaterialRecord,
 } from "@/lib/materials";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -204,7 +204,7 @@ export default function MaterialsApp() {
           .from("materials")
           .select("*")
           .eq("user_id", userId)
-          .order("updated_at", { ascending: false });
+          .order("name", { ascending: true });
 
         if (cancelled) return;
         if (error) {
@@ -215,14 +215,14 @@ export default function MaterialsApp() {
           return;
         }
 
-        setMaterials(sortMaterialsByUpdatedAtDesc((data ?? []).map((row) => rowToMaterial(row as DbMaterialRow))));
+        setMaterials(sortMaterialsByNameAsc((data ?? []).map((row) => rowToMaterial(row as DbMaterialRow))));
         hasHydratedRef.current = true;
         setLoading(false);
         return;
       }
 
       const local = readLocalMaterials();
-      const next = local.length ? sortMaterialsByUpdatedAtDesc(local) : createDemoMaterials();
+      const next = sortMaterialsByNameAsc(local.length ? local : createDemoMaterials());
       if (!local.length) writeLocalMaterials(next);
       if (cancelled) return;
       setMaterials(next);
