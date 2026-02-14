@@ -296,7 +296,7 @@ export default function DashboardApp() {
       />
 
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
-        <div className="w-full animate-[fadeUp_.45s_ease-out]">
+        <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
           <header className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
               <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Dashboard</h1>

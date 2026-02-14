@@ -14,7 +14,14 @@ export function MainContentStatusFooter({
   className,
 }: MainContentStatusFooterProps) {
   return (
-    <footer className={["mt-6 border-t border-border/80 pt-3", className].filter(Boolean).join(" ")}>
+    <footer
+      className={[
+        "mt-auto border-t border-border/80 pt-3 text-center",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <p className="font-mono text-xs text-muted">
         {userLabel ? (
           <>
@@ -30,4 +37,3 @@ export function MainContentStatusFooter({
     </footer>
   );
 }
-
