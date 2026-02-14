@@ -30,7 +30,6 @@ const inputBase =
 const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
 const MATERIAL_CODE_PREFIX = "MA-";
-const MATERIAL_USABLE_UNIT_LIST_ID = "materials-usable-unit-options";
 const STANDARD_USABLE_UNITS = [
   "ea",
   "pc",
@@ -414,26 +413,6 @@ export default function MaterialsApp() {
     });
   }, [materials, query, showInactive]);
 
-  const usableUnitOptions = useMemo(() => {
-    const byKey = new Map<string, string>();
-    const seed = [...STANDARD_USABLE_UNITS, settings.defaultMaterialUnit];
-    for (const unit of seed) {
-      const value = String(unit || "").trim();
-      if (!value) continue;
-      const key = value.toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, value);
-    }
-    for (const row of materials) {
-      const value = String(row.unit || "").trim();
-      if (!value) continue;
-      const key = value.toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, value);
-    }
-    return Array.from(byKey.values()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }),
-    );
-  }, [materials, settings.defaultMaterialUnit]);
-
   if (!authReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
@@ -545,14 +524,17 @@ export default function MaterialsApp() {
                         />
                       </td>
                       <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                        <input
+                        <select
                           className={inputBase}
                           value={row.unit}
                           onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, unit: e.target.value }))}
-                          list={MATERIAL_USABLE_UNIT_LIST_ID}
-                          autoComplete="off"
-                          placeholder="ea / kg / yd"
-                        />
+                        >
+                          {STANDARD_USABLE_UNITS.map((unit) => (
+                            <option key={unit} value={unit}>
+                              {unit}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
                         <div className="relative">
@@ -611,11 +593,6 @@ export default function MaterialsApp() {
                   ) : null}
                 </tbody>
               </table>
-              <datalist id={MATERIAL_USABLE_UNIT_LIST_ID}>
-                {usableUnitOptions.map((unit) => (
-                  <option key={unit} value={unit} />
-                ))}
-              </datalist>
             </div>
 
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
