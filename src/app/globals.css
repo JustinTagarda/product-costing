@@ -50,11 +50,16 @@ table {
 table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
   border-top: 1px solid var(--border);
   border-left: 1px solid var(--border);
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
+}
+
+table > :is(thead, tbody, tfoot) > tr > th {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }
 
 table > :is(thead, tbody, tfoot) > tr > td {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
   padding-left: 4px !important;
   padding-right: 4px !important;
 }

@@ -498,10 +498,10 @@ export default function MaterialsApp() {
                 <thead className="bg-paper/55">
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Usable Unit</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Active</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">Usable Unit</th>
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost</th>
+                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Active</th>
+                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -515,7 +515,7 @@ export default function MaterialsApp() {
                           placeholder="e.g., Canvas fabric"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
                         <input
                           className={inputBase}
                           value={row.unit}
@@ -523,7 +523,7 @@ export default function MaterialsApp() {
                           placeholder="ea / kg / yd"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
@@ -543,26 +543,30 @@ export default function MaterialsApp() {
                           />
                         </div>
                       </td>
-                      <td className="p-2">
-                        <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/55 px-2 py-1.5 text-xs text-ink">
-                          <input
-                            type="checkbox"
-                            checked={row.isActive}
-                            onChange={(e) =>
-                              updateMaterial(row.id, (x) => ({ ...x, isActive: e.target.checked }))
-                            }
-                          />
-                          {row.isActive ? "Yes" : "No"}
-                        </label>
+                      <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
+                        <div className="flex justify-center">
+                          <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/55 px-2 py-1.5 text-xs text-ink">
+                            <input
+                              type="checkbox"
+                              checked={row.isActive}
+                              onChange={(e) =>
+                                updateMaterial(row.id, (x) => ({ ...x, isActive: e.target.checked }))
+                              }
+                            />
+                            {row.isActive ? "Yes" : "No"}
+                          </label>
+                        </div>
                       </td>
-                      <td className="p-2">
-                        <button
-                          type="button"
-                          className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
-                          onClick={() => void deleteMaterial(row.id)}
-                        >
-                          Delete
-                        </button>
+                      <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
+                        <div className="flex justify-center">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                            onClick={() => void deleteMaterial(row.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
