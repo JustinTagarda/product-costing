@@ -7,6 +7,7 @@ import type { CostSheet, StoredData } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
@@ -298,19 +299,7 @@ export default function DashboardApp() {
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <header className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
-              <p className="font-mono text-xs text-muted">
-                {session ? (
-                  <>
-                    Signed in as <span className="select-all">{user?.email || user?.id}</span>{" "}
-                    <span className="text-muted">- dashboard sync via Supabase</span>
-                  </>
-                ) : (
-                  <>
-                    Guest mode <span className="text-muted">- saved in this browser (localStorage)</span>
-                  </>
-                )}
-              </p>
-              <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">Dashboard</h1>
+              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Dashboard</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
                 Overview of total costs, margin health, and recent products. Use the top bar to search and jump
                 quickly into product details or the cost calculator.
@@ -473,6 +462,12 @@ export default function DashboardApp() {
               </table>
             </div>
           </section>
+
+          <MainContentStatusFooter
+            userLabel={session ? user?.email || user?.id : null}
+            syncLabel="dashboard sync via Supabase"
+            guestLabel="saved in this browser (localStorage)"
+          />
         </div>
       </div>
     </div>

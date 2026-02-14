@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
+import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { formatShortDate } from "@/lib/format";
 import {
@@ -827,19 +828,7 @@ export default function CostingApp() {
         <div className="flex min-h-[calc(100dvh-5rem)] w-full flex-col animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-mono text-xs text-muted">
-              {session ? (
-                <>
-                  Signed in as <span className="select-all">{user?.email || user?.id}</span>{" "}
-                  <span className="text-muted">- synced via Supabase</span>
-                </>
-              ) : (
-                <>
-                  Guest mode <span className="text-muted">- saved in this browser (localStorage)</span>
-                </>
-              )}
-            </p>
-            <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">
+            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
               Product Costing
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
@@ -1728,6 +1717,12 @@ export default function CostingApp() {
             </div>
             </main>
           </div>
+
+          <MainContentStatusFooter
+            userLabel={session ? user?.email || user?.id : null}
+            syncLabel="synced via Supabase"
+            guestLabel="saved in this browser (localStorage)"
+          />
 
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
@@ -604,19 +605,7 @@ export default function BomApp() {
         <div className="w-full animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="font-mono text-xs text-muted">
-                {session ? (
-                  <>
-                    Signed in as <span className="select-all">{user?.email || user?.id}</span>{" "}
-                    <span className="text-muted">- BOM sync via Supabase</span>
-                  </>
-                ) : (
-                  <>
-                    Guest mode <span className="text-muted">- saved in this browser (localStorage)</span>
-                  </>
-                )}
-              </p>
-              <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">
+              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
                 Bill of Materials
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
@@ -876,6 +865,12 @@ export default function BomApp() {
               </div>
             </section>
           ) : null}
+
+          <MainContentStatusFooter
+            userLabel={session ? user?.email || user?.id : null}
+            syncLabel="BOM sync via Supabase"
+            guestLabel="saved in this browser (localStorage)"
+          />
         </div>
       </div>
     </div>

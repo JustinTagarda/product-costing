@@ -8,6 +8,7 @@ import type { CostSheet, StoredData } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { currencyCodeFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
@@ -246,19 +247,7 @@ export default function ProductDetailsApp() {
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <header>
-            <p className="font-mono text-xs text-muted">
-              {session ? (
-                <>
-                  Signed in as <span className="select-all">{user?.email || user?.id}</span>{" "}
-                  <span className="text-muted">- product detail sync via Supabase</span>
-                </>
-              ) : (
-                <>
-                  Guest mode <span className="text-muted">- product details loaded from localStorage</span>
-                </>
-              )}
-            </p>
-            <h1 className="mt-2 font-serif text-4xl leading-[1.08] tracking-tight text-ink">Product Details</h1>
+            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Product Details</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
               Header information, cost breakdown, change history, and notes for a single product.
             </p>
@@ -441,6 +430,12 @@ export default function ProductDetailsApp() {
               </section>
             </>
           ) : null}
+
+          <MainContentStatusFooter
+            userLabel={session ? user?.email || user?.id : null}
+            syncLabel="product detail sync via Supabase"
+            guestLabel="product details loaded from localStorage"
+          />
         </div>
       </div>
     </div>

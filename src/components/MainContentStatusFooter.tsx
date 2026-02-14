@@ -1,0 +1,33 @@
+"use client";
+
+type MainContentStatusFooterProps = {
+  userLabel?: string | null;
+  syncLabel: string;
+  guestLabel: string;
+  className?: string;
+};
+
+export function MainContentStatusFooter({
+  userLabel,
+  syncLabel,
+  guestLabel,
+  className,
+}: MainContentStatusFooterProps) {
+  return (
+    <footer className={["mt-6 border-t border-border/80 pt-3", className].filter(Boolean).join(" ")}>
+      <p className="font-mono text-xs text-muted">
+        {userLabel ? (
+          <>
+            Signed in as <span className="select-all">{userLabel}</span>{" "}
+            <span className="text-muted">- {syncLabel}</span>
+          </>
+        ) : (
+          <>
+            Guest mode <span className="text-muted">- {guestLabel}</span>
+          </>
+        )}
+      </p>
+    </footer>
+  );
+}
+
