@@ -228,6 +228,7 @@ export default function MaterialsApp() {
   const [showInactive, setShowInactive] = useState(false);
   const [draftMaterial, setDraftMaterial] = useState<DraftMaterialRow>(() => makeDraftMaterial("each"));
   const [savingDraftMaterial, setSavingDraftMaterial] = useState(false);
+  const [duplicateNameModal, setDuplicateNameModal] = useState<string | null>(null);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -237,6 +238,8 @@ export default function MaterialsApp() {
   const hasHydratedRef = useRef(false);
   const pendingScrollMaterialIdRef = useRef<string | null>(null);
   const savingDraftMaterialRef = useRef(false);
+  const draftRowRef = useRef<HTMLTableRowElement | null>(null);
+  const draftNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -269,6 +272,23 @@ export default function MaterialsApp() {
       settings.currencyRoundingMode,
     ],
   );
+
+  const focusDraftNameInput = useCallback((scrollBehavior: ScrollBehavior = "smooth") => {
+    const row = draftRowRef.current;
+    if (row) {
+      const rect = row.getBoundingClientRect();
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      if (!isVisible) {
+        row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+      }
+    }
+    window.requestAnimationFrame(() => {
+      const input = draftNameInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+    });
+  }, []);
 
   useEffect(() => {
     const normalizedDefault =
@@ -423,7 +443,16 @@ export default function MaterialsApp() {
 
   async function commitDraftMaterial(): Promise<void> {
     const trimmedName = draftMaterial.name.trim();
-    if (!trimmedName || savingDraftMaterialRef.current) return;
+    if (!trimmedName || savingDraftMaterialRef.current || duplicateNameModal) return;
+
+    const normalizedName = trimmedName.toLowerCase();
+    const hasDuplicateName = materials.some(
+      (row) => row.name.trim().toLowerCase() === normalizedName,
+    );
+    if (hasDuplicateName) {
+      setDuplicateNameModal(trimmedName);
+      return;
+    }
 
     const normalizedUnit =
       normalizeUsableUnit(draftMaterial.unit) ||
@@ -469,6 +498,7 @@ export default function MaterialsApp() {
             pendingScrollMaterialIdRef.current = row.id;
             setMaterials((prev) => [...prev, row]);
             setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+            window.setTimeout(() => focusDraftNameInput("auto"), 0);
             return;
           }
 
@@ -498,68 +528,11 @@ export default function MaterialsApp() {
         return [...prev, row];
       });
       setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+      window.setTimeout(() => focusDraftNameInput("auto"), 0);
     } finally {
       savingDraftMaterialRef.current = false;
       setSavingDraftMaterial(false);
     }
-  }
-
-  async function addMaterial() {
-    const nextCodeNumber = getNextCodeNumber(
-      materials.map((row) => row.code),
-      MATERIAL_CODE_PREFIX,
-    );
-
-    if (isCloudMode && supabase && userId) {
-      for (let offset = 0; offset < 1000; offset += 1) {
-        const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
-        const { data: existing, error: lookupError } = await supabase
-          .from("materials")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("code", code)
-          .limit(1);
-        if (lookupError) {
-          toast("error", lookupError.message);
-          return;
-        }
-        if ((existing ?? []).length > 0) continue;
-
-        const insert = makeBlankMaterialInsert(userId, {
-          defaultUnit: normalizeUsableUnit(settings.defaultMaterialUnit),
-        });
-        insert.code = code;
-
-        const { data, error } = await supabase.from("materials").insert(insert).select("*");
-        if (!error && data?.[0]) {
-          const row = rowToMaterial(data[0] as DbMaterialRow);
-          pendingScrollMaterialIdRef.current = row.id;
-          setMaterials((prev) => [...prev, row]);
-          return;
-        }
-
-        if (error && isDuplicateKeyError(error)) continue;
-        toast("error", error?.message || "Could not create material.");
-        return;
-      }
-
-      toast("error", "Could not create material. Failed to generate a unique code.");
-      return;
-    }
-
-    setMaterials((prev) => {
-      const row = makeBlankMaterial(makeId("mat"));
-      row.unit = normalizeUsableUnit(settings.defaultMaterialUnit);
-      row.code = formatCode(
-        MATERIAL_CODE_PREFIX,
-        getNextCodeNumber(
-          prev.map((item) => item.code),
-          MATERIAL_CODE_PREFIX,
-        ),
-      );
-      pendingScrollMaterialIdRef.current = row.id;
-      return [...prev, row];
-    });
   }
 
   async function deleteMaterial(id: string) {
@@ -626,7 +599,7 @@ export default function MaterialsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
-        onQuickAdd={() => void addMaterial()}
+        onQuickAdd={() => focusDraftNameInput()}
         quickAddLabel="+ New Material"
         profileLabel={session?.user?.email || "Profile"}
       />
@@ -659,7 +632,7 @@ export default function MaterialsApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => void addMaterial()}
+                onClick={() => focusDraftNameInput()}
               >
                 New material
               </button>
@@ -785,6 +758,7 @@ export default function MaterialsApp() {
                   ) : null}
 
                   <tr
+                    ref={draftRowRef}
                     className="align-top"
                     onBlurCapture={(e) => {
                       const nextFocus = e.relatedTarget as Node | null;
@@ -799,6 +773,7 @@ export default function MaterialsApp() {
                   >
                     <td className="p-2">
                       <input
+                        ref={draftNameInputRef}
                         className={inputBase}
                         value={draftMaterial.name}
                         onChange={(e) =>
@@ -884,6 +859,37 @@ export default function MaterialsApp() {
               </span>
             </div>
           </section>
+
+          {duplicateNameModal ? (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/35 p-4">
+              <div
+                className="w-full max-w-md rounded-2xl border border-border bg-card/95 p-5 shadow-[0_18px_55px_rgba(0,0,0,.22)] backdrop-blur-md"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="duplicate-material-title"
+              >
+                <h2 id="duplicate-material-title" className="font-serif text-xl tracking-tight text-ink">
+                  Duplicate material name
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  A material named <span className="font-semibold text-ink">{duplicateNameModal}</span> already exists.
+                  Enter a different name before saving.
+                </p>
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    onClick={() => {
+                      setDuplicateNameModal(null);
+                      focusDraftNameInput("auto");
+                    }}
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
