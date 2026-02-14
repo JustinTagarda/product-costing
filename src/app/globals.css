@@ -84,8 +84,18 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
   background-color: transparent !important;
 }
 
-table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([type="radio"]) {
+table
+  > :is(thead, tbody, tfoot)
+  > tr
+  > td
+  input:not([type="checkbox"]):not([type="radio"]):not([class*="pl-"]) {
   padding: 8px !important;
+}
+
+table > :is(thead, tbody, tfoot) > tr > td input:not([type="checkbox"]):not([type="radio"])[class*="pl-"] {
+  padding-top: 8px !important;
+  padding-right: 8px !important;
+  padding-bottom: 8px !important;
 }
 
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
