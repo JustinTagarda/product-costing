@@ -123,6 +123,7 @@ export default function MaterialsApp() {
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
+  const pendingScrollMaterialIdRef = useRef<string | null>(null);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -240,6 +241,19 @@ export default function MaterialsApp() {
     writeLocalMaterials(materials);
   }, [authReady, isCloudMode, materials]);
 
+  useEffect(() => {
+    const pendingId = pendingScrollMaterialIdRef.current;
+    if (!pendingId) return;
+    const row = document.getElementById(`material-row-${pendingId}`);
+    pendingScrollMaterialIdRef.current = null;
+    if (!row) return;
+    const rect = row.getBoundingClientRect();
+    const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+    if (!isVisible) {
+      row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [materials]);
+
   async function persistMaterial(next: MaterialRecord) {
     if (!isCloudMode || !supabase) return;
     const { error } = await supabase
@@ -267,7 +281,7 @@ export default function MaterialsApp() {
         return updated;
       });
       if (changed && isCloudMode) schedulePersist(changed);
-      return sortMaterialsByUpdatedAtDesc(next);
+      return next;
     });
   }
 
@@ -300,8 +314,8 @@ export default function MaterialsApp() {
         const { data, error } = await supabase.from("materials").insert(insert).select("*");
         if (!error && data?.[0]) {
           const row = rowToMaterial(data[0] as DbMaterialRow);
-          setMaterials((prev) => sortMaterialsByUpdatedAtDesc([row, ...prev]));
-          toast("success", "Material created.");
+          pendingScrollMaterialIdRef.current = row.id;
+          setMaterials((prev) => [...prev, row]);
           return;
         }
 
@@ -324,9 +338,9 @@ export default function MaterialsApp() {
           MATERIAL_CODE_PREFIX,
         ),
       );
-      return sortMaterialsByUpdatedAtDesc([row, ...prev]);
+      pendingScrollMaterialIdRef.current = row.id;
+      return [...prev, row];
     });
-    toast("success", "Local material created.");
   }
 
   async function deleteMaterial(id: string) {
@@ -492,7 +506,7 @@ export default function MaterialsApp() {
                 </thead>
                 <tbody>
                   {filteredMaterials.map((row) => (
-                    <tr key={row.id} className="align-top">
+                    <tr key={row.id} id={`material-row-${row.id}`} className="align-top">
                       <td className="p-2">
                         <input
                           className={inputBase}
