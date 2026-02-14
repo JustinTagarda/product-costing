@@ -5,7 +5,6 @@ import type { Session } from "@supabase/supabase-js";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { formatShortDate } from "@/lib/format";
 import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
@@ -223,15 +222,6 @@ export default function PurchasesApp() {
   const materialById = useMemo(() => {
     return new Map(materials.map((item) => [item.id, item]));
   }, [materials]);
-
-  const formatAppDate = useCallback(
-    (iso: string) =>
-      formatShortDate(iso, {
-        dateFormat: settings.dateFormat,
-        timezone: settings.timezone,
-      }),
-    [settings.dateFormat, settings.timezone],
-  );
 
   const formatMoney = useCallback(
     (cents: number) =>
@@ -655,16 +645,19 @@ export default function PurchasesApp() {
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Material</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Description</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Variation</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Quantity</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                      Quantity
+                    </th>
+                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                      Cost
+                    </th>
+                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Usable Quantity
                     </th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Purchased Date</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
+                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
+                    <th className="w-[75px] px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -718,7 +711,7 @@ export default function PurchasesApp() {
                           placeholder="Variation"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="w-[80px] p-2">
                         <input
                           className={inputBase + " " + inputMono}
                           type="number"
@@ -733,7 +726,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="w-[80px] p-2">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
@@ -754,7 +747,7 @@ export default function PurchasesApp() {
                           />
                         </div>
                       </td>
-                      <td className="p-2">
+                      <td className="w-[80px] p-2">
                         <input
                           className={inputBase + " " + inputMono}
                           type="number"
@@ -782,7 +775,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="w-[100px] p-2">
                         <select
                           className={inputBase}
                           value={row.marketplace}
@@ -800,7 +793,7 @@ export default function PurchasesApp() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-2">
+                      <td className="w-[100px] p-2">
                         <input
                           className={inputBase}
                           value={row.store}
@@ -814,8 +807,7 @@ export default function PurchasesApp() {
                           placeholder="Store"
                         />
                       </td>
-                      <td className="p-2 font-mono text-xs text-muted">{formatAppDate(row.updatedAt)}</td>
-                      <td className="p-2">
+                      <td className="w-[75px] p-2">
                         <button
                           type="button"
                           className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
@@ -829,7 +821,7 @@ export default function PurchasesApp() {
 
                   {!loading && filteredPurchases.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted">
+                      <td colSpan={10} className="px-4 py-8 text-center text-sm text-muted">
                         No purchases found. Create one using <span className="font-semibold">New purchase</span>.
                       </td>
                     </tr>
