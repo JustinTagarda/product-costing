@@ -24,6 +24,12 @@ import {
 import { goToWelcomePage } from "@/lib/navigation";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
+type DraftMaterialRow = {
+  name: string;
+  unit: string;
+  unitCostCents: number;
+  isActive: boolean;
+};
 
 const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
@@ -123,6 +129,15 @@ function normalizeUsableUnit(value: string): string {
   return USABLE_UNIT_ALIASES[key] ?? raw;
 }
 
+function makeDraftMaterial(defaultUnit: string): DraftMaterialRow {
+  return {
+    name: "",
+    unit: normalizeUsableUnit(defaultUnit) || STANDARD_USABLE_UNITS[0],
+    unitCostCents: 0,
+    isActive: true,
+  };
+}
+
 function parseMoneyToCents(value: string): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return 0;
@@ -211,6 +226,8 @@ export default function MaterialsApp() {
   const [materials, setMaterials] = useState<MaterialRecord[]>([]);
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const [draftMaterial, setDraftMaterial] = useState<DraftMaterialRow>(() => makeDraftMaterial("each"));
+  const [savingDraftMaterial, setSavingDraftMaterial] = useState(false);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -219,6 +236,7 @@ export default function MaterialsApp() {
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
   const pendingScrollMaterialIdRef = useRef<string | null>(null);
+  const savingDraftMaterialRef = useRef(false);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -251,6 +269,17 @@ export default function MaterialsApp() {
       settings.currencyRoundingMode,
     ],
   );
+
+  useEffect(() => {
+    const normalizedDefault =
+      normalizeUsableUnit(settings.defaultMaterialUnit) || STANDARD_USABLE_UNITS[0];
+    setDraftMaterial((prev) => {
+      const isPristine = prev.name.trim().length === 0 && prev.unitCostCents === 0 && prev.isActive;
+      if (!isPristine) return prev;
+      if (prev.unit === normalizedDefault) return prev;
+      return { ...prev, unit: normalizedDefault };
+    });
+  }, [settings.defaultMaterialUnit]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -390,6 +419,89 @@ export default function MaterialsApp() {
       if (changed && isCloudMode) schedulePersist(changed);
       return next;
     });
+  }
+
+  async function commitDraftMaterial(): Promise<void> {
+    const trimmedName = draftMaterial.name.trim();
+    if (!trimmedName || savingDraftMaterialRef.current) return;
+
+    const normalizedUnit =
+      normalizeUsableUnit(draftMaterial.unit) ||
+      normalizeUsableUnit(settings.defaultMaterialUnit) ||
+      STANDARD_USABLE_UNITS[0];
+    const unitCostCents = Math.max(0, Math.round(draftMaterial.unitCostCents));
+    const isActive = draftMaterial.isActive;
+
+    savingDraftMaterialRef.current = true;
+    setSavingDraftMaterial(true);
+
+    try {
+      const nextCodeNumber = getNextCodeNumber(
+        materials.map((row) => row.code),
+        MATERIAL_CODE_PREFIX,
+      );
+
+      if (isCloudMode && supabase && userId) {
+        for (let offset = 0; offset < 1000; offset += 1) {
+          const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
+          const { data: existing, error: lookupError } = await supabase
+            .from("materials")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("code", code)
+            .limit(1);
+          if (lookupError) {
+            toast("error", lookupError.message);
+            return;
+          }
+          if ((existing ?? []).length > 0) continue;
+
+          const insert = makeBlankMaterialInsert(userId, { defaultUnit: normalizedUnit });
+          insert.code = code;
+          insert.name = trimmedName;
+          insert.unit = normalizedUnit;
+          insert.weighted_average_cost_cents = unitCostCents;
+          insert.is_active = isActive;
+
+          const { data, error } = await supabase.from("materials").insert(insert).select("*");
+          if (!error && data?.[0]) {
+            const row = rowToMaterial(data[0] as DbMaterialRow);
+            pendingScrollMaterialIdRef.current = row.id;
+            setMaterials((prev) => [...prev, row]);
+            setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+            return;
+          }
+
+          if (error && isDuplicateKeyError(error)) continue;
+          toast("error", error?.message || "Could not create material.");
+          return;
+        }
+
+        toast("error", "Could not create material. Failed to generate a unique code.");
+        return;
+      }
+
+      setMaterials((prev) => {
+        const row = makeBlankMaterial(makeId("mat"));
+        row.name = trimmedName;
+        row.unit = normalizedUnit;
+        row.unitCostCents = unitCostCents;
+        row.isActive = isActive;
+        row.code = formatCode(
+          MATERIAL_CODE_PREFIX,
+          getNextCodeNumber(
+            prev.map((item) => item.code),
+            MATERIAL_CODE_PREFIX,
+          ),
+        );
+        pendingScrollMaterialIdRef.current = row.id;
+        return [...prev, row];
+      });
+      setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+    } finally {
+      savingDraftMaterialRef.current = false;
+      setSavingDraftMaterial(false);
+    }
   }
 
   async function addMaterial() {
@@ -671,6 +783,89 @@ export default function MaterialsApp() {
                       </td>
                     </tr>
                   ) : null}
+
+                  <tr
+                    className="align-top"
+                    onBlurCapture={(e) => {
+                      const nextFocus = e.relatedTarget as Node | null;
+                      if (nextFocus && e.currentTarget.contains(nextFocus)) return;
+                      void commitDraftMaterial();
+                    }}
+                    onKeyDownCapture={(e) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      void commitDraftMaterial();
+                    }}
+                  >
+                    <td className="p-2">
+                      <input
+                        className={inputBase}
+                        value={draftMaterial.name}
+                        onChange={(e) =>
+                          setDraftMaterial((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        placeholder="New material name"
+                        disabled={savingDraftMaterial}
+                      />
+                    </td>
+                    <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
+                      <select
+                        className={inputBase}
+                        value={draftMaterial.unit}
+                        onChange={(e) =>
+                          setDraftMaterial((prev) => ({ ...prev, unit: e.target.value }))
+                        }
+                        disabled={savingDraftMaterial}
+                      >
+                        {STANDARD_USABLE_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
+                          {currencyPrefix}
+                        </span>
+                        <input
+                          className={inputBase + " pl-7 " + inputMono}
+                          type="number"
+                          step={0.01}
+                          min={0}
+                          value={centsToMoneyString(draftMaterial.unitCostCents)}
+                          onChange={(e) =>
+                            setDraftMaterial((prev) => ({
+                              ...prev,
+                              unitCostCents: parseMoneyToCents(e.target.value),
+                            }))
+                          }
+                          disabled={savingDraftMaterial}
+                        />
+                      </div>
+                    </td>
+                    <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
+                      <div className="flex justify-center">
+                        <label className="inline-flex items-center gap-2 rounded-lg bg-paper/55 px-2 py-1.5 text-xs text-ink">
+                          <input
+                            type="checkbox"
+                            checked={draftMaterial.isActive}
+                            onChange={(e) =>
+                              setDraftMaterial((prev) => ({ ...prev, isActive: e.target.checked }))
+                            }
+                            disabled={savingDraftMaterial}
+                          />
+                          {draftMaterial.isActive ? "Yes" : "No"}
+                        </label>
+                      </div>
+                    </td>
+                    <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
+                      <span className="font-mono text-[11px] text-muted">
+                        {savingDraftMaterial ? "Saving..." : "Auto"}
+                      </span>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
