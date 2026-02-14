@@ -103,21 +103,20 @@ function parseLocalPurchases(raw: unknown): PurchaseRecord[] {
       const usableQuantity = Number.isFinite(usableQuantityRaw)
         ? Math.max(0, usableQuantityRaw)
         : quantity;
-      const unitCostRaw = Number(row.unitCostCents);
-      const legacyUnitCostCents = Number.isFinite(unitCostRaw)
-        ? Math.max(0, Math.round(unitCostRaw))
-        : fallback.unitCostCents;
-      const totalCostRaw = Number(row.totalCostCents);
-      const explicitCostRaw = Number(row.costCents);
-      const computedLegacyCost = computePurchaseTotalCents(quantity, legacyUnitCostCents);
-      const costCents = Number.isFinite(explicitCostRaw)
-        ? Math.max(0, Math.round(explicitCostRaw))
-        : Number.isFinite(totalCostRaw)
-          ? Math.max(0, Math.round(totalCostRaw))
-          : computedLegacyCost;
-      const unitCostCents = quantity > 0
-        ? computeUnitCostCentsFromCost(quantity, costCents)
-        : legacyUnitCostCents;
+      const explicitUnitCostRaw = Number(row.unitCostCents);
+      const explicitTotalRaw = Number(row.costCents);
+      const legacyTotalRaw = Number(row.totalCostCents);
+      const storedTotalCents = Number.isFinite(explicitTotalRaw)
+        ? Math.max(0, Math.round(explicitTotalRaw))
+        : Number.isFinite(legacyTotalRaw)
+          ? Math.max(0, Math.round(legacyTotalRaw))
+          : 0;
+      const unitCostCents = Number.isFinite(explicitUnitCostRaw)
+        ? Math.max(0, Math.round(explicitUnitCostRaw))
+        : quantity > 0 && storedTotalCents > 0
+          ? computeUnitCostCentsFromCost(quantity, storedTotalCents)
+          : fallback.unitCostCents;
+      const totalCostCents = computePurchaseTotalCents(quantity, unitCostCents);
       const store = typeof row.store === "string"
         ? row.store
         : typeof row.supplier === "string"
@@ -139,8 +138,8 @@ function parseLocalPurchases(raw: unknown): PurchaseRecord[] {
         usableQuantity,
         unit: typeof row.unit === "string" ? row.unit : fallback.unit,
         unitCostCents,
-        costCents,
-        totalCostCents: costCents,
+        costCents: totalCostCents,
+        totalCostCents,
         currency: typeof row.currency === "string" ? row.currency.toUpperCase() : fallback.currency,
         marketplace: normalizePurchaseMarketplace(
           typeof row.marketplace === "string" ? row.marketplace : fallback.marketplace,
@@ -244,17 +243,24 @@ export default function PurchasesApp() {
     const usableQuantity = Number.isFinite(row.usableQuantity)
       ? Math.max(0, row.usableQuantity)
       : quantity;
-    const costRaw = Number.isFinite(row.costCents) ? row.costCents : row.totalCostCents;
-    const costCents = Math.max(0, Math.round(costRaw));
-    const unitCostCents = quantity > 0 ? computeUnitCostCentsFromCost(quantity, costCents) : 0;
+    const unitCostRaw = Number.isFinite(row.unitCostCents)
+      ? row.unitCostCents
+      : quantity > 0
+        ? computeUnitCostCentsFromCost(
+            quantity,
+            Number.isFinite(row.costCents) ? row.costCents : row.totalCostCents,
+          )
+        : 0;
+    const unitCostCents = Math.max(0, Math.round(unitCostRaw));
+    const totalCostCents = computePurchaseTotalCents(quantity, unitCostCents);
     const store = (row.store || row.supplier || "").trim();
     return {
       ...row,
       quantity,
       usableQuantity,
       unitCostCents,
-      costCents,
-      totalCostCents: costCents,
+      costCents: totalCostCents,
+      totalCostCents,
       currency: settings.baseCurrency,
       marketplace: normalizePurchaseMarketplace(row.marketplace, "other"),
       store,
@@ -639,7 +645,7 @@ export default function PurchasesApp() {
             </div>
 
             <div className="overflow-x-auto">
-              <table data-input-layout className="min-w-[1480px] w-full text-left text-sm">
+              <table data-input-layout className="min-w-[1600px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Material</th>
@@ -648,22 +654,25 @@ export default function PurchasesApp() {
                     <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Quantity
                     </th>
-                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Cost
+                    </th>
+                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                      Total Cost
                     </th>
                     <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Usable Quantity
                     </th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Purchased Date</th>
-                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
-                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
+                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
+                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
                     <th className="w-[75px] px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPurchases.map((row) => (
-                    <tr key={row.id} className="align-top">
-                      <td className="p-2">
+                    <tr key={row.id} className="align-middle">
+                      <td className="p-2 align-middle">
                         <select
                           className={inputBase}
                           value={row.materialId ?? ""}
@@ -691,7 +700,7 @@ export default function PurchasesApp() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-2">
+                      <td className="p-2 align-middle">
                         <input
                           className={inputBase}
                           value={row.description}
@@ -701,7 +710,7 @@ export default function PurchasesApp() {
                           placeholder="Description"
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-2 align-middle">
                         <input
                           className={inputBase}
                           value={row.variation}
@@ -711,7 +720,7 @@ export default function PurchasesApp() {
                           placeholder="Variation"
                         />
                       </td>
-                      <td className="w-[80px] p-2">
+                      <td className="w-[80px] p-2 align-middle">
                         <input
                           className={inputBase + " " + inputMono}
                           type="number"
@@ -726,7 +735,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="w-[80px] p-2">
+                      <td className="w-[100px] p-2 align-middle">
                         <div className="relative">
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
@@ -736,18 +745,22 @@ export default function PurchasesApp() {
                             type="number"
                             step={0.01}
                             min={0}
-                            value={centsToMoneyString(row.costCents)}
+                            value={centsToMoneyString(row.unitCostCents)}
                             onChange={(e) =>
                               updatePurchase(row.id, (x) => ({
                                 ...x,
-                                costCents: parseMoneyToCents(e.target.value),
-                                totalCostCents: parseMoneyToCents(e.target.value),
+                                unitCostCents: parseMoneyToCents(e.target.value),
                               }))
                             }
                           />
                         </div>
                       </td>
-                      <td className="w-[80px] p-2">
+                      <td className="w-[120px] p-2 align-middle">
+                        <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
+                          {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
+                        </p>
+                      </td>
+                      <td className="w-[80px] p-2 align-middle">
                         <input
                           className={inputBase + " " + inputMono}
                           type="number"
@@ -762,7 +775,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-2 align-middle">
                         <input
                           className={inputBase + " " + inputMono}
                           type="date"
@@ -775,7 +788,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="w-[100px] p-2">
+                      <td className="w-[120px] p-2 align-middle">
                         <select
                           className={inputBase}
                           value={row.marketplace}
@@ -793,7 +806,7 @@ export default function PurchasesApp() {
                           ))}
                         </select>
                       </td>
-                      <td className="w-[100px] p-2">
+                      <td className="w-[120px] p-2 align-middle">
                         <input
                           className={inputBase}
                           value={row.store}
@@ -807,7 +820,7 @@ export default function PurchasesApp() {
                           placeholder="Store"
                         />
                       </td>
-                      <td className="w-[75px] p-2">
+                      <td className="w-[75px] p-2 align-middle">
                         <button
                           type="button"
                           className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
@@ -821,7 +834,7 @@ export default function PurchasesApp() {
 
                   {!loading && filteredPurchases.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-4 py-8 text-center text-sm text-muted">
+                      <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted">
                         No purchases found. Create one using <span className="font-semibold">New purchase</span>.
                       </td>
                     </tr>
@@ -833,7 +846,7 @@ export default function PurchasesApp() {
             <div className="border-t border-border bg-paper/40 px-4 py-3 text-xs text-muted">
               Total purchases value:{" "}
               <span className="font-mono text-ink">
-                {formatMoney(filteredPurchases.reduce((sum, row) => sum + row.costCents, 0))}
+                {formatMoney(filteredPurchases.reduce((sum, row) => sum + row.totalCostCents, 0))}
               </span>
             </div>
           </section>
