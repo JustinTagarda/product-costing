@@ -31,30 +31,97 @@ const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
 const MATERIAL_CODE_PREFIX = "MA-";
 const STANDARD_USABLE_UNITS = [
-  "ea",
-  "pc",
+  "each",
   "piece",
   "pack",
   "set",
   "box",
-  "kg",
-  "g",
-  "lb",
-  "oz",
-  "l",
-  "ml",
-  "m",
-  "cm",
-  "mm",
-  "yd",
-  "ft",
-  "in",
+  "kilogram",
+  "gram",
+  "pound",
+  "ounce",
+  "liter",
+  "milliliter",
+  "meter",
+  "centimeter",
+  "millimeter",
+  "yard",
+  "foot",
+  "inch",
   "sheet",
   "roll",
   "spool",
   "pair",
   "dozen",
 ] as const;
+
+const USABLE_UNIT_ALIASES: Record<string, string> = {
+  ea: "each",
+  each: "each",
+  pc: "piece",
+  pcs: "piece",
+  piece: "piece",
+  pieces: "piece",
+  pack: "pack",
+  packs: "pack",
+  set: "set",
+  sets: "set",
+  box: "box",
+  boxes: "box",
+  kg: "kilogram",
+  kilogram: "kilogram",
+  kilograms: "kilogram",
+  g: "gram",
+  gram: "gram",
+  grams: "gram",
+  lb: "pound",
+  lbs: "pound",
+  pound: "pound",
+  pounds: "pound",
+  oz: "ounce",
+  ounce: "ounce",
+  ounces: "ounce",
+  l: "liter",
+  liter: "liter",
+  liters: "liter",
+  ml: "milliliter",
+  milliliter: "milliliter",
+  milliliters: "milliliter",
+  m: "meter",
+  meter: "meter",
+  meters: "meter",
+  cm: "centimeter",
+  centimeter: "centimeter",
+  centimeters: "centimeter",
+  mm: "millimeter",
+  millimeter: "millimeter",
+  millimeters: "millimeter",
+  yd: "yard",
+  yard: "yard",
+  yards: "yard",
+  ft: "foot",
+  feet: "foot",
+  foot: "foot",
+  in: "inch",
+  inch: "inch",
+  inches: "inch",
+  sheet: "sheet",
+  sheets: "sheet",
+  roll: "roll",
+  rolls: "roll",
+  spool: "spool",
+  spools: "spool",
+  pair: "pair",
+  pairs: "pair",
+  dozen: "dozen",
+};
+
+function normalizeUsableUnit(value: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const key = raw.toLowerCase();
+  return USABLE_UNIT_ALIASES[key] ?? raw;
+}
 
 function parseMoneyToCents(value: string): number {
   const n = Number(value);
@@ -77,6 +144,7 @@ function parseLocalMaterials(raw: unknown): MaterialRecord[] {
       return {
         ...fallback,
         ...row,
+        unit: normalizeUsableUnit(typeof row.unit === "string" ? row.unit : fallback.unit),
         unitCostCents: (() => {
           const n = Number(row.unitCostCents);
           return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback.unitCostCents;
@@ -242,14 +310,26 @@ export default function MaterialsApp() {
           return;
         }
 
-        setMaterials(sortMaterialsByNameAsc((data ?? []).map((row) => rowToMaterial(row as DbMaterialRow))));
+        setMaterials(
+          sortMaterialsByNameAsc(
+            (data ?? []).map((row) => {
+              const material = rowToMaterial(row as DbMaterialRow);
+              return { ...material, unit: normalizeUsableUnit(material.unit) };
+            }),
+          ),
+        );
         hasHydratedRef.current = true;
         setLoading(false);
         return;
       }
 
       const local = readLocalMaterials();
-      const next = sortMaterialsByNameAsc(local.length ? local : createDemoMaterials());
+      const next = sortMaterialsByNameAsc(
+        (local.length ? local : createDemoMaterials()).map((row) => ({
+          ...row,
+          unit: normalizeUsableUnit(row.unit),
+        })),
+      );
       if (!local.length) writeLocalMaterials(next);
       if (cancelled) return;
       setMaterials(next);
@@ -334,7 +414,7 @@ export default function MaterialsApp() {
         if ((existing ?? []).length > 0) continue;
 
         const insert = makeBlankMaterialInsert(userId, {
-          defaultUnit: settings.defaultMaterialUnit,
+          defaultUnit: normalizeUsableUnit(settings.defaultMaterialUnit),
         });
         insert.code = code;
 
@@ -357,7 +437,7 @@ export default function MaterialsApp() {
 
     setMaterials((prev) => {
       const row = makeBlankMaterial(makeId("mat"));
-      row.unit = settings.defaultMaterialUnit;
+      row.unit = normalizeUsableUnit(settings.defaultMaterialUnit);
       row.code = formatCode(
         MATERIAL_CODE_PREFIX,
         getNextCodeNumber(
