@@ -197,7 +197,7 @@ export default function ProductsApp() {
         onLogout={() => void signOut()}
         searchValue={query}
         onSearchChange={setQuery}
-        searchPlaceholder="Search products by name or SKU"
+        searchPlaceholder="Search products by name or code"
         onQuickAdd={() => window.location.assign("/calculator")}
         quickAddLabel="+ New Product"
         profileLabel={session?.user?.email || "Profile"}
@@ -258,8 +258,8 @@ export default function ProductsApp() {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Product</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">SKU</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Margin</th>
@@ -272,8 +272,8 @@ export default function ProductsApp() {
                     const totals = computeTotals(sheet);
                     return (
                       <tr key={sheet.id}>
-                        <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
                         <td className="p-2 font-mono text-xs text-muted">{sheet.sku || "-"}</td>
+                        <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
                         <td className="p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>
                         <td className="p-2 font-mono text-xs text-ink">
                           {totals.costPerUnitCents === null

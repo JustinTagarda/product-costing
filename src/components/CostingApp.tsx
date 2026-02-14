@@ -15,6 +15,7 @@ import {
 import { parseStoredDataJson } from "@/lib/importExport";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
 import {
   makeBlankSheetInsert,
   rowToSheet,
@@ -31,6 +32,7 @@ const inputBase =
 const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:local:v1";
 const WELCOME_GATE_DISMISSED_KEY = "product-costing:welcome-gate:dismissed";
+const PRODUCT_CODE_PREFIX = "PR-";
 
 function parseNumber(value: string): number {
   const n = Number(value);
@@ -437,27 +439,54 @@ export default function CostingApp() {
   }
 
   async function newSheet() {
+    const nextCodeNumber = getNextCodeNumber(
+      sheets.map((sheet) => sheet.sku),
+      PRODUCT_CODE_PREFIX,
+    );
+
     if (isCloudMode && supabase && user) {
-      const insert = makeBlankSheetInsert(user.id, {
-        currency: settingsCurrencyCode,
-        wastePct: settings.defaultWastePct,
-        markupPct: settings.defaultMarkupPct,
-        taxPct: settings.defaultTaxPct,
-      });
-      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-      if (error || !inserted?.[0]) {
+      for (let offset = 0; offset < 1000; offset += 1) {
+        const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
+        const { data: existing, error: lookupError } = await supabase
+          .from("cost_sheets")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("sku", code)
+          .limit(1);
+        if (lookupError) {
+          toast("error", lookupError.message);
+          return;
+        }
+        if ((existing ?? []).length > 0) continue;
+
+        const insert = makeBlankSheetInsert(user.id, {
+          currency: settingsCurrencyCode,
+          wastePct: settings.defaultWastePct,
+          markupPct: settings.defaultMarkupPct,
+          taxPct: settings.defaultTaxPct,
+        });
+        insert.sku = code;
+
+        const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+        if (!error && inserted?.[0]) {
+          const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+          setSheets((prev) => [sheet, ...prev]);
+          setSelectedId(sheet.id);
+          toast("success", "New sheet created.");
+          return;
+        }
+
+        if (error && isDuplicateKeyError(error)) continue;
         toast("error", error?.message || "Could not create sheet.");
         return;
       }
 
-      const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
-      setSheets((prev) => [sheet, ...prev]);
-      setSelectedId(sheet.id);
-      toast("success", "New sheet created.");
+      toast("error", "Could not create sheet. Failed to generate a unique code.");
       return;
     }
 
     const sheet = makeBlankSheet(makeId("sheet"));
+    sheet.sku = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber);
     sheet.currency = settingsCurrencyCode;
     sheet.wastePct = settings.defaultWastePct;
     sheet.markupPct = settings.defaultMarkupPct;
@@ -469,34 +498,57 @@ export default function CostingApp() {
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
+    const nextCodeNumber = getNextCodeNumber(
+      sheets.map((sheet) => sheet.sku),
+      PRODUCT_CODE_PREFIX,
+    );
 
     if (isCloudMode && supabase && user) {
-      const insert: DbCostSheetInsert = {
-        user_id: user.id,
-        name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
-        sku: selectedSheet.sku,
-        currency: settingsCurrencyCode,
-        unit_name: selectedSheet.unitName,
-        batch_size: selectedSheet.batchSize,
-        waste_pct: selectedSheet.wastePct,
-        markup_pct: selectedSheet.markupPct,
-        tax_pct: selectedSheet.taxPct,
-        materials: selectedSheet.materials,
-        labor: selectedSheet.labor,
-        overhead: selectedSheet.overhead,
-        notes: selectedSheet.notes,
-      };
+      for (let offset = 0; offset < 1000; offset += 1) {
+        const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
+        const { data: existing, error: lookupError } = await supabase
+          .from("cost_sheets")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("sku", code)
+          .limit(1);
+        if (lookupError) {
+          toast("error", lookupError.message);
+          return;
+        }
+        if ((existing ?? []).length > 0) continue;
 
-      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-      if (error || !inserted?.[0]) {
+        const insert: DbCostSheetInsert = {
+          user_id: user.id,
+          name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
+          sku: code,
+          currency: settingsCurrencyCode,
+          unit_name: selectedSheet.unitName,
+          batch_size: selectedSheet.batchSize,
+          waste_pct: selectedSheet.wastePct,
+          markup_pct: selectedSheet.markupPct,
+          tax_pct: selectedSheet.taxPct,
+          materials: selectedSheet.materials,
+          labor: selectedSheet.labor,
+          overhead: selectedSheet.overhead,
+          notes: selectedSheet.notes,
+        };
+
+        const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+        if (!error && inserted?.[0]) {
+          const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+          setSheets((prev) => [sheet, ...prev]);
+          setSelectedId(sheet.id);
+          toast("success", "Sheet duplicated.");
+          return;
+        }
+
+        if (error && isDuplicateKeyError(error)) continue;
         toast("error", error?.message || "Could not duplicate sheet.");
         return;
       }
 
-      const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
-      setSheets((prev) => [sheet, ...prev]);
-      setSelectedId(sheet.id);
-      toast("success", "Sheet duplicated.");
+      toast("error", "Could not duplicate sheet. Failed to generate a unique code.");
       return;
     }
 
@@ -505,6 +557,7 @@ export default function CostingApp() {
       ...selectedSheet,
       id: makeId("sheet"),
       name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
+      sku: formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber),
       currency: settingsCurrencyCode,
       materials: selectedSheet.materials.map((it) => ({ ...it })),
       labor: selectedSheet.labor.map((it) => ({ ...it })),

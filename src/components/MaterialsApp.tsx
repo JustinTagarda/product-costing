@@ -14,6 +14,7 @@ import {
 } from "@/lib/materials";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
 import {
   makeBlankMaterialInsert,
   materialToRowUpdate,
@@ -27,6 +28,7 @@ const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
+const MATERIAL_CODE_PREFIX = "MA-";
 
 function parseMoneyToCents(value: string): number {
   const n = Number(value);
@@ -280,24 +282,60 @@ export default function MaterialsApp() {
   }
 
   async function addMaterial() {
+    const nextCodeNumber = getNextCodeNumber(
+      materials.map((row) => row.code),
+      MATERIAL_CODE_PREFIX,
+    );
+
     if (isCloudMode && supabase && userId) {
-      const insert = makeBlankMaterialInsert(userId, {
-        defaultUnit: settings.defaultMaterialUnit,
-      });
-      const { data, error } = await supabase.from("materials").insert(insert).select("*");
-      if (error || !data?.[0]) {
+      for (let offset = 0; offset < 1000; offset += 1) {
+        const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
+        const { data: existing, error: lookupError } = await supabase
+          .from("materials")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("code", code)
+          .limit(1);
+        if (lookupError) {
+          toast("error", lookupError.message);
+          return;
+        }
+        if ((existing ?? []).length > 0) continue;
+
+        const insert = makeBlankMaterialInsert(userId, {
+          defaultUnit: settings.defaultMaterialUnit,
+        });
+        insert.code = code;
+
+        const { data, error } = await supabase.from("materials").insert(insert).select("*");
+        if (!error && data?.[0]) {
+          const row = rowToMaterial(data[0] as DbMaterialRow);
+          setMaterials((prev) => sortMaterialsByUpdatedAtDesc([row, ...prev]));
+          toast("success", "Material created.");
+          return;
+        }
+
+        if (error && isDuplicateKeyError(error)) continue;
         toast("error", error?.message || "Could not create material.");
         return;
       }
-      const row = rowToMaterial(data[0] as DbMaterialRow);
-      setMaterials((prev) => sortMaterialsByUpdatedAtDesc([row, ...prev]));
-      toast("success", "Material created.");
+
+      toast("error", "Could not create material. Failed to generate a unique code.");
       return;
     }
 
-    const row = makeBlankMaterial(makeId("mat"));
-    row.unit = settings.defaultMaterialUnit;
-    setMaterials((prev) => sortMaterialsByUpdatedAtDesc([row, ...prev]));
+    setMaterials((prev) => {
+      const row = makeBlankMaterial(makeId("mat"));
+      row.unit = settings.defaultMaterialUnit;
+      row.code = formatCode(
+        MATERIAL_CODE_PREFIX,
+        getNextCodeNumber(
+          prev.map((item) => item.code),
+          MATERIAL_CODE_PREFIX,
+        ),
+      );
+      return sortMaterialsByUpdatedAtDesc([row, ...prev]);
+    });
     toast("success", "Local material created.");
   }
 
@@ -455,8 +493,8 @@ export default function MaterialsApp() {
               <table data-input-layout className="min-w-[1160px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
+                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Category</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
@@ -475,20 +513,19 @@ export default function MaterialsApp() {
                     <tr key={row.id} className="align-top">
                       <td className="p-2">
                         <input
-                          className={inputBase}
-                          value={row.name}
-                          onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, name: e.target.value }))}
-                          placeholder="e.g., Canvas fabric"
+                          className={inputBase + " " + inputMono}
+                          value={row.code}
+                          placeholder="-"
+                          readOnly
+                          aria-label="Material code"
                         />
                       </td>
                       <td className="p-2">
                         <input
-                          className={inputBase + " " + inputMono}
-                          value={row.code}
-                          onChange={(e) =>
-                            updateMaterial(row.id, (x) => ({ ...x, code: e.target.value.toUpperCase() }))
-                          }
-                          placeholder="e.g., FAB-001"
+                          className={inputBase}
+                          value={row.name}
+                          onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, name: e.target.value }))}
+                          placeholder="e.g., Canvas fabric"
                         />
                       </td>
                       <td className="p-2">
