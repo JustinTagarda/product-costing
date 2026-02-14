@@ -663,7 +663,7 @@ export default function PurchasesApp() {
                     <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                       Usable Quantity
                     </th>
-                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[100px] min-w-[100px] max-w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Purchased Date
                     </th>
                     <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
@@ -777,7 +777,7 @@ export default function PurchasesApp() {
                           }
                         />
                       </td>
-                      <td className="w-[100px] p-2 align-middle">
+                      <td className="w-[100px] min-w-[100px] max-w-[100px] p-2 align-middle">
                         <input
                           className={inputBase + " " + inputMono}
                           type="date"
