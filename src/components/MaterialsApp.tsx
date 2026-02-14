@@ -21,6 +21,7 @@ import {
   rowToMaterial,
   type DbMaterialRow,
 } from "@/lib/supabase/materials";
+import { goToWelcomePage } from "@/lib/navigation";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
@@ -365,7 +366,7 @@ export default function MaterialsApp() {
       }
     }
     setSession(null);
-    window.location.assign("/");
+    goToWelcomePage();
   }
 
   function openSettings() {

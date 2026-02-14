@@ -24,6 +24,7 @@ import {
   type DbCostSheetInsert,
   type DbCostSheetRow,
 } from "@/lib/supabase/costSheets";
+import { goToWelcomePage } from "@/lib/navigation";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
@@ -432,7 +433,7 @@ export default function CostingApp() {
     setSession(null);
     setShowWelcomeGate(true);
     writeWelcomeGateDismissed(false);
-    toast("info", "Signed out.");
+    goToWelcomePage();
   }
 
   function openSettings() {

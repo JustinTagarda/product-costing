@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { goToWelcomePage } from "@/lib/navigation";
 
 const KNOWN_MENU_ITEMS = new Set([
   "Dashboard",
@@ -79,7 +80,7 @@ export default function ComingSoonApp() {
       await supabase.auth.signOut();
     }
     setSession(null);
-    window.location.assign("/");
+    goToWelcomePage();
   }
 
   function openSettings() {

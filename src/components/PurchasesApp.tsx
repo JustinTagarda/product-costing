@@ -30,6 +30,7 @@ import {
   rowToPurchase,
   type DbPurchaseRow,
 } from "@/lib/supabase/purchases";
+import { goToWelcomePage } from "@/lib/navigation";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -479,7 +480,7 @@ export default function PurchasesApp() {
       }
     }
     setSession(null);
-    window.location.assign("/");
+    goToWelcomePage();
   }
 
   function openSettings() {

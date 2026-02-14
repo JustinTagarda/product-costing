@@ -14,6 +14,7 @@ import {
   type UomConversion,
 } from "@/lib/settings";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { goToWelcomePage } from "@/lib/navigation";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -122,7 +123,7 @@ export default function SettingsApp() {
       }
     }
     setSession(null);
-    window.location.assign("/");
+    goToWelcomePage();
   }
 
   function updateSettings(updater: (prev: AppSettings) => AppSettings) {

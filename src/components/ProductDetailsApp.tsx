@@ -11,6 +11,7 @@ import { parseStoredDataJson } from "@/lib/importExport";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAppSettings } from "@/lib/useAppSettings";
 
@@ -182,7 +183,7 @@ export default function ProductDetailsApp() {
       }
     }
     setSession(null);
-    toast("info", "Signed out.");
+    goToWelcomePage();
   }
 
   function openSettings() {

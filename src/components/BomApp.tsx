@@ -35,6 +35,7 @@ import {
   type DbBomLineRow,
 } from "@/lib/supabase/bom";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
+import { goToWelcomePage } from "@/lib/navigation";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -568,7 +569,7 @@ export default function BomApp() {
       }
     }
     setSession(null);
-    window.location.assign("/");
+    goToWelcomePage();
   }
 
   function openSettings() {
