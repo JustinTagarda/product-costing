@@ -113,6 +113,8 @@ table input[type="date"] {
   appearance: textfield;
   -webkit-appearance: textfield;
   -moz-appearance: textfield;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
 }
 
 table input[type="date"]::-webkit-calendar-picker-indicator {
