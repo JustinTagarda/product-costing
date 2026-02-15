@@ -7,7 +7,7 @@ import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
-import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
   readLocalMaterialRecords,
@@ -207,11 +207,6 @@ export default function BomApp() {
         timezone: settings.timezone,
       }),
     [settings.dateFormat, settings.timezone],
-  );
-
-  const currencyPrefix = useMemo(
-    () => currencySymbolFromSettings(settings.baseCurrency),
-    [settings.baseCurrency],
   );
 
   const materialById = useMemo(() => new Map(materials.map((item) => [item.id, item])), [materials]);
@@ -826,19 +821,16 @@ export default function BomApp() {
                           </td>
                           <td className="p-2">
                             {line.componentType === "material" && !line.materialId ? (
-                              <div className="relative">
-                                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">{currencyPrefix}</span>
-                                <DeferredMoneyInput
-                                  className={inputBase + " pl-7 " + inputMono}
-                                  valueCents={line.unitCostCents}
-                                  onCommitCents={(valueCents) =>
-                                    updateLine(selectedBom.id, line.id, (row) => ({
-                                      ...row,
-                                      unitCostCents: valueCents,
-                                    }))
-                                  }
-                                />
-                              </div>
+                              <DeferredMoneyInput
+                                className={inputBase + " " + inputMono}
+                                valueCents={line.unitCostCents}
+                                onCommitCents={(valueCents) =>
+                                  updateLine(selectedBom.id, line.id, (row) => ({
+                                    ...row,
+                                    unitCostCents: valueCents,
+                                  }))
+                                }
+                              />
                             ) : (
                               <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">{formatMoney(lineUnitCost)}</p>
                             )}

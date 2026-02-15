@@ -11,7 +11,6 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { formatShortDate } from "@/lib/format";
 import {
   currencyCodeFromSettings,
-  currencySymbolFromSettings,
   formatCentsWithSettingsSymbol,
 } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
@@ -332,11 +331,6 @@ export default function CostingApp() {
     const found = selectedId ? sheets.find((s) => s.id === selectedId) : null;
     return found ?? sheets[0];
   }, [selectedId, sheets]);
-
-  const selectedCurrencyPrefix = useMemo(
-    () => currencySymbolFromSettings(settingsCurrencyCode),
-    [settingsCurrencyCode],
-  );
 
   const filteredSheets = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1117,25 +1111,20 @@ export default function CostingApp() {
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <div className="relative">
-                                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                      {selectedCurrencyPrefix}
-                                    </span>
-                                    <DeferredMoneyInput
-                                      className={inputBase + " pl-7 " + inputMono}
-                                      valueCents={it.unitCostCents}
-                                      onCommitCents={(valueCents) =>
-                                        updateSelected((s) => ({
-                                          ...s,
-                                          materials: s.materials.map((m) =>
-                                            m.id === it.id
-                                              ? { ...m, unitCostCents: valueCents }
-                                              : m,
-                                          ),
-                                        }))
-                                      }
-                                    />
-                                  </div>
+                                  <DeferredMoneyInput
+                                    className={inputBase + " " + inputMono}
+                                    valueCents={it.unitCostCents}
+                                    onCommitCents={(valueCents) =>
+                                      updateSelected((s) => ({
+                                        ...s,
+                                        materials: s.materials.map((m) =>
+                                          m.id === it.id
+                                            ? { ...m, unitCostCents: valueCents }
+                                            : m,
+                                        ),
+                                      }))
+                                    }
+                                  />
                                 </td>
                                 <td className="p-2">
                                   <div className="flex items-center justify-between gap-2">
@@ -1265,25 +1254,20 @@ export default function CostingApp() {
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <div className="relative">
-                                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                      {selectedCurrencyPrefix}
-                                    </span>
-                                    <DeferredMoneyInput
-                                      className={inputBase + " pl-7 " + inputMono}
-                                      valueCents={it.rateCents}
-                                      onCommitCents={(valueCents) =>
-                                        updateSelected((s) => ({
-                                          ...s,
-                                          labor: s.labor.map((l) =>
-                                            l.id === it.id
-                                              ? { ...l, rateCents: valueCents }
-                                              : l,
-                                          ),
-                                        }))
-                                      }
-                                    />
-                                  </div>
+                                  <DeferredMoneyInput
+                                    className={inputBase + " " + inputMono}
+                                    valueCents={it.rateCents}
+                                    onCommitCents={(valueCents) =>
+                                      updateSelected((s) => ({
+                                        ...s,
+                                        labor: s.labor.map((l) =>
+                                          l.id === it.id
+                                            ? { ...l, rateCents: valueCents }
+                                            : l,
+                                        ),
+                                      }))
+                                    }
+                                  />
                                 </td>
                                 <td className="p-2">
                                   <div className="flex items-center justify-between gap-2">
@@ -1416,25 +1400,20 @@ export default function CostingApp() {
                                   </td>
                                   <td className="p-2">
                                     {it.kind === "flat" ? (
-                                      <div className="relative">
-                                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                                          {selectedCurrencyPrefix}
-                                        </span>
-                                        <DeferredMoneyInput
-                                          className={inputBase + " pl-7 " + inputMono}
-                                          valueCents={it.amountCents}
-                                          onCommitCents={(valueCents) =>
-                                            updateSelected((s) => ({
-                                              ...s,
-                                              overhead: s.overhead.map((o) =>
-                                                o.id === it.id
-                                                  ? { ...o, amountCents: valueCents }
-                                                  : o,
-                                              ) as OverheadItem[],
-                                            }))
-                                          }
-                                        />
-                                      </div>
+                                      <DeferredMoneyInput
+                                        className={inputBase + " " + inputMono}
+                                        valueCents={it.amountCents}
+                                        onCommitCents={(valueCents) =>
+                                          updateSelected((s) => ({
+                                            ...s,
+                                            overhead: s.overhead.map((o) =>
+                                              o.id === it.id
+                                                ? { ...o, amountCents: valueCents }
+                                                : o,
+                                            ) as OverheadItem[],
+                                          }))
+                                        }
+                                      />
                                     ) : (
                                       <div className="relative">
                                         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">

@@ -6,7 +6,7 @@ import { DeferredMoneyInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
   makeBlankMaterial,
@@ -242,11 +242,6 @@ export default function MaterialsApp() {
     authReady,
     onError: (message) => toast("error", message),
   });
-
-  const currencyPrefix = useMemo(
-    () => currencySymbolFromSettings(settings.baseCurrency),
-    [settings.baseCurrency],
-  );
 
   const formatSettingsMoney = useCallback(
     (cents: number) =>
@@ -692,21 +687,16 @@ export default function MaterialsApp() {
                         </select>
                       </td>
                       <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                        <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                            {currencyPrefix}
-                          </span>
-                          <DeferredMoneyInput
-                            className={inputBase + " pl-7 " + inputMono}
-                            valueCents={row.unitCostCents}
-                            onCommitCents={(valueCents) =>
-                              updateMaterial(row.id, (x) => ({
-                                ...x,
-                                unitCostCents: valueCents,
-                              }))
-                            }
-                          />
-                        </div>
+                        <DeferredMoneyInput
+                          className={inputBase + " " + inputMono}
+                          valueCents={row.unitCostCents}
+                          onCommitCents={(valueCents) =>
+                            updateMaterial(row.id, (x) => ({
+                              ...x,
+                              unitCostCents: valueCents,
+                            }))
+                          }
+                        />
                       </td>
                       <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
                         <div className="flex justify-center">
@@ -791,22 +781,17 @@ export default function MaterialsApp() {
                       </select>
                     </td>
                     <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                          {currencyPrefix}
-                        </span>
-                        <DeferredMoneyInput
-                          className={inputBase + " pl-7 " + inputMono}
-                          valueCents={draftMaterial.unitCostCents}
-                          onCommitCents={(valueCents) =>
-                            setDraftMaterial((prev) => ({
-                              ...prev,
-                              unitCostCents: valueCents,
-                            }))
-                          }
-                          disabled={savingDraftMaterial}
-                        />
-                      </div>
+                      <DeferredMoneyInput
+                        className={inputBase + " " + inputMono}
+                        valueCents={draftMaterial.unitCostCents}
+                        onCommitCents={(valueCents) =>
+                          setDraftMaterial((prev) => ({
+                            ...prev,
+                            unitCostCents: valueCents,
+                          }))
+                        }
+                        disabled={savingDraftMaterial}
+                      />
                     </td>
                     <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
                       <div className="flex justify-center">

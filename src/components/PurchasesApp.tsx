@@ -6,7 +6,7 @@ import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNu
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
-import { currencySymbolFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   createDemoMaterials,
   readLocalMaterialRecords,
@@ -251,11 +251,6 @@ export default function PurchasesApp() {
         settings.currencyRoundingMode,
       ),
     [settings.baseCurrency, settings.currencyRoundingIncrement, settings.currencyRoundingMode],
-  );
-
-  const currencyPrefix = useMemo(
-    () => currencySymbolFromSettings(settings.baseCurrency),
-    [settings.baseCurrency],
   );
 
   const focusDraftMaterialSelect = useCallback((scrollBehavior: ScrollBehavior = "smooth") => {
@@ -871,21 +866,16 @@ export default function PurchasesApp() {
                         />
                       </td>
                       <td className="w-[100px] p-2 align-middle">
-                        <div className="relative">
-                          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                            {currencyPrefix}
-                          </span>
-                          <DeferredMoneyInput
-                            className={inputBase + " pl-7 " + inputMono}
-                            valueCents={row.unitCostCents}
-                            onCommitCents={(valueCents) =>
-                              updatePurchase(row.id, (x) => ({
-                                ...x,
-                                unitCostCents: valueCents,
-                              }))
-                            }
-                          />
-                        </div>
+                        <DeferredMoneyInput
+                          className={inputBase + " " + inputMono}
+                          valueCents={row.unitCostCents}
+                          onCommitCents={(valueCents) =>
+                            updatePurchase(row.id, (x) => ({
+                              ...x,
+                              unitCostCents: valueCents,
+                            }))
+                          }
+                        />
                       </td>
                       <td className="w-[120px] p-2 align-middle">
                         <p className="px-3 py-2 font-mono text-sm text-ink">
@@ -1048,22 +1038,17 @@ export default function PurchasesApp() {
                       />
                     </td>
                     <td className="w-[100px] p-2 align-middle">
-                      <div className="relative">
-                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
-                          {currencyPrefix}
-                        </span>
-                        <DeferredMoneyInput
-                          className={inputBase + " pl-7 " + inputMono}
-                          valueCents={draftPurchase.unitCostCents}
-                          onCommitCents={(valueCents) =>
-                            setDraftPurchase((prev) => ({
-                              ...prev,
-                              unitCostCents: valueCents,
-                            }))
-                          }
-                          disabled={savingDraftPurchase}
-                        />
-                      </div>
+                      <DeferredMoneyInput
+                        className={inputBase + " " + inputMono}
+                        valueCents={draftPurchase.unitCostCents}
+                        onCommitCents={(valueCents) =>
+                          setDraftPurchase((prev) => ({
+                            ...prev,
+                            unitCostCents: valueCents,
+                          }))
+                        }
+                        disabled={savingDraftPurchase}
+                      />
                     </td>
                     <td className="w-[120px] p-2 align-middle">
                       <p className="px-3 py-2 font-mono text-sm text-ink">
