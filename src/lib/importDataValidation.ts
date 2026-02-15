@@ -99,23 +99,12 @@ function parseDelimited(text: string, delimiter: string): ParseDelimitedResult {
   return { ok: true, rows: compactRows };
 }
 
-function trimTrailingEmptyColumns(rows: string[][]): string[][] {
-  let lastNonEmptyColumn = -1;
-  for (const row of rows) {
-    for (let i = row.length - 1; i >= 0; i -= 1) {
-      if (row[i].trim().length > 0) {
-        lastNonEmptyColumn = Math.max(lastNonEmptyColumn, i);
-        break;
-      }
-    }
-  }
-
-  const width = Math.max(lastNonEmptyColumn + 1, 1);
-  return rows.map((row) => row.slice(0, width));
-}
-
 function sanitizeCell(cell: string): string {
   return cell.replace(/\r?\n/g, " ").replace(/\t/g, " ").trim();
+}
+
+function sanitizeRows(rows: string[][]): string[][] {
+  return rows.map((row) => row.map(sanitizeCell));
 }
 
 function isLikelyDataToken(value: string): boolean {
@@ -141,13 +130,46 @@ function hasHeaderRow(firstRow: string[]): boolean {
   return alphaCellCount >= Math.ceil(nonEmptyCells.length / 2);
 }
 
-function createRectifiedRows(rows: string[][]): string[][] {
-  const width = Math.max(...rows.map((row) => row.length));
-  return rows.map((row) => {
-    const padded = [...row];
-    while (padded.length < width) padded.push("");
-    return padded.map(sanitizeCell);
-  });
+function validateUniformRows(rows: string[][]): { ok: true } | { ok: false; reason: string } {
+  if (!rows.length) return { ok: false, reason: "No rows found after parsing." };
+
+  const expectedColumns = rows[0].length;
+  if (expectedColumns < 2) {
+    return { ok: false, reason: "At least 2 columns are required in the header row." };
+  }
+
+  const headerArrangement = rows[0].map((cell) => cell.length > 0);
+
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
+    const displayRowNumber = rowIndex + 1;
+
+    if (row.length !== expectedColumns) {
+      return {
+        ok: false,
+        reason: `Validation failed: not all rows have the same number of columns (row ${displayRowNumber}).`,
+      };
+    }
+
+    const hasEmptyCell = row.some((cell) => cell.length === 0);
+    if (hasEmptyCell) {
+      return {
+        ok: false,
+        reason: `Validation failed: some rows are not complete (row ${displayRowNumber}).`,
+      };
+    }
+
+    const arrangement = row.map((cell) => cell.length > 0);
+    const hasDifferentArrangement = arrangement.some((isFilled, i) => isFilled !== headerArrangement[i]);
+    if (hasDifferentArrangement) {
+      return {
+        ok: false,
+        reason: `Validation failed: rows do not have the same cell arrangement (row ${displayRowNumber}).`,
+      };
+    }
+  }
+
+  return { ok: true };
 }
 
 function isValidTsv(tsv: string): boolean {
@@ -179,20 +201,24 @@ export function validateAndNormalizeImportText(rawInput: string): ImportValidati
     return { ok: false, reason: parseResult.reason };
   }
 
-  const trimmedRows = trimTrailingEmptyColumns(parseResult.rows);
-  if (trimmedRows.length === 0) {
+  const sanitizedRows = sanitizeRows(parseResult.rows);
+  if (sanitizedRows.length === 0) {
     return { ok: false, reason: "No valid rows remained after formatting cleanup." };
   }
 
-  const fixedRows = createRectifiedRows(trimmedRows);
-  if (!hasHeaderRow(fixedRows[0])) {
+  if (!hasHeaderRow(sanitizedRows[0])) {
     return {
       ok: false,
       reason: "Header row is missing or invalid. Include a descriptive header row as the first line.",
     };
   }
 
-  const tsv = fixedRows.map((row) => row.join("\t")).join("\n");
+  const rowValidationResult = validateUniformRows(sanitizedRows);
+  if (!rowValidationResult.ok) {
+    return { ok: false, reason: rowValidationResult.reason };
+  }
+
+  const tsv = sanitizedRows.map((row) => row.join("\t")).join("\n");
   if (!isValidTsv(tsv)) {
     return {
       ok: false,
