@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PopupNotification } from "@/components/PopupNotification";
@@ -231,6 +232,8 @@ export default function PurchasesApp() {
   );
   const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
   const [newPurchasePopup, setNewPurchasePopup] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTextareaValue, setImportTextareaValue] = useState("");
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -807,6 +810,13 @@ export default function PurchasesApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/75 active:translate-y-px"
+                onClick={() => setIsImportModalOpen(true)}
+              >
+                Import
+              </button>
+              <button
+                type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={onNewPurchaseButtonClick}
               >
@@ -821,6 +831,16 @@ export default function PurchasesApp() {
               locationClassName="fixed right-4 top-20 z-50 max-w-md"
             />
           ) : null}
+
+          <ImportDataModal
+            isOpen={isImportModalOpen}
+            value={importTextareaValue}
+            onValueChange={setImportTextareaValue}
+            onClose={() => setIsImportModalOpen(false)}
+            title="Import purchases"
+            description="Paste CSV or TSV rows below. Parsing and preview will be added in the next step."
+            placeholder="material,description,quantity,cost..."
+          />
 
           {notice ? (
             <div
