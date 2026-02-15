@@ -366,7 +366,7 @@ function SidebarSections({
         </div>
       </nav>
 
-      <div className="border-t border-zinc-300 px-2 py-3">
+      <div className="px-2 py-3">
 
         <footer className="mt-3 border-t border-zinc-300/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
