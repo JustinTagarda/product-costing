@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { PopupNotification } from "@/components/PopupNotification";
 import { validateAndNormalizeImportText } from "@/lib/importDataValidation";
 
 type ImportDataModalProps = {
@@ -15,7 +16,6 @@ type ImportDataModalProps = {
 };
 
 type ValidationNotice = {
-  kind: "success" | "error";
   message: string;
 };
 
@@ -32,15 +32,32 @@ export function ImportDataModal({
   const titleId = useId();
   const descriptionId = useId();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
   const [isValidated, setIsValidated] = useState(false);
   const [notice, setNotice] = useState<ValidationNotice | null>(null);
   const isTextareaEmpty = value.trim().length === 0;
 
+  const clearNotice = useCallback((): void => {
+    setNotice(null);
+    if (!toastTimerRef.current) return;
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
+  }, []);
+
+  const showNotice = useCallback((message: string): void => {
+    setNotice({ message });
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setNotice(null);
+      toastTimerRef.current = null;
+    }, 3200);
+  }, []);
+
   const clearTextarea = useCallback((): void => {
     onValueChange("");
     setIsValidated(false);
-    setNotice(null);
-  }, [onValueChange]);
+    clearNotice();
+  }, [clearNotice, onValueChange]);
 
   const requestClose = useCallback((): void => {
     clearTextarea();
@@ -56,13 +73,13 @@ export function ImportDataModal({
     const result = validateAndNormalizeImportText(value);
     if (!result.ok) {
       setIsValidated(false);
-      setNotice({ kind: "error", message: result.reason });
+      showNotice(result.reason);
       return;
     }
     onValueChange(result.tsv);
     setIsValidated(true);
-    setNotice({ kind: "success", message: result.message });
-  }, [onValueChange, value]);
+    showNotice(result.message);
+  }, [onValueChange, showNotice, value]);
 
   const handleImport = useCallback((): void => {
     if (!isValidated) return;
@@ -73,10 +90,18 @@ export function ImportDataModal({
     (next: string): void => {
       onValueChange(next);
       setIsValidated(false);
-      setNotice(null);
+      clearNotice();
     },
-    [onValueChange],
+    [clearNotice, onValueChange],
   );
+
+  useEffect(() => {
+    return () => {
+      if (!toastTimerRef.current) return;
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -148,16 +173,10 @@ export function ImportDataModal({
         </div>
 
         {notice ? (
-          <div
-            className={[
-              "mt-3 rounded-xl border px-3 py-2 text-sm",
-              notice.kind === "error" ? "border-danger/30 bg-danger/10 text-danger" : "border-border bg-accent/10 text-ink",
-            ].join(" ")}
-            role="status"
-            aria-live="polite"
-          >
-            {notice.message}
-          </div>
+          <PopupNotification
+            message={notice.message}
+            locationClassName="fixed right-4 top-20 z-[140] max-w-md"
+          />
         ) : null}
 
         <div className="mt-4 flex items-center justify-end gap-2">
