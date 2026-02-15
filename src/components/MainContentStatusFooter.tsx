@@ -16,7 +16,7 @@ export function MainContentStatusFooter({
   return (
     <footer
       className={[
-        "mt-auto pt-3 text-center",
+        "mt-auto pt-3 text-center -mb-4 sm:-mb-5 lg:-mb-6",
         className,
       ]
         .filter(Boolean)

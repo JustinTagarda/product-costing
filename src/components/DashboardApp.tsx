@@ -468,6 +468,7 @@ export default function DashboardApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="dashboard sync via Supabase"
             guestLabel="saved in this browser (localStorage)"
+            className="-mb-6 sm:-mb-7 lg:-mb-8"
           />
         </div>
       </div>

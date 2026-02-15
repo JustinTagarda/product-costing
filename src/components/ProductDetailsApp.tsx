@@ -436,6 +436,7 @@ export default function ProductDetailsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="product detail sync via Supabase"
             guestLabel="product details loaded from localStorage"
+            className="-mb-6 sm:-mb-7 lg:-mb-8"
           />
         </div>
       </div>
