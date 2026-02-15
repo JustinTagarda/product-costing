@@ -206,7 +206,7 @@ export default function ProductsApp() {
       />
 
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
-        <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
+        <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.25rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.75rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3.25rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
           <header>
             <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Products</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
@@ -312,7 +312,6 @@ export default function ProductsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="products sync via Supabase"
             guestLabel="products saved in this browser (localStorage)"
-            className="-mb-6 sm:-mb-7 lg:-mb-8"
           />
         </div>
       </div>
