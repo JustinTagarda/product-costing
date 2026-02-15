@@ -589,8 +589,6 @@ export default function MaterialsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
-        onQuickAdd={() => focusDraftNameInput()}
-        quickAddLabel="+ New Material"
         profileLabel={session?.user?.email || "Profile"}
       />
 

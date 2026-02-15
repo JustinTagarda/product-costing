@@ -785,8 +785,6 @@ export default function PurchasesApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
-        onQuickAdd={() => focusDraftMaterialSelect()}
-        quickAddLabel="+ New Purchase"
         profileLabel={session?.user?.email || "Profile"}
       />
 

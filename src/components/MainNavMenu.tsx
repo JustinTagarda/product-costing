@@ -200,13 +200,15 @@ export function MainNavMenu({
             <span className="hidden sm:inline">{profileLabel || "Profile"}</span>
           </button>
 
-          <button
-            type="button"
-            className="inline-flex items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
-            onClick={() => onQuickAdd?.()}
-          >
-            {quickAddLabel || "+ New Product"}
-          </button>
+          {onQuickAdd ? (
+            <button
+              type="button"
+              className="inline-flex items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+              onClick={() => onQuickAdd()}
+            >
+              {quickAddLabel || "+ New Product"}
+            </button>
+          ) : null}
         </div>
       </header>
 
