@@ -504,7 +504,7 @@ export default function PurchasesApp() {
 
       if (changed && isCloudMode) schedulePersist(changed);
       if (changed && !isCloudMode) void syncMaterialFromPurchase(changed);
-      return sortPurchasesByDateDesc(next);
+      return next;
     });
   }
 
@@ -619,7 +619,7 @@ export default function PurchasesApp() {
           },
           new Date().toISOString(),
         );
-        setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
+        setPurchases((prev) => [...prev, row]);
         await syncMaterialFromPurchase(row);
         setDraftPurchase(
           makeDraftPurchase({
@@ -633,7 +633,7 @@ export default function PurchasesApp() {
       }
 
       const row = buildPurchaseFromDraft(makeId("pur"));
-      setPurchases((prev) => sortPurchasesByDateDesc([row, ...prev]));
+      setPurchases((prev) => [...prev, row]);
       await syncMaterialFromPurchase(row);
       setDraftPurchase(
         makeDraftPurchase({

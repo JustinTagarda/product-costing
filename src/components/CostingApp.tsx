@@ -360,9 +360,7 @@ export default function CostingApp() {
     if (!selectedSheet) return;
     const now = new Date().toISOString();
     const next = { ...updater(selectedSheet), updatedAt: now };
-    setSheets((prev) =>
-      sortSheetsByUpdatedAtDesc(prev.map((s) => (s.id === next.id ? next : s))),
-    );
+    setSheets((prev) => prev.map((s) => (s.id === next.id ? next : s)));
     if (isCloudMode) schedulePersist(next);
   }
 

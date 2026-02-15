@@ -386,7 +386,7 @@ export default function BomApp() {
         return updated;
       });
       if (changed && isCloudMode) scheduleItemPersist(changed);
-      return sortBomsByUpdatedAtDesc(next);
+      return next;
     });
   }
 
@@ -409,7 +409,7 @@ export default function BomApp() {
       });
       if (changedItem && isCloudMode) scheduleItemPersist(changedItem);
       if (changedLine && isCloudMode) scheduleLinePersist(bomId, changedLine);
-      return sortBomsByUpdatedAtDesc(next);
+      return next;
     });
   }
 
@@ -442,14 +442,14 @@ export default function BomApp() {
       }
       const next = combineBomRows([itemRow], [lineData[0] as DbBomLineRow])[0];
       if (!next) return;
-      setBoms((prev) => sortBomsByUpdatedAtDesc([next, ...prev]));
+      setBoms((prev) => [next, ...prev]);
       setSelectedId(next.id);
       toast("success", "BOM created.");
       return;
     }
 
     const row = makeBlankBom(makeId("bom"), defaults);
-    setBoms((prev) => sortBomsByUpdatedAtDesc([row, ...prev]));
+    setBoms((prev) => [row, ...prev]);
     setSelectedId(row.id);
     toast("success", "Local BOM created.");
   }
@@ -483,12 +483,10 @@ export default function BomApp() {
       }
       const line = rowToBomLine(data[0] as DbBomLineRow);
       setBoms((prev) =>
-        sortBomsByUpdatedAtDesc(
-          prev.map((item) =>
-            item.id === selectedBom.id
-              ? { ...item, lines: reindexLines([...item.lines, line]), updatedAt: now }
-              : item,
-          ),
+        prev.map((item) =>
+          item.id === selectedBom.id
+            ? { ...item, lines: reindexLines([...item.lines, line]), updatedAt: now }
+            : item,
         ),
       );
       return;
@@ -499,12 +497,10 @@ export default function BomApp() {
       unit: settings.defaultMaterialUnit,
     });
     setBoms((prev) =>
-      sortBomsByUpdatedAtDesc(
-        prev.map((item) =>
-          item.id === selectedBom.id
-            ? { ...item, lines: reindexLines([...item.lines, line]), updatedAt: now }
-            : item,
-        ),
+      prev.map((item) =>
+        item.id === selectedBom.id
+          ? { ...item, lines: reindexLines([...item.lines, line]), updatedAt: now }
+          : item,
       ),
     );
   }
@@ -520,23 +516,21 @@ export default function BomApp() {
     }
     const now = new Date().toISOString();
     setBoms((prev) =>
-      sortBomsByUpdatedAtDesc(
-        prev.map((item) => {
-          if (item.id !== selectedBom.id) return item;
-          const nextLines = item.lines.filter((line) => line.id !== lineId);
-          const lines = reindexLines(
-            nextLines.length
-              ? nextLines
-              : [
-                  makeBlankBomLine(makeId("bomline"), {
-                    sortOrder: 0,
-                    unit: settings.defaultMaterialUnit,
-                  }),
-                ],
-          );
-          return { ...item, lines, updatedAt: now };
-        }),
-      ),
+      prev.map((item) => {
+        if (item.id !== selectedBom.id) return item;
+        const nextLines = item.lines.filter((line) => line.id !== lineId);
+        const lines = reindexLines(
+          nextLines.length
+            ? nextLines
+            : [
+                makeBlankBomLine(makeId("bomline"), {
+                  sortOrder: 0,
+                  unit: settings.defaultMaterialUnit,
+                }),
+              ],
+        );
+        return { ...item, lines, updatedAt: now };
+      }),
     );
   }
 
