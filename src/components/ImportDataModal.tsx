@@ -159,7 +159,7 @@ export function ImportDataModal({
           </button>
         </div>
 
-        <div className="mt-4">
+        <div className="relative mt-4">
           <textarea
             ref={textareaRef}
             className="app-import-textarea"
@@ -170,14 +170,14 @@ export function ImportDataModal({
             autoCapitalize="off"
             autoCorrect="off"
           />
-        </div>
 
-        {notice ? (
-          <PopupNotification
-            message={notice.message}
-            locationClassName="fixed right-4 top-20 z-[140] max-w-md"
-          />
-        ) : null}
+          {notice ? (
+            <PopupNotification
+              message={notice.message}
+              locationClassName="pointer-events-none absolute left-1/2 top-1/2 z-[140] max-w-md -translate-x-1/2 -translate-y-1/2"
+            />
+          ) : null}
+        </div>
 
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
