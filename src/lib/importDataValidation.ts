@@ -137,6 +137,12 @@ function validateUniformRows(rows: string[][]): { ok: true } | { ok: false; reas
   if (expectedColumns < 2) {
     return { ok: false, reason: "At least 2 columns are required in the header row." };
   }
+  if (rows.length < 2) {
+    return {
+      ok: false,
+      reason: "Validation failed: only header row found. Add at least one data row.",
+    };
+  }
 
   const headerArrangement = rows[0].map((cell) => cell.length > 0);
 
