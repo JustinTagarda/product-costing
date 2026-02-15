@@ -796,7 +796,7 @@ export default function PurchasesApp() {
             </div>
 
             <div className="overflow-x-auto">
-              <table data-input-layout className="min-w-[1600px] w-full text-left text-sm">
+              <table data-input-layout className="w-max min-w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Material</th>
