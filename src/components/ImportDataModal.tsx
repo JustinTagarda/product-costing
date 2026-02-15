@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef } from "react";
 
 type ImportDataModalProps = {
   isOpen: boolean;
@@ -18,12 +18,24 @@ export function ImportDataModal({
   onValueChange,
   onClose,
   title = "Import data",
-  description = "Paste CSV or TSV rows into the box below.",
+  description = "Paste a Tab-Separated Value below.",
   placeholder = "Paste CSV/TSV data here...",
 }: ImportDataModalProps) {
   const titleId = useId();
   const descriptionId = useId();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isTextareaEmpty = value.trim().length === 0;
+
+  const requestClose = useCallback((): void => {
+    onValueChange("");
+    onClose();
+  }, [onClose, onValueChange]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    if (!value) return;
+    onValueChange("");
+  }, [isOpen, onValueChange, value]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -35,7 +47,7 @@ export function ImportDataModal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
-      onClose();
+      requestClose();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -43,7 +55,7 @@ export function ImportDataModal({
       window.cancelAnimationFrame(frame);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, requestClose]);
 
   if (!isOpen) return null;
 
@@ -52,7 +64,7 @@ export function ImportDataModal({
       className="app-modal-overlay"
       onMouseDown={(event) => {
         if (event.target !== event.currentTarget) return;
-        onClose();
+        requestClose();
       }}
     >
       <div
@@ -73,10 +85,11 @@ export function ImportDataModal({
           </div>
           <button
             type="button"
-            className="rounded-lg border border-border bg-paper px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/75"
-            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-paper/75"
+            aria-label="Close import popup"
+            onClick={requestClose}
           >
-            Close
+            <CloseIcon />
           </button>
         </div>
 
@@ -96,8 +109,17 @@ export function ImportDataModal({
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
+            className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => onValueChange("")}
+            disabled={isTextareaEmpty}
+            aria-disabled={isTextareaEmpty}
+          >
+            Clear
+          </button>
+          <button
+            type="button"
             className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75"
-            onClick={onClose}
+            onClick={requestClose}
           >
             Cancel
           </button>
@@ -112,5 +134,23 @@ export function ImportDataModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    >
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </svg>
   );
 }

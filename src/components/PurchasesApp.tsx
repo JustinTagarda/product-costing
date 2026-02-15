@@ -838,7 +838,7 @@ export default function PurchasesApp() {
             onValueChange={setImportTextareaValue}
             onClose={() => setIsImportModalOpen(false)}
             title="Import purchases"
-            description="Paste CSV or TSV rows below. Parsing and preview will be added in the next step."
+            description="Paste a Tab-Separated Value below."
             placeholder="material,description,quantity,cost..."
           />
 
