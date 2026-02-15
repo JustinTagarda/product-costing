@@ -64,6 +64,8 @@ const marketplaceLabels: Record<PurchaseMarketplace, string> = {
   local: "Local",
   other: "Other",
 };
+const INCOMPLETE_DRAFT_POPUP_MESSAGE =
+  "Complete required fields first: Material, Description, Marketplace, Quantity, Cost, and Usable Quantity.";
 
 function makeDraftPurchase(defaults?: {
   purchaseDate?: string;
@@ -80,6 +82,17 @@ function makeDraftPurchase(defaults?: {
     marketplace: defaults?.marketplace || "local",
     store: "",
   };
+}
+
+function isDraftPurchaseComplete(row: DraftPurchaseRow): boolean {
+  return (
+    row.materialId !== null &&
+    row.description.trim().length > 0 &&
+    String(row.marketplace || "").trim().length > 0 &&
+    row.quantity > 0 &&
+    row.unitCostCents > 0 &&
+    row.usableQuantity > 0
+  );
 }
 
 function cardClassName(): string {
@@ -215,6 +228,7 @@ export default function PurchasesApp() {
     makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }),
   );
   const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
+  const [newPurchasePopup, setNewPurchasePopup] = useState<string | null>(null);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -223,12 +237,23 @@ export default function PurchasesApp() {
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
   const savingDraftPurchaseRef = useRef(false);
+  const newPurchasePopupTimerRef = useRef<number | null>(null);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
+  }, []);
+
+  const showNewPurchasePopup = useCallback((message: string) => {
+    setNewPurchasePopup(message);
+    const existingTimer = newPurchasePopupTimerRef.current;
+    if (existingTimer) window.clearTimeout(existingTimer);
+    newPurchasePopupTimerRef.current = window.setTimeout(() => {
+      setNewPurchasePopup(null);
+      newPurchasePopupTimerRef.current = null;
+    }, 3200);
   }, []);
 
   const { settings } = useAppSettings({
@@ -331,6 +356,28 @@ export default function PurchasesApp() {
       timers.clear();
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      const timer = newPurchasePopupTimerRef.current;
+      if (timer) window.clearTimeout(timer);
+      newPurchasePopupTimerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!newPurchasePopup) return;
+    const dismiss = () => {
+      setNewPurchasePopup(null);
+      const timer = newPurchasePopupTimerRef.current;
+      if (timer) window.clearTimeout(timer);
+      newPurchasePopupTimerRef.current = null;
+    };
+    document.addEventListener("pointerdown", dismiss, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss, true);
+    };
+  }, [newPurchasePopup]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -569,6 +616,7 @@ export default function PurchasesApp() {
   async function commitDraftPurchase(): Promise<void> {
     if (savingDraftPurchaseRef.current) return;
     if (!hasDraftPurchaseValues()) return;
+    if (!isDraftPurchaseComplete(draftPurchase)) return;
 
     savingDraftPurchaseRef.current = true;
     setSavingDraftPurchase(true);
@@ -677,6 +725,19 @@ export default function PurchasesApp() {
     window.location.assign("/settings");
   }
 
+  function onNewPurchaseButtonClick(): void {
+    if (savingDraftPurchaseRef.current) return;
+    if (!hasDraftPurchaseValues()) {
+      focusDraftMaterialSelect();
+      return;
+    }
+    if (!isDraftPurchaseComplete(draftPurchase)) {
+      showNewPurchasePopup(INCOMPLETE_DRAFT_POPUP_MESSAGE);
+      return;
+    }
+    void commitDraftPurchase();
+  }
+
   const filteredPurchases = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return purchases;
@@ -741,12 +802,22 @@ export default function PurchasesApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => focusDraftMaterialSelect()}
+                onClick={onNewPurchaseButtonClick}
               >
                 New purchase
               </button>
             </div>
           </header>
+
+          {newPurchasePopup ? (
+            <div
+              className="fixed right-4 top-20 z-50 max-w-md rounded-xl border border-border bg-paper px-4 py-3 text-sm text-ink shadow-xl"
+              role="status"
+              aria-live="polite"
+            >
+              {newPurchasePopup}
+            </div>
+          ) : null}
 
           {notice ? (
             <div
