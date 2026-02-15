@@ -776,7 +776,7 @@ export default function PurchasesApp() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem="Purchases"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}

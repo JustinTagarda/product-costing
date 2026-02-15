@@ -217,7 +217,7 @@ export default function SettingsApp() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem="Settings"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}

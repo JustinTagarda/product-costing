@@ -563,7 +563,7 @@ export default function BomApp() {
   const selectedCost = selectedBom ? bomCosts.get(selectedBom.id) : null;
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem="BOM"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}

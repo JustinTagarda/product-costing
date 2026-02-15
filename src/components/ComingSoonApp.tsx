@@ -96,7 +96,7 @@ export default function ComingSoonApp() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem={activeItem}
         onSettings={openSettings}

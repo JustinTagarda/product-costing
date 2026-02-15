@@ -752,7 +752,7 @@ export default function CostingApp() {
 
   if (!selectedSheet || !totals) {
     return (
-      <div className="min-h-dvh">
+      <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
         <MainNavMenu
           activeItem="Cost Calculator"
           onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
@@ -787,7 +787,7 @@ export default function CostingApp() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem="Cost Calculator"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}

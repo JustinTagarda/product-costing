@@ -191,7 +191,7 @@ export default function ProductsApp() {
   }, [products, query]);
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
       <MainNavMenu
         activeItem="Products"
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
