@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { PopupNotification } from "@/components/PopupNotification";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
@@ -810,13 +811,10 @@ export default function PurchasesApp() {
           </header>
 
           {newPurchasePopup ? (
-            <div
-              className="fixed right-4 top-20 z-50 max-w-md rounded-xl border border-border bg-paper px-4 py-3 text-sm text-ink shadow-xl"
-              role="status"
-              aria-live="polite"
-            >
-              {newPurchasePopup}
-            </div>
+            <PopupNotification
+              message={newPurchasePopup}
+              locationClassName="fixed right-4 top-20 z-50 max-w-md"
+            />
           ) : null}
 
           {notice ? (

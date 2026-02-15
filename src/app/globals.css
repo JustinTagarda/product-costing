@@ -136,6 +136,17 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+.app-popup-notification {
+  border: 1px solid var(--border);
+  background-color: #fffff0;
+  color: var(--ink);
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
