@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -79,22 +80,6 @@ function makeDraftPurchase(defaults?: {
     marketplace: defaults?.marketplace || "local",
     store: "",
   };
-}
-
-function parseNumber(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function parseMoneyToCents(value: string): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.round(n * 100));
-}
-
-function centsToMoneyString(cents: number): string {
-  const safe = Number.isFinite(cents) ? cents : 0;
-  return (safe / 100).toFixed(2);
 }
 
 function cardClassName(): string {
@@ -874,16 +859,13 @@ export default function PurchasesApp() {
                         />
                       </td>
                       <td className="w-[80px] p-2 align-middle">
-                        <input
+                        <DeferredNumberInput
                           className={inputBase + " " + inputMono}
-                          type="number"
-                          step={0.001}
-                          min={0}
                           value={row.quantity}
-                          onChange={(e) =>
+                          onCommit={(value) =>
                             updatePurchase(row.id, (x) => ({
                               ...x,
-                              quantity: Math.max(0, parseNumber(e.target.value)),
+                              quantity: Math.max(0, value),
                             }))
                           }
                         />
@@ -893,16 +875,13 @@ export default function PurchasesApp() {
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
                           </span>
-                          <input
+                          <DeferredMoneyInput
                             className={inputBase + " pl-7 " + inputMono}
-                            type="number"
-                            step={0.01}
-                            min={0}
-                            value={centsToMoneyString(row.unitCostCents)}
-                            onChange={(e) =>
+                            valueCents={row.unitCostCents}
+                            onCommitCents={(valueCents) =>
                               updatePurchase(row.id, (x) => ({
                                 ...x,
-                                unitCostCents: parseMoneyToCents(e.target.value),
+                                unitCostCents: valueCents,
                               }))
                             }
                           />
@@ -914,16 +893,13 @@ export default function PurchasesApp() {
                         </p>
                       </td>
                       <td className="w-[80px] p-2 align-middle">
-                        <input
+                        <DeferredNumberInput
                           className={inputBase + " " + inputMono}
-                          type="number"
-                          step={0.001}
-                          min={0}
                           value={row.usableQuantity}
-                          onChange={(e) =>
+                          onCommit={(value) =>
                             updatePurchase(row.id, (x) => ({
                               ...x,
-                              usableQuantity: Math.max(0, parseNumber(e.target.value)),
+                              usableQuantity: Math.max(0, value),
                             }))
                           }
                         />
@@ -999,12 +975,16 @@ export default function PurchasesApp() {
                     onBlurCapture={(e) => {
                       const nextFocus = e.relatedTarget as Node | null;
                       if (nextFocus && e.currentTarget.contains(nextFocus)) return;
-                      void commitDraftPurchase();
+                      window.setTimeout(() => {
+                        void commitDraftPurchase();
+                      }, 0);
                     }}
                     onKeyDownCapture={(e) => {
                       if (e.key !== "Enter") return;
                       e.preventDefault();
-                      void commitDraftPurchase();
+                      window.setTimeout(() => {
+                        void commitDraftPurchase();
+                      }, 0);
                     }}
                   >
                     <td className="p-2 align-middle">
@@ -1055,16 +1035,13 @@ export default function PurchasesApp() {
                       />
                     </td>
                     <td className="w-[80px] p-2 align-middle">
-                      <input
+                      <DeferredNumberInput
                         className={inputBase + " " + inputMono}
-                        type="number"
-                        step={0.001}
-                        min={0}
                         value={draftPurchase.quantity}
-                        onChange={(e) =>
+                        onCommit={(value) =>
                           setDraftPurchase((prev) => ({
                             ...prev,
-                            quantity: Math.max(0, parseNumber(e.target.value)),
+                            quantity: Math.max(0, value),
                           }))
                         }
                         disabled={savingDraftPurchase}
@@ -1075,16 +1052,13 @@ export default function PurchasesApp() {
                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                           {currencyPrefix}
                         </span>
-                        <input
+                        <DeferredMoneyInput
                           className={inputBase + " pl-7 " + inputMono}
-                          type="number"
-                          step={0.01}
-                          min={0}
-                          value={centsToMoneyString(draftPurchase.unitCostCents)}
-                          onChange={(e) =>
+                          valueCents={draftPurchase.unitCostCents}
+                          onCommitCents={(valueCents) =>
                             setDraftPurchase((prev) => ({
                               ...prev,
-                              unitCostCents: parseMoneyToCents(e.target.value),
+                              unitCostCents: valueCents,
                             }))
                           }
                           disabled={savingDraftPurchase}
@@ -1097,16 +1071,13 @@ export default function PurchasesApp() {
                       </p>
                     </td>
                     <td className="w-[80px] p-2 align-middle">
-                      <input
+                      <DeferredNumberInput
                         className={inputBase + " " + inputMono}
-                        type="number"
-                        step={0.001}
-                        min={0}
                         value={draftPurchase.usableQuantity}
-                        onChange={(e) =>
+                        onCommit={(value) =>
                           setDraftPurchase((prev) => ({
                             ...prev,
-                            usableQuantity: Math.max(0, parseNumber(e.target.value)),
+                            usableQuantity: Math.max(0, value),
                           }))
                         }
                         disabled={savingDraftPurchase}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -26,11 +27,6 @@ const cardClassName = [
   "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
   "backdrop-blur-md",
 ].join(" ");
-
-function parseNumber(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
 
 function sectionTitleClass() {
   return "font-serif text-2xl tracking-tight text-ink";
@@ -369,16 +365,13 @@ export default function SettingsApp() {
                 </div>
                 <div>
                   <label className="block font-mono text-xs text-muted">Rounding (cents)</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    min={1}
-                    max={100}
                     value={settings.currencyRoundingIncrement}
-                    onChange={(e) =>
+                    onCommit={(value) =>
                       updateSettings((prev) => ({
                         ...prev,
-                        currencyRoundingIncrement: Math.max(1, Math.round(parseNumber(e.target.value))),
+                        currencyRoundingIncrement: Math.max(1, Math.min(100, Math.round(value))),
                       }))
                     }
                   />
@@ -481,16 +474,13 @@ export default function SettingsApp() {
                         }
                         placeholder="To (e.g., lb)"
                       />
-                      <input
+                      <DeferredNumberInput
                         className={inputBase + " font-mono"}
-                        type="number"
-                        step={0.000001}
-                        min={0.000001}
                         value={row.factor}
-                        onChange={(e) =>
+                        onCommit={(value) =>
                           updateConversion(row.id, (prev) => ({
                             ...prev,
-                            factor: Math.max(0.000001, parseNumber(e.target.value)),
+                            factor: Math.max(0.000001, value),
                           }))
                         }
                         placeholder="Factor"
@@ -548,30 +538,24 @@ export default function SettingsApp() {
 
                 <div>
                   <label className="block font-mono text-xs text-muted">Default waste %</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    step={0.1}
-                    min={0}
                     value={settings.defaultWastePct}
-                    onChange={(e) =>
-                      updateSettings((prev) => ({ ...prev, defaultWastePct: Math.max(0, parseNumber(e.target.value)) }))
+                    onCommit={(value) =>
+                      updateSettings((prev) => ({ ...prev, defaultWastePct: Math.max(0, value) }))
                     }
                   />
                 </div>
 
                 <div>
                   <label className="block font-mono text-xs text-muted">Default markup %</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    step={0.1}
-                    min={0}
                     value={settings.defaultMarkupPct}
-                    onChange={(e) =>
+                    onCommit={(value) =>
                       updateSettings((prev) => ({
                         ...prev,
-                        defaultMarkupPct: Math.max(0, parseNumber(e.target.value)),
+                        defaultMarkupPct: Math.max(0, value),
                       }))
                     }
                   />
@@ -579,31 +563,24 @@ export default function SettingsApp() {
 
                 <div>
                   <label className="block font-mono text-xs text-muted">Default tax %</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    step={0.1}
-                    min={0}
                     value={settings.defaultTaxPct}
-                    onChange={(e) =>
-                      updateSettings((prev) => ({ ...prev, defaultTaxPct: Math.max(0, parseNumber(e.target.value)) }))
+                    onCommit={(value) =>
+                      updateSettings((prev) => ({ ...prev, defaultTaxPct: Math.max(0, value) }))
                     }
                   />
                 </div>
 
                 <div>
                   <label className="block font-mono text-xs text-muted">Quantity precision</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    step={1}
-                    min={0}
-                    max={6}
                     value={settings.quantityPrecision}
-                    onChange={(e) =>
+                    onCommit={(value) =>
                       updateSettings((prev) => ({
                         ...prev,
-                        quantityPrecision: Math.max(0, Math.min(6, Math.round(parseNumber(e.target.value)))),
+                        quantityPrecision: Math.max(0, Math.min(6, Math.round(value))),
                       }))
                     }
                   />
@@ -611,17 +588,13 @@ export default function SettingsApp() {
 
                 <div>
                   <label className="block font-mono text-xs text-muted">Price precision</label>
-                  <input
+                  <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
-                    type="number"
-                    step={1}
-                    min={0}
-                    max={6}
                     value={settings.pricePrecision}
-                    onChange={(e) =>
+                    onCommit={(value) =>
                       updateSettings((prev) => ({
                         ...prev,
-                        pricePrecision: Math.max(0, Math.min(6, Math.round(parseNumber(e.target.value)))),
+                        pricePrecision: Math.max(0, Math.min(6, Math.round(value))),
                       }))
                     }
                   />

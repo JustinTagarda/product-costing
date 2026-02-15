@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DeferredMoneyInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -136,17 +137,6 @@ function makeDraftMaterial(defaultUnit: string): DraftMaterialRow {
     unitCostCents: 0,
     isActive: true,
   };
-}
-
-function parseMoneyToCents(value: string): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.round(n * 100));
-}
-
-function centsToMoneyString(cents: number): string {
-  const safe = Number.isFinite(cents) ? cents : 0;
-  return (safe / 100).toFixed(2);
 }
 
 function parseLocalMaterials(raw: unknown): MaterialRecord[] {
@@ -706,16 +696,13 @@ export default function MaterialsApp() {
                           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                             {currencyPrefix}
                           </span>
-                          <input
+                          <DeferredMoneyInput
                             className={inputBase + " pl-7 " + inputMono}
-                            type="number"
-                            step={0.01}
-                            min={0}
-                            value={centsToMoneyString(row.unitCostCents)}
-                            onChange={(e) =>
+                            valueCents={row.unitCostCents}
+                            onCommitCents={(valueCents) =>
                               updateMaterial(row.id, (x) => ({
                                 ...x,
-                                unitCostCents: parseMoneyToCents(e.target.value),
+                                unitCostCents: valueCents,
                               }))
                             }
                           />
@@ -763,12 +750,16 @@ export default function MaterialsApp() {
                     onBlurCapture={(e) => {
                       const nextFocus = e.relatedTarget as Node | null;
                       if (nextFocus && e.currentTarget.contains(nextFocus)) return;
-                      void commitDraftMaterial();
+                      window.setTimeout(() => {
+                        void commitDraftMaterial();
+                      }, 0);
                     }}
                     onKeyDownCapture={(e) => {
                       if (e.key !== "Enter") return;
                       e.preventDefault();
-                      void commitDraftMaterial();
+                      window.setTimeout(() => {
+                        void commitDraftMaterial();
+                      }, 0);
                     }}
                   >
                     <td className="p-2">
@@ -804,16 +795,13 @@ export default function MaterialsApp() {
                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                           {currencyPrefix}
                         </span>
-                        <input
+                        <DeferredMoneyInput
                           className={inputBase + " pl-7 " + inputMono}
-                          type="number"
-                          step={0.01}
-                          min={0}
-                          value={centsToMoneyString(draftMaterial.unitCostCents)}
-                          onChange={(e) =>
+                          valueCents={draftMaterial.unitCostCents}
+                          onCommitCents={(valueCents) =>
                             setDraftMaterial((prev) => ({
                               ...prev,
-                              unitCostCents: parseMoneyToCents(e.target.value),
+                              unitCostCents: valueCents,
                             }))
                           }
                           disabled={savingDraftMaterial}

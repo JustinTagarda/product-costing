@@ -3,6 +3,7 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -35,22 +36,6 @@ const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:local:v1";
 const WELCOME_GATE_DISMISSED_KEY = "product-costing:welcome-gate:dismissed";
 const PRODUCT_CODE_PREFIX = "PR-";
-
-function parseNumber(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function parseMoneyToCents(value: string): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100);
-}
-
-function centsToMoneyString(cents: number): string {
-  const safe = Number.isFinite(cents) ? cents : 0;
-  return (safe / 100).toFixed(2);
-}
 
 function downloadJson(filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -1013,16 +998,13 @@ export default function CostingApp() {
                       </div>
                       <div>
                         <label className="block font-mono text-xs text-muted">Batch size</label>
-                        <input
+                        <DeferredNumberInput
                           className={inputBase + " mt-1 " + inputMono}
-                          type="number"
-                          min={0}
-                          step={1}
                           value={selectedSheet.batchSize}
-                          onChange={(e) =>
+                          onCommit={(value) =>
                             updateSelected((s) => ({
                               ...s,
-                              batchSize: Math.max(0, Math.trunc(parseNumber(e.target.value))),
+                              batchSize: Math.max(0, Math.trunc(value)),
                             }))
                           }
                         />
@@ -1106,16 +1088,14 @@ export default function CostingApp() {
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <input
+                                  <DeferredNumberInput
                                     className={inputBase + " " + inputMono}
-                                    type="number"
-                                    step={0.001}
                                     value={it.qty}
-                                    onChange={(e) =>
+                                    onCommit={(value) =>
                                       updateSelected((s) => ({
                                         ...s,
                                         materials: s.materials.map((m) =>
-                                          m.id === it.id ? { ...m, qty: parseNumber(e.target.value) } : m,
+                                          m.id === it.id ? { ...m, qty: value } : m,
                                         ),
                                       }))
                                     }
@@ -1141,17 +1121,15 @@ export default function CostingApp() {
                                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                                       {selectedCurrencyPrefix}
                                     </span>
-                                    <input
+                                    <DeferredMoneyInput
                                       className={inputBase + " pl-7 " + inputMono}
-                                      type="number"
-                                      step={0.01}
-                                      value={centsToMoneyString(it.unitCostCents)}
-                                      onChange={(e) =>
+                                      valueCents={it.unitCostCents}
+                                      onCommitCents={(valueCents) =>
                                         updateSelected((s) => ({
                                           ...s,
                                           materials: s.materials.map((m) =>
                                             m.id === it.id
-                                              ? { ...m, unitCostCents: parseMoneyToCents(e.target.value) }
+                                              ? { ...m, unitCostCents: valueCents }
                                               : m,
                                           ),
                                         }))
@@ -1194,14 +1172,11 @@ export default function CostingApp() {
                     <div className="flex flex-wrap gap-3 border-t border-border px-4 py-3">
                         <div className="flex-1">
                           <label className="block font-mono text-xs text-muted">Waste %</label>
-                          <input
+                          <DeferredNumberInput
                             className={inputBase + " mt-1 " + inputMono}
-                            type="number"
-                            step={0.1}
-                            min={0}
                             value={selectedSheet.wastePct}
-                            onChange={(e) =>
-                              updateSelected((s) => ({ ...s, wastePct: Math.max(0, parseNumber(e.target.value)) }))
+                            onCommit={(value) =>
+                              updateSelected((s) => ({ ...s, wastePct: Math.max(0, value) }))
                             }
                           />
                         </div>
@@ -1274,18 +1249,15 @@ export default function CostingApp() {
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <input
+                                  <DeferredNumberInput
                                     className={inputBase + " " + inputMono}
-                                    type="number"
-                                    step={0.05}
-                                    min={0}
                                     value={it.hours}
-                                    onChange={(e) =>
+                                    onCommit={(value) =>
                                       updateSelected((s) => ({
                                         ...s,
                                         labor: s.labor.map((l) =>
                                           l.id === it.id
-                                            ? { ...l, hours: Math.max(0, parseNumber(e.target.value)) }
+                                            ? { ...l, hours: Math.max(0, value) }
                                             : l,
                                         ),
                                       }))
@@ -1297,18 +1269,15 @@ export default function CostingApp() {
                                     <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                                       {selectedCurrencyPrefix}
                                     </span>
-                                    <input
+                                    <DeferredMoneyInput
                                       className={inputBase + " pl-7 " + inputMono}
-                                      type="number"
-                                      step={0.01}
-                                      min={0}
-                                      value={centsToMoneyString(it.rateCents)}
-                                      onChange={(e) =>
+                                      valueCents={it.rateCents}
+                                      onCommitCents={(valueCents) =>
                                         updateSelected((s) => ({
                                           ...s,
                                           labor: s.labor.map((l) =>
                                             l.id === it.id
-                                              ? { ...l, rateCents: parseMoneyToCents(e.target.value) }
+                                              ? { ...l, rateCents: valueCents }
                                               : l,
                                           ),
                                         }))
@@ -1451,18 +1420,15 @@ export default function CostingApp() {
                                         <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">
                                           {selectedCurrencyPrefix}
                                         </span>
-                                        <input
+                                        <DeferredMoneyInput
                                           className={inputBase + " pl-7 " + inputMono}
-                                          type="number"
-                                          step={0.01}
-                                          min={0}
-                                          value={centsToMoneyString(it.amountCents)}
-                                          onChange={(e) =>
+                                          valueCents={it.amountCents}
+                                          onCommitCents={(valueCents) =>
                                             updateSelected((s) => ({
                                               ...s,
                                               overhead: s.overhead.map((o) =>
                                                 o.id === it.id
-                                                  ? { ...o, amountCents: parseMoneyToCents(e.target.value) }
+                                                  ? { ...o, amountCents: valueCents }
                                                   : o,
                                               ) as OverheadItem[],
                                             }))
@@ -1474,18 +1440,15 @@ export default function CostingApp() {
                                         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
                                           %
                                         </span>
-                                        <input
+                                        <DeferredNumberInput
                                           className={inputBase + " pr-7 " + inputMono}
-                                          type="number"
-                                          step={0.1}
-                                          min={0}
                                           value={it.percent}
-                                          onChange={(e) =>
+                                          onCommit={(value) =>
                                             updateSelected((s) => ({
                                               ...s,
                                               overhead: s.overhead.map((o) =>
                                                 o.id === it.id
-                                                  ? { ...o, percent: Math.max(0, parseNumber(e.target.value)) }
+                                                  ? { ...o, percent: Math.max(0, value) }
                                                   : o,
                                               ) as OverheadItem[],
                                             }))
@@ -1587,16 +1550,13 @@ export default function CostingApp() {
                       <div className="mt-3 grid gap-3">
                         <div>
                           <label className="block font-mono text-xs text-muted">Markup %</label>
-                          <input
+                          <DeferredNumberInput
                             className={inputBase + " mt-1 " + inputMono}
-                            type="number"
-                            step={0.1}
-                            min={0}
                             value={selectedSheet.markupPct}
-                            onChange={(e) =>
+                            onCommit={(value) =>
                               updateSelected((s) => ({
                                 ...s,
-                                markupPct: Math.max(0, parseNumber(e.target.value)),
+                                markupPct: Math.max(0, value),
                               }))
                             }
                           />
@@ -1605,16 +1565,13 @@ export default function CostingApp() {
                           <label className="block font-mono text-xs text-muted">
                             Sales tax % (optional)
                           </label>
-                          <input
+                          <DeferredNumberInput
                             className={inputBase + " mt-1 " + inputMono}
-                            type="number"
-                            step={0.1}
-                            min={0}
                             value={selectedSheet.taxPct}
-                            onChange={(e) =>
+                            onCommit={(value) =>
                               updateSelected((s) => ({
                                 ...s,
-                                taxPct: Math.max(0, parseNumber(e.target.value)),
+                                taxPct: Math.max(0, value),
                               }))
                             }
                           />

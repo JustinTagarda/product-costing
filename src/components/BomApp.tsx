@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -57,22 +58,6 @@ function cardClassName(): string {
     "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
     "backdrop-blur-md",
   ].join(" ");
-}
-
-function parseNumber(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function parseMoneyToCents(value: string): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.round(n * 100));
-}
-
-function centsToMoneyString(cents: number): string {
-  const safe = Number.isFinite(cents) ? cents : 0;
-  return (safe / 100).toFixed(2);
 }
 
 function toMaterialOption(material: MaterialRecord): MaterialOption {
@@ -742,7 +727,13 @@ export default function BomApp() {
                 </div>
                 <div>
                   <label className="block font-mono text-xs text-muted">Output quantity</label>
-                  <input className={inputBase + " mt-1 " + inputMono} type="number" min={0} step={0.001} value={selectedBom.outputQty} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, outputQty: Math.max(0, parseNumber(e.target.value)) }))} />
+                  <DeferredNumberInput
+                    className={inputBase + " mt-1 " + inputMono}
+                    value={selectedBom.outputQty}
+                    onCommit={(value) =>
+                      updateBom(selectedBom.id, (row) => ({ ...row, outputQty: Math.max(0, value) }))
+                    }
+                  />
                 </div>
                 <div>
                   <label className="block font-mono text-xs text-muted">Output unit</label>
@@ -819,7 +810,16 @@ export default function BomApp() {
                             )}
                           </td>
                           <td className="p-2">
-                            <input className={inputBase + " " + inputMono} type="number" min={0} step={0.001} value={line.quantity} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, quantity: Math.max(0, parseNumber(e.target.value)) }))} />
+                            <DeferredNumberInput
+                              className={inputBase + " " + inputMono}
+                              value={line.quantity}
+                              onCommit={(value) =>
+                                updateLine(selectedBom.id, line.id, (row) => ({
+                                  ...row,
+                                  quantity: Math.max(0, value),
+                                }))
+                              }
+                            />
                           </td>
                           <td className="p-2">
                             <input className={inputBase} value={line.unit} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, unit: e.target.value || settings.defaultMaterialUnit }))} />
@@ -828,7 +828,16 @@ export default function BomApp() {
                             {line.componentType === "material" && !line.materialId ? (
                               <div className="relative">
                                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-xs text-muted">{currencyPrefix}</span>
-                                <input className={inputBase + " pl-7 " + inputMono} type="number" min={0} step={0.01} value={centsToMoneyString(line.unitCostCents)} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, unitCostCents: parseMoneyToCents(e.target.value) }))} />
+                                <DeferredMoneyInput
+                                  className={inputBase + " pl-7 " + inputMono}
+                                  valueCents={line.unitCostCents}
+                                  onCommitCents={(valueCents) =>
+                                    updateLine(selectedBom.id, line.id, (row) => ({
+                                      ...row,
+                                      unitCostCents: valueCents,
+                                    }))
+                                  }
+                                />
                               </div>
                             ) : (
                               <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">{formatMoney(lineUnitCost)}</p>
