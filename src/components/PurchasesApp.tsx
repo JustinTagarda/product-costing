@@ -686,7 +686,6 @@ export default function PurchasesApp() {
           }),
         );
         window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
-        toast("success", "Purchase created.");
         return;
       }
 
@@ -700,7 +699,6 @@ export default function PurchasesApp() {
         }),
       );
       window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
-      toast("success", "Local purchase created.");
     } finally {
       savingDraftPurchaseRef.current = false;
       setSavingDraftPurchase(false);
@@ -857,7 +855,9 @@ export default function PurchasesApp() {
               <table data-input-layout className="w-max min-w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Material</th>
+                    <th className="w-[230px] min-w-[230px] max-w-[230px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                      Material
+                    </th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Description</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Variation</th>
                     <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
@@ -883,7 +883,7 @@ export default function PurchasesApp() {
                 <tbody>
                   {filteredPurchases.map((row) => (
                     <tr key={row.id} className="align-middle">
-                      <td className="p-2 align-middle">
+                      <td className="w-[230px] min-w-[230px] max-w-[230px] p-2 align-middle">
                         <select
                           className={inputBase}
                           value={row.materialId ?? ""}
@@ -1055,7 +1055,7 @@ export default function PurchasesApp() {
                       })
                     }
                   >
-                    <td className="p-2 align-middle">
+                    <td className="w-[230px] min-w-[230px] max-w-[230px] p-2 align-middle">
                       <select
                         ref={draftMaterialSelectRef}
                         className={inputBase}

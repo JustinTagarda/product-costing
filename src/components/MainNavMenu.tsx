@@ -336,35 +336,37 @@ function SidebarSections({
             </button>
           );
         })}
+        <div className="mt-3 border-t border-zinc-300 pt-3">
+          <button
+            type="button"
+            title={compact ? "Settings" : undefined}
+            className={[
+              "flex w-full items-center rounded-md py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              buttonClasses,
+              isSettingsActive ? "bg-zinc-100 text-ink" : "text-ink hover:bg-zinc-100/75",
+            ].join(" ")}
+            onClick={onSettings}
+          >
+            <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Settings</span>
+            {compact ? <span className={compactLabelClasses || "md:hidden"}>S</span> : null}
+          </button>
+
+          <button
+            type="button"
+            title={compact ? "Log out" : undefined}
+            className={[
+              "mt-1 flex w-full items-center rounded-md py-2 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              buttonClasses,
+            ].join(" ")}
+            onClick={onLogout}
+          >
+            <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Log out</span>
+            {compact ? <span className={compactLabelClasses || "md:hidden"}>L</span> : null}
+          </button>
+        </div>
       </nav>
 
       <div className="border-t border-zinc-300 px-2 py-3">
-        <button
-          type="button"
-          title={compact ? "Settings" : undefined}
-          className={[
-            "flex w-full items-center rounded-md py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
-            buttonClasses,
-            isSettingsActive ? "bg-zinc-100 text-ink" : "text-ink hover:bg-zinc-100/75",
-          ].join(" ")}
-          onClick={onSettings}
-        >
-          <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Settings</span>
-          {compact ? <span className={compactLabelClasses || "md:hidden"}>S</span> : null}
-        </button>
-
-        <button
-          type="button"
-          title={compact ? "Log out" : undefined}
-          className={[
-            "mt-1 flex w-full items-center rounded-md py-2 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
-            buttonClasses,
-          ].join(" ")}
-          onClick={onLogout}
-        >
-          <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Log out</span>
-          {compact ? <span className={compactLabelClasses || "md:hidden"}>L</span> : null}
-        </button>
 
         <footer className="mt-3 border-t border-zinc-300/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
