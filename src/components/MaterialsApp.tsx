@@ -7,6 +7,7 @@ import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import {
   createDemoMaterials,
   makeBlankMaterial,
@@ -274,6 +275,10 @@ export default function MaterialsApp() {
       input.select();
     });
   }, []);
+
+  const resetDraftMaterial = useCallback(() => {
+    setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+  }, [settings.defaultMaterialUnit]);
 
   useEffect(() => {
     const normalizedDefault =
@@ -737,20 +742,20 @@ export default function MaterialsApp() {
                   <tr
                     ref={draftRowRef}
                     className="align-top"
-                    onBlurCapture={(e) => {
-                      const nextFocus = e.relatedTarget as Node | null;
-                      if (nextFocus && e.currentTarget.contains(nextFocus)) return;
-                      window.setTimeout(() => {
+                    onBlurCapture={(e) =>
+                      handleDraftRowBlurCapture(e, () => {
                         void commitDraftMaterial();
-                      }, 0);
-                    }}
-                    onKeyDownCapture={(e) => {
-                      if (e.key !== "Enter") return;
-                      e.preventDefault();
-                      window.setTimeout(() => {
-                        void commitDraftMaterial();
-                      }, 0);
-                    }}
+                      })
+                    }
+                    onKeyDownCapture={(e) =>
+                      handleDraftRowKeyDownCapture(e, {
+                        commit: () => {
+                          void commitDraftMaterial();
+                        },
+                        reset: resetDraftMaterial,
+                        focusAfterReset: () => focusDraftNameInput("auto"),
+                      })
+                    }
                   >
                     <td className="p-2">
                       <input

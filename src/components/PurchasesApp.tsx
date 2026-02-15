@@ -8,6 +8,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { PopupNotification } from "@/components/PopupNotification";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import {
   createDemoMaterials,
   readLocalMaterialRecords,
@@ -291,6 +292,14 @@ export default function PurchasesApp() {
     window.requestAnimationFrame(() => {
       draftMaterialSelectRef.current?.focus();
     });
+  }, []);
+
+  const resetDraftPurchase = useCallback(() => {
+    setDraftPurchase(makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }));
+    setNewPurchasePopup(null);
+    const timer = newPurchasePopupTimerRef.current;
+    if (timer) window.clearTimeout(timer);
+    newPurchasePopupTimerRef.current = null;
   }, []);
 
   function normalizePurchaseRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
@@ -1031,20 +1040,20 @@ export default function PurchasesApp() {
                   <tr
                     ref={draftRowRef}
                     className="align-middle"
-                    onBlurCapture={(e) => {
-                      const nextFocus = e.relatedTarget as Node | null;
-                      if (nextFocus && e.currentTarget.contains(nextFocus)) return;
-                      window.setTimeout(() => {
+                    onBlurCapture={(e) =>
+                      handleDraftRowBlurCapture(e, () => {
                         void commitDraftPurchase();
-                      }, 0);
-                    }}
-                    onKeyDownCapture={(e) => {
-                      if (e.key !== "Enter") return;
-                      e.preventDefault();
-                      window.setTimeout(() => {
-                        void commitDraftPurchase();
-                      }, 0);
-                    }}
+                      })
+                    }
+                    onKeyDownCapture={(e) =>
+                      handleDraftRowKeyDownCapture(e, {
+                        commit: () => {
+                          void commitDraftPurchase();
+                        },
+                        reset: resetDraftPurchase,
+                        focusAfterReset: () => focusDraftMaterialSelect("auto"),
+                      })
+                    }
                   >
                     <td className="p-2 align-middle">
                       <select
