@@ -174,20 +174,14 @@ function getObjectNumber(source: Record<string, unknown>, keys: string[]): numbe
 
 function computeWeightedAverageCostByMaterialId(
   rows: unknown[],
-  baseCurrency: string,
 ): Record<string, number> {
   const totals = new Map<string, { costCents: number; usableQuantity: number }>();
-  const normalizedBaseCurrency = (baseCurrency || "USD").trim().toUpperCase();
 
   for (const raw of rows) {
     if (!raw || typeof raw !== "object") continue;
     const row = raw as Record<string, unknown>;
     const materialId = getObjectString(row, ["material_id", "materialId"]).trim();
     if (!materialId) continue;
-
-    const rowCurrencyRaw = getObjectString(row, ["currency"]).trim().toUpperCase();
-    const rowCurrency = rowCurrencyRaw || normalizedBaseCurrency;
-    if (rowCurrency !== normalizedBaseCurrency) continue;
 
     const quantity = Math.max(0, getObjectNumber(row, ["quantity"]) ?? 0);
     const usableRaw = getObjectNumber(row, ["usable_quantity", "usableQuantity"]);
@@ -425,7 +419,6 @@ export default function MaterialsApp() {
 
         const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
           purchasesRes.data ?? [],
-          settings.baseCurrency,
         );
 
         setMaterials(
@@ -448,7 +441,6 @@ export default function MaterialsApp() {
       const localMaterials = readLocalMaterials();
       const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
         readLocalPurchaseRows(),
-        settings.baseCurrency,
       );
       const next = sortMaterialsByNameAsc(
         (localMaterials.length ? localMaterials : createDemoMaterials()).map((row) => ({
@@ -468,7 +460,7 @@ export default function MaterialsApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, settings.baseCurrency, supabase, toast, userId]);
+  }, [authReady, isCloudMode, supabase, toast, userId]);
 
   useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedRef.current) return;
