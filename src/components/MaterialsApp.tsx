@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { DeferredMoneyInput } from "@/components/DeferredNumericInput";
+import { DeferredMoneyInput, parseMoneyToCents } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
@@ -30,7 +30,7 @@ type Notice = { kind: "info" | "success" | "error"; message: string };
 type DraftMaterialRow = {
   name: string;
   unit: string;
-  unitCostCents: number;
+  unitCostInput: string;
   isActive: boolean;
 };
 
@@ -132,11 +132,11 @@ function normalizeUsableUnit(value: string): string {
   return USABLE_UNIT_ALIASES[key] ?? raw;
 }
 
-function makeDraftMaterial(defaultUnit: string): DraftMaterialRow {
+function makeDraftMaterial(): DraftMaterialRow {
   return {
     name: "",
-    unit: normalizeUsableUnit(defaultUnit) || STANDARD_USABLE_UNITS[0],
-    unitCostCents: 0,
+    unit: "",
+    unitCostInput: "",
     isActive: true,
   };
 }
@@ -218,7 +218,7 @@ export default function MaterialsApp() {
   const [materials, setMaterials] = useState<MaterialRecord[]>([]);
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
-  const [draftMaterial, setDraftMaterial] = useState<DraftMaterialRow>(() => makeDraftMaterial("each"));
+  const [draftMaterial, setDraftMaterial] = useState<DraftMaterialRow>(() => makeDraftMaterial());
   const [savingDraftMaterial, setSavingDraftMaterial] = useState(false);
   const [duplicateNameModal, setDuplicateNameModal] = useState<string | null>(null);
 
@@ -278,19 +278,8 @@ export default function MaterialsApp() {
   }, []);
 
   const resetDraftMaterial = useCallback(() => {
-    setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
-  }, [settings.defaultMaterialUnit]);
-
-  useEffect(() => {
-    const normalizedDefault =
-      normalizeUsableUnit(settings.defaultMaterialUnit) || STANDARD_USABLE_UNITS[0];
-    setDraftMaterial((prev) => {
-      const isPristine = prev.name.trim().length === 0 && prev.unitCostCents === 0 && prev.isActive;
-      if (!isPristine) return prev;
-      if (prev.unit === normalizedDefault) return prev;
-      return { ...prev, unit: normalizedDefault };
-    });
-  }, [settings.defaultMaterialUnit]);
+    setDraftMaterial(makeDraftMaterial());
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -449,8 +438,8 @@ export default function MaterialsApp() {
       normalizeUsableUnit(draftMaterial.unit) ||
       normalizeUsableUnit(settings.defaultMaterialUnit) ||
       STANDARD_USABLE_UNITS[0];
-    const unitCostCents = Math.max(0, Math.round(draftMaterial.unitCostCents));
-    const isActive = draftMaterial.isActive;
+    const unitCostCents = Math.max(0, parseMoneyToCents(draftMaterial.unitCostInput));
+    const isActive = true;
 
     savingDraftMaterialRef.current = true;
     setSavingDraftMaterial(true);
@@ -488,7 +477,7 @@ export default function MaterialsApp() {
             const row = rowToMaterial(data[0] as DbMaterialRow);
             pendingScrollMaterialIdRef.current = row.id;
             setMaterials((prev) => [...prev, row]);
-            setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+            setDraftMaterial(makeDraftMaterial());
             window.setTimeout(() => focusDraftNameInput("auto"), 0);
             toast("success", "Material added.");
             return;
@@ -519,7 +508,7 @@ export default function MaterialsApp() {
         pendingScrollMaterialIdRef.current = row.id;
         return [...prev, row];
       });
-      setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
+      setDraftMaterial(makeDraftMaterial());
       window.setTimeout(() => focusDraftNameInput("auto"), 0);
       toast("success", "Material added.");
     } finally {
@@ -764,6 +753,7 @@ export default function MaterialsApp() {
                         }
                         disabled={savingDraftMaterial}
                       >
+                        <option value="">Select Unit</option>
                         {STANDARD_USABLE_UNITS.map((unit) => (
                           <option key={unit} value={unit}>
                             {unit}
@@ -772,15 +762,16 @@ export default function MaterialsApp() {
                       </select>
                     </td>
                     <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                      <DeferredMoneyInput
+                      <input
                         className={inputBase + " " + inputMono}
-                        valueCents={draftMaterial.unitCostCents}
-                        onCommitCents={(valueCents) =>
+                        value={draftMaterial.unitCostInput}
+                        onChange={(e) =>
                           setDraftMaterial((prev) => ({
                             ...prev,
-                            unitCostCents: valueCents,
+                            unitCostInput: e.target.value,
                           }))
                         }
+                        placeholder="0.00"
                         disabled={savingDraftMaterial}
                       />
                     </td>
