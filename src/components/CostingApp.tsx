@@ -566,7 +566,6 @@ export default function CostingApp() {
     const remaining = sheets.filter((s) => s.id !== selectedSheet.id);
     setSheets(remaining);
     if (selectedId === selectedSheet.id) setSelectedId(remaining[0]?.id ?? null);
-    toast("info", isCloudMode ? "Sheet deleted." : "Local sheet deleted.");
   }
 
   function exportAll() {

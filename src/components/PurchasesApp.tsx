@@ -1018,7 +1018,6 @@ export default function PurchasesApp() {
       return next;
     });
     setPurchases((prev) => prev.filter((row) => row.id !== id));
-    toast("info", isImportedDraft ? "Imported draft row removed." : "Purchase deleted.");
   }
 
   async function signOut() {

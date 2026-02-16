@@ -466,7 +466,6 @@ export default function BomApp() {
       }
     }
     setBoms((prev) => prev.filter((item) => item.id !== id));
-    toast("info", "BOM deleted.");
   }
 
   async function addLine(): Promise<void> {
