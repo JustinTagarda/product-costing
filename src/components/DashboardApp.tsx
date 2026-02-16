@@ -7,6 +7,7 @@ import type { CostSheet, StoredData } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -313,22 +314,7 @@ export default function DashboardApp() {
             </div>
           </header>
 
-          {notice ? (
-            <div
-              className={[
-                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                notice.kind === "error"
-                  ? "bg-danger/10 text-danger"
-                  : notice.kind === "success"
-                    ? "bg-accent/10 text-ink"
-                    : "bg-paper/55 text-ink",
-              ].join(" ")}
-              role="status"
-              aria-live="polite"
-            >
-              {notice.message}
-            </div>
-          ) : null}
+          <GlobalAppToast notice={notice} />
 
           <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Total Cost" value={formatMoney(kpis.totalCostCents)} note={`${dashboardRows.length} product(s)`} />

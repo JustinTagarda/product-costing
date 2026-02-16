@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
-import { PopupNotification } from "@/components/PopupNotification";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
@@ -429,7 +429,6 @@ export default function PurchasesApp() {
     makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }),
   );
   const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
-  const [newPurchasePopup, setNewPurchasePopup] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTextareaValue, setImportTextareaValue] = useState("");
   const [importRowMetaById, setImportRowMetaById] = useState<Record<string, ImportedPurchaseRowMeta>>({});
@@ -441,7 +440,6 @@ export default function PurchasesApp() {
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
   const savingDraftPurchaseRef = useRef(false);
-  const newPurchasePopupTimerRef = useRef<number | null>(null);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
   const purchasesRef = useRef<PurchaseRecord[]>([]);
@@ -451,16 +449,6 @@ export default function PurchasesApp() {
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
-  }, []);
-
-  const showNewPurchasePopup = useCallback((message: string) => {
-    setNewPurchasePopup(message);
-    const existingTimer = newPurchasePopupTimerRef.current;
-    if (existingTimer) window.clearTimeout(existingTimer);
-    newPurchasePopupTimerRef.current = window.setTimeout(() => {
-      setNewPurchasePopup(null);
-      newPurchasePopupTimerRef.current = null;
-    }, 3200);
   }, []);
 
   const { settings } = useAppSettings({
@@ -519,10 +507,6 @@ export default function PurchasesApp() {
 
   const resetDraftPurchase = useCallback(() => {
     setDraftPurchase(makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }));
-    setNewPurchasePopup(null);
-    const timer = newPurchasePopupTimerRef.current;
-    if (timer) window.clearTimeout(timer);
-    newPurchasePopupTimerRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -600,28 +584,6 @@ export default function PurchasesApp() {
       timers.clear();
     };
   }, []);
-
-  useEffect(() => {
-    return () => {
-      const timer = newPurchasePopupTimerRef.current;
-      if (timer) window.clearTimeout(timer);
-      newPurchasePopupTimerRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!newPurchasePopup) return;
-    const dismiss = () => {
-      setNewPurchasePopup(null);
-      const timer = newPurchasePopupTimerRef.current;
-      if (timer) window.clearTimeout(timer);
-      newPurchasePopupTimerRef.current = null;
-    };
-    document.addEventListener("pointerdown", dismiss, true);
-    return () => {
-      document.removeEventListener("pointerdown", dismiss, true);
-    };
-  }, [newPurchasePopup]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -1043,7 +1005,7 @@ export default function PurchasesApp() {
       return;
     }
     if (!isDraftPurchaseComplete(draftPurchase)) {
-      showNewPurchasePopup(INCOMPLETE_DRAFT_POPUP_MESSAGE);
+      toast("info", INCOMPLETE_DRAFT_POPUP_MESSAGE);
       return;
     }
     void commitDraftPurchase();
@@ -1429,13 +1391,6 @@ export default function PurchasesApp() {
             </div>
           </header>
 
-          {newPurchasePopup ? (
-            <PopupNotification
-              message={newPurchasePopup}
-              locationClassName="fixed right-4 top-20 z-50 max-w-md"
-            />
-          ) : null}
-
           <ImportDataModal
             isOpen={isImportModalOpen}
             value={importTextareaValue}
@@ -1448,22 +1403,7 @@ export default function PurchasesApp() {
             placeholder="material,description,quantity,cost..."
           />
 
-          {notice ? (
-            <div
-              className={[
-                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                notice.kind === "error"
-                  ? "bg-danger/10 text-danger"
-                  : notice.kind === "success"
-                    ? "bg-accent/10 text-ink"
-                    : "bg-paper/55 text-ink",
-              ].join(" ")}
-              role="status"
-              aria-live="polite"
-            >
-              {notice.message}
-            </div>
-          ) : null}
+          <GlobalAppToast notice={notice} />
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">

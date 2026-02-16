@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -608,22 +609,7 @@ export default function BomApp() {
             </div>
           </header>
 
-          {notice ? (
-            <div
-              className={[
-                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                notice.kind === "error"
-                  ? "bg-danger/10 text-danger"
-                  : notice.kind === "success"
-                    ? "bg-accent/10 text-ink"
-                    : "bg-paper/55 text-ink",
-              ].join(" ")}
-              role="status"
-              aria-live="polite"
-            >
-              {notice.message}
-            </div>
-          ) : null}
+          <GlobalAppToast notice={notice} />
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">

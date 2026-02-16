@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredNumberInput } from "@/components/DeferredNumericInput";
+import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { makeId } from "@/lib/costing";
@@ -263,22 +264,7 @@ export default function SettingsApp() {
             </div>
           </header>
 
-          {notice ? (
-            <div
-              className={[
-                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                notice.kind === "error"
-                  ? "bg-danger/10 text-danger"
-                  : notice.kind === "success"
-                    ? "bg-accent/10 text-ink"
-                    : "bg-paper/55 text-ink",
-              ].join(" ")}
-              role="status"
-              aria-live="polite"
-            >
-              {notice.message}
-            </div>
-          ) : null}
+          <GlobalAppToast notice={notice} />
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <section className={cardClassName + " p-5"}>

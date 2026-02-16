@@ -4,6 +4,7 @@ import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -712,22 +713,7 @@ export default function CostingApp() {
                 your sheets persistent across devices.
               </p>
 
-              {notice ? (
-                <div
-                  className={[
-                    "mx-auto mt-6 max-w-md rounded-2xl border px-4 py-3 text-sm",
-                    notice.kind === "error"
-                      ? "border-danger/40 bg-danger/10 text-danger"
-                      : notice.kind === "success"
-                        ? "border-accent/30 bg-accent/10 text-ink"
-                        : "border-border bg-paper text-ink",
-                  ].join(" ")}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {notice.message}
-                </div>
-              ) : null}
+              <GlobalAppToast notice={notice} />
             </section>
           </main>
 
@@ -849,22 +835,7 @@ export default function CostingApp() {
           </div>
           </header>
 
-          {notice ? (
-            <div
-              className={[
-                "mt-6 rounded-2xl border border-border px-4 py-3 text-sm",
-                notice.kind === "error"
-                  ? "bg-danger/10 text-danger"
-                  : notice.kind === "success"
-                    ? "bg-accent/10 text-ink"
-                    : "bg-paper/55 text-ink",
-              ].join(" ")}
-              role="status"
-              aria-live="polite"
-            >
-              {notice.message}
-            </div>
-          ) : null}
+          <GlobalAppToast notice={notice} />
 
           <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <aside className={cardClassName()}>
