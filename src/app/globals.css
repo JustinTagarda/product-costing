@@ -53,12 +53,12 @@ table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
 }
 
 table > :is(thead, tbody, tfoot) > tr > th {
-  padding: 4px !important;
+  padding: 2px 4px !important;
   font-weight: 700 !important;
 }
 
 table > :is(thead, tbody, tfoot) > tr > td {
-  padding: 4px !important;
+  padding: 2px 4px !important;
 }
 
 table > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child {
@@ -99,7 +99,7 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
 }
 
 table > :is(thead, tbody, tfoot) > tr > td :is(input, select, p, label, button, textarea) {
-  padding: 4px !important;
+  padding: 2px 4px !important;
 }
 
 table input[type="number"] {
@@ -117,7 +117,7 @@ table input[type="date"] {
   appearance: textfield;
   -webkit-appearance: textfield;
   -moz-appearance: textfield;
-  padding: 4px !important;
+  padding: 2px 4px !important;
 }
 
 table input[type="date"]::-webkit-calendar-picker-indicator {
