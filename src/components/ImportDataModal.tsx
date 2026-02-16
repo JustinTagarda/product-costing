@@ -41,7 +41,6 @@ export function ImportDataModal({
   const titleId = useId();
   const descriptionId = useId();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const toastTimerRef = useRef<number | null>(null);
   const [isValidated, setIsValidated] = useState(false);
   const [validatedTsv, setValidatedTsv] = useState("");
   const [notice, setNotice] = useState<ValidationNotice | null>(null);
@@ -49,18 +48,10 @@ export function ImportDataModal({
 
   const clearNotice = useCallback((): void => {
     setNotice(null);
-    if (!toastTimerRef.current) return;
-    window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = null;
   }, []);
 
   const showNotice = useCallback((message: string): void => {
     setNotice({ message });
-    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = window.setTimeout(() => {
-      setNotice(null);
-      toastTimerRef.current = null;
-    }, 3200);
   }, []);
 
   const clearTextarea = useCallback((): void => {
@@ -126,12 +117,17 @@ export function ImportDataModal({
   );
 
   useEffect(() => {
+    if (!notice) return;
+
+    const dismiss = () => setNotice(null);
+    window.addEventListener("pointerdown", dismiss, true);
+    window.addEventListener("keydown", dismiss, true);
+
     return () => {
-      if (!toastTimerRef.current) return;
-      window.clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
+      window.removeEventListener("pointerdown", dismiss, true);
+      window.removeEventListener("keydown", dismiss, true);
     };
-  }, []);
+  }, [notice]);
 
   useEffect(() => {
     if (!isOpen) return;
