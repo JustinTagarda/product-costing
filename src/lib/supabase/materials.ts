@@ -80,7 +80,6 @@ export function materialToRowUpdate(material: MaterialRecord): DbMaterialUpdate 
     code: material.code,
     category: material.category,
     unit: material.unit,
-    weighted_average_cost_cents: material.unitCostCents,
     supplier: material.supplier,
     last_purchase_cost_cents: material.lastPurchaseCostCents,
     last_purchase_date: material.lastPurchaseDate || null,

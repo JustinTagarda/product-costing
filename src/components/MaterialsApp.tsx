@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { DeferredMoneyInput, parseMoneyToCents } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
@@ -30,7 +29,6 @@ type Notice = { kind: "info" | "success" | "error"; message: string };
 type DraftMaterialRow = {
   name: string;
   unit: string;
-  unitCostInput: string;
   isActive: boolean;
 };
 
@@ -38,6 +36,7 @@ const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 const inputMono = "tabular-nums font-mono tracking-tight";
 const LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
+const LOCAL_PURCHASES_STORAGE_KEY = "product-costing:purchases:local:v1";
 const MATERIAL_CODE_PREFIX = "MA-";
 const STANDARD_USABLE_UNITS = [
   "each",
@@ -136,9 +135,85 @@ function makeDraftMaterial(): DraftMaterialRow {
   return {
     name: "",
     unit: "",
-    unitCostInput: "",
     isActive: true,
   };
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function readLocalPurchaseRows(): unknown[] {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_PURCHASES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function getObjectString(source: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string") return value;
+  }
+  return "";
+}
+
+function getObjectNumber(source: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    if (!(key in source)) continue;
+    const value = toFiniteNumber(source[key]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function computeWeightedAverageCostByMaterialId(
+  rows: unknown[],
+  baseCurrency: string,
+): Record<string, number> {
+  const totals = new Map<string, { costCents: number; usableQuantity: number }>();
+  const normalizedBaseCurrency = (baseCurrency || "USD").trim().toUpperCase();
+
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") continue;
+    const row = raw as Record<string, unknown>;
+    const materialId = getObjectString(row, ["material_id", "materialId"]).trim();
+    if (!materialId) continue;
+
+    const rowCurrencyRaw = getObjectString(row, ["currency"]).trim().toUpperCase();
+    const rowCurrency = rowCurrencyRaw || normalizedBaseCurrency;
+    if (rowCurrency !== normalizedBaseCurrency) continue;
+
+    const quantity = Math.max(0, getObjectNumber(row, ["quantity"]) ?? 0);
+    const usableRaw = getObjectNumber(row, ["usable_quantity", "usableQuantity"]);
+    const usableQuantity = Math.max(0, usableRaw ?? quantity);
+    if (usableQuantity <= 0) continue;
+
+    const costFromCost = getObjectNumber(row, ["cost_cents", "costCents"]);
+    const costFromTotal = getObjectNumber(row, ["total_cost_cents", "totalCostCents"]);
+    const unitCostCents = Math.max(0, getObjectNumber(row, ["unit_cost_cents", "unitCostCents"]) ?? 0);
+    const quantityForCost = quantity > 0 ? quantity : usableQuantity;
+    const derivedCostFromUnitCost = unitCostCents > 0 ? Math.round(unitCostCents * quantityForCost) : 0;
+    const rawCost = costFromCost ?? costFromTotal ?? derivedCostFromUnitCost;
+    const costCents = Math.max(0, Math.round(rawCost));
+
+    const current = totals.get(materialId) ?? { costCents: 0, usableQuantity: 0 };
+    current.costCents += costCents;
+    current.usableQuantity += usableQuantity;
+    totals.set(materialId, current);
+  }
+
+  const computed: Record<string, number> = {};
+  for (const [materialId, total] of totals.entries()) {
+    if (total.usableQuantity <= 0) continue;
+    computed[materialId] = Math.max(0, Math.round(total.costCents / total.usableQuantity));
+  }
+  return computed;
 }
 
 function parseLocalMaterials(raw: unknown): MaterialRecord[] {
@@ -324,26 +399,44 @@ export default function MaterialsApp() {
       setLoading(true);
 
       if (isCloudMode && userId && supabase) {
-        const { data, error } = await supabase
-          .from("materials")
-          .select("*")
-          .eq("user_id", userId)
-          .order("name", { ascending: true });
+        const [materialsRes, purchasesRes] = await Promise.all([
+          supabase
+            .from("materials")
+            .select("*")
+            .eq("user_id", userId)
+            .order("name", { ascending: true }),
+          supabase
+            .from("purchases")
+            .select("material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
+            .eq("user_id", userId)
+            .not("material_id", "is", null),
+        ]);
 
         if (cancelled) return;
-        if (error) {
-          toast("error", error.message);
+        if (materialsRes.error) {
+          toast("error", materialsRes.error.message);
           setMaterials([]);
           hasHydratedRef.current = true;
           setLoading(false);
           return;
         }
 
+        if (purchasesRes.error) toast("error", purchasesRes.error.message);
+
+        const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
+          purchasesRes.data ?? [],
+          settings.baseCurrency,
+        );
+
         setMaterials(
           sortMaterialsByNameAsc(
-            (data ?? []).map((row) => {
+            (materialsRes.data ?? []).map((row) => {
               const material = rowToMaterial(row as DbMaterialRow);
-              return { ...material, unit: normalizeUsableUnit(material.unit) };
+              return {
+                ...material,
+                unit: normalizeUsableUnit(material.unit),
+                unitCostCents: weightedAverageCostByMaterialId[material.id] ?? 0,
+              };
             }),
           ),
         );
@@ -352,14 +445,19 @@ export default function MaterialsApp() {
         return;
       }
 
-      const local = readLocalMaterials();
+      const localMaterials = readLocalMaterials();
+      const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
+        readLocalPurchaseRows(),
+        settings.baseCurrency,
+      );
       const next = sortMaterialsByNameAsc(
-        (local.length ? local : createDemoMaterials()).map((row) => ({
+        (localMaterials.length ? localMaterials : createDemoMaterials()).map((row) => ({
           ...row,
           unit: normalizeUsableUnit(row.unit),
+          unitCostCents: weightedAverageCostByMaterialId[row.id] ?? 0,
         })),
       );
-      if (!local.length) writeLocalMaterials(next);
+      writeLocalMaterials(next);
       if (cancelled) return;
       setMaterials(next);
       hasHydratedRef.current = true;
@@ -370,7 +468,7 @@ export default function MaterialsApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [authReady, isCloudMode, settings.baseCurrency, supabase, toast, userId]);
 
   useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedRef.current) return;
@@ -438,7 +536,7 @@ export default function MaterialsApp() {
       normalizeUsableUnit(draftMaterial.unit) ||
       normalizeUsableUnit(settings.defaultMaterialUnit) ||
       STANDARD_USABLE_UNITS[0];
-    const unitCostCents = Math.max(0, parseMoneyToCents(draftMaterial.unitCostInput));
+    const unitCostCents = 0;
     const isActive = true;
 
     savingDraftMaterialRef.current = true;
@@ -590,8 +688,8 @@ export default function MaterialsApp() {
             <div>
               <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Materials</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-                Central material list for costing. Maintain weighted average costs, last purchase prices, suppliers, and
-                active status.
+                Central material list for costing. Weighted average cost is computed from purchases as total cost
+                divided by total usable quantity.
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
@@ -637,7 +735,7 @@ export default function MaterialsApp() {
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
                     <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost</th>
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost (Computed)</th>
                     <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Active</th>
                     <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
@@ -667,16 +765,9 @@ export default function MaterialsApp() {
                         </select>
                       </td>
                       <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                        <DeferredMoneyInput
-                          className={inputBase + " " + inputMono}
-                          valueCents={row.unitCostCents}
-                          onCommitCents={(valueCents) =>
-                            updateMaterial(row.id, (x) => ({
-                              ...x,
-                              unitCostCents: valueCents,
-                            }))
-                          }
-                        />
+                        <p className={"px-3 py-2 text-sm text-ink " + inputMono}>
+                          {formatSettingsMoney(row.unitCostCents)}
+                        </p>
                       </td>
                       <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
                         <div className="flex justify-center">
@@ -762,18 +853,7 @@ export default function MaterialsApp() {
                       </select>
                     </td>
                     <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                      <input
-                        className={inputBase + " " + inputMono}
-                        value={draftMaterial.unitCostInput}
-                        onChange={(e) =>
-                          setDraftMaterial((prev) => ({
-                            ...prev,
-                            unitCostInput: e.target.value,
-                          }))
-                        }
-                        placeholder="0.00"
-                        disabled={savingDraftMaterial}
-                      />
+                      <p className={"px-3 py-2 text-sm text-muted " + inputMono}>Auto</p>
                     </td>
                     <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">
                       <div className="flex justify-center">

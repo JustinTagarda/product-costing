@@ -133,6 +133,7 @@ begin
 end $$;
 
 comment on column public.materials.unit is 'UI: Unit';
+comment on column public.materials.weighted_average_cost_cents is 'Computed from purchases as total cost divided by total usable quantity.';
 
 create index if not exists materials_user_id_updated_at_idx
   on public.materials (user_id, updated_at desc);
@@ -296,6 +297,101 @@ drop trigger if exists purchases_set_updated_at on public.purchases;
 create trigger purchases_set_updated_at
 before update on public.purchases
 for each row execute function public.set_updated_at();
+
+create or replace function public.compute_material_weighted_average_cost_cents(
+  p_user_id uuid,
+  p_material_id uuid
+)
+returns integer
+language plpgsql
+as $$
+declare
+  v_weighted_average_cost_cents integer := 0;
+begin
+  if p_user_id is null or p_material_id is null then
+    return 0;
+  end if;
+
+  select coalesce(
+    round(
+      sum(greatest(0, coalesce(p.cost_cents, p.total_cost_cents, 0)))::numeric
+      /
+      nullif(
+        sum(
+          case
+            when coalesce(p.usable_quantity, 0) > 0 then p.usable_quantity
+            when coalesce(p.quantity, 0) > 0 then p.quantity
+            else 0
+          end
+        ),
+        0
+      )
+    ),
+    0
+  )::integer
+  into v_weighted_average_cost_cents
+  from public.purchases p
+  where p.user_id = p_user_id
+    and p.material_id = p_material_id
+    and (
+      coalesce(p.usable_quantity, 0) > 0
+      or coalesce(p.quantity, 0) > 0
+    );
+
+  return greatest(0, v_weighted_average_cost_cents);
+end;
+$$;
+
+create or replace function public.refresh_material_weighted_average_cost(
+  p_user_id uuid,
+  p_material_id uuid
+)
+returns void
+language plpgsql
+as $$
+begin
+  if p_user_id is null or p_material_id is null then
+    return;
+  end if;
+
+  update public.materials m
+    set weighted_average_cost_cents = public.compute_material_weighted_average_cost_cents(p_user_id, p_material_id)
+    where m.user_id = p_user_id
+      and m.id = p_material_id;
+end;
+$$;
+
+create or replace function public.purchases_refresh_material_weighted_average_cost()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    perform public.refresh_material_weighted_average_cost(new.user_id, new.material_id);
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if old.user_id is distinct from new.user_id
+       or old.material_id is distinct from new.material_id then
+      perform public.refresh_material_weighted_average_cost(old.user_id, old.material_id);
+    end if;
+    perform public.refresh_material_weighted_average_cost(new.user_id, new.material_id);
+    return new;
+  end if;
+
+  perform public.refresh_material_weighted_average_cost(old.user_id, old.material_id);
+  return old;
+end;
+$$;
+
+drop trigger if exists purchases_refresh_material_weighted_average_cost on public.purchases;
+create trigger purchases_refresh_material_weighted_average_cost
+after insert or update or delete on public.purchases
+for each row execute function public.purchases_refresh_material_weighted_average_cost();
+
+update public.materials m
+  set weighted_average_cost_cents = public.compute_material_weighted_average_cost_cents(m.user_id, m.id);
 
 create table if not exists public.bom_items (
   id uuid primary key default gen_random_uuid(),
