@@ -26,7 +26,6 @@ import {
   makeBlankPurchase,
   normalizePurchaseMarketplace,
   PURCHASE_MARKETPLACES,
-  sortPurchasesByDateDesc,
   type PurchaseMarketplace,
   type PurchaseRecord,
 } from "@/lib/purchases";
@@ -102,6 +101,33 @@ const marketplaceLabels: Record<PurchaseMarketplace, string> = {
 };
 const INCOMPLETE_DRAFT_POPUP_MESSAGE =
   "Complete required fields first: Material, Description, Marketplace, Quantity, Cost, and Usable Quantity.";
+const purchaseTableTextCollator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+
+function comparePurchaseDateAsc(a: string, b: string): number {
+  const aDate = Date.parse(`${a || ""}T00:00:00.000Z`);
+  const bDate = Date.parse(`${b || ""}T00:00:00.000Z`);
+  const aValid = Number.isFinite(aDate);
+  const bValid = Number.isFinite(bDate);
+
+  if (aValid && bValid && aDate !== bDate) return aDate - bDate;
+  if (aValid !== bValid) return aValid ? -1 : 1;
+  return purchaseTableTextCollator.compare(a || "", b || "");
+}
+
+function sortPurchasesForInitialLoad(items: PurchaseRecord[]): PurchaseRecord[] {
+  return [...items].sort((a, b) => {
+    const dateCompare = comparePurchaseDateAsc(a.purchaseDate, b.purchaseDate);
+    if (dateCompare !== 0) return dateCompare;
+
+    const materialCompare = purchaseTableTextCollator.compare(
+      (a.materialName || "").trim(),
+      (b.materialName || "").trim(),
+    );
+    if (materialCompare !== 0) return materialCompare;
+
+    return purchaseTableTextCollator.compare((a.description || "").trim(), (b.description || "").trim());
+  });
+}
 
 function parseTsvRows(tsv: string): { header: string[]; rows: string[][] } {
   const lines = tsv
@@ -600,9 +626,7 @@ export default function PurchasesApp() {
           supabase
             .from("purchases")
             .select("*")
-            .eq("user_id", userId)
-            .order("purchase_date", { ascending: false })
-            .order("updated_at", { ascending: false }),
+            .eq("user_id", userId),
           supabase.from("materials").select("*").eq("user_id", userId).order("name", { ascending: true }),
         ]);
 
@@ -615,7 +639,7 @@ export default function PurchasesApp() {
           const rows = (purchasesRes.data ?? [])
             .map((row) => rowToPurchase(row as DbPurchaseRow))
             .map((row) => ({ ...row, currency: settings.baseCurrency }));
-          setPurchases(sortPurchasesByDateDesc(rows));
+          setPurchases(sortPurchasesForInitialLoad(rows));
         }
 
         if (materialsRes.error) {
@@ -647,16 +671,16 @@ export default function PurchasesApp() {
       if (!localMaterialRecords.length) writeLocalMaterialRecords(baseMaterialRecords);
 
       const localPurchases = readLocalPurchases();
-      const nextPurchases = (
-        localPurchases.length
-          ? sortPurchasesByDateDesc(localPurchases)
-          : createDemoPurchases(baseMaterials, { currency: settings.baseCurrency })
+      const nextPurchases = (localPurchases.length
+        ? localPurchases
+        : createDemoPurchases(baseMaterials, { currency: settings.baseCurrency })
       ).map((row) => ({ ...row, currency: settings.baseCurrency }));
-      if (!localPurchases.length) writeLocalPurchases(nextPurchases);
+      const sortedInitialPurchases = sortPurchasesForInitialLoad(nextPurchases);
+      if (!localPurchases.length) writeLocalPurchases(sortedInitialPurchases);
 
       if (cancelled) return;
       setMaterials(baseMaterials);
-      setPurchases(nextPurchases);
+      setPurchases(sortedInitialPurchases);
       hasHydratedRef.current = true;
       setLoading(false);
     }
@@ -944,6 +968,7 @@ export default function PurchasesApp() {
           }),
         );
         window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
+        toast("success", "Purchase added.");
         return;
       }
 
@@ -957,6 +982,7 @@ export default function PurchasesApp() {
         }),
       );
       window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
+      toast("success", "Purchase added.");
     } finally {
       savingDraftPurchaseRef.current = false;
       setSavingDraftPurchase(false);
@@ -1288,10 +1314,13 @@ export default function PurchasesApp() {
       if (errorCount > 0) {
         toast(
           "info",
-          `Imported ${importedRows.length} row(s). ${errorCount} row(s) need correction before auto-save.`,
+          `Imported ${importedRows.length} row(s). ${errorCount} row(s) have error/incomplete data and need correction before auto-save.`,
         );
       } else {
-        toast("success", `Imported ${importedRows.length} row(s). Saving to ${isCloudMode ? "cloud" : "local"}...`);
+        toast(
+          "success",
+          `All ${importedRows.length} row(s) imported successfully. Saving to ${isCloudMode ? "cloud" : "local"}...`,
+        );
       }
     },
     [

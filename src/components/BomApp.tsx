@@ -490,6 +490,7 @@ export default function BomApp() {
             : item,
         ),
       );
+      toast("success", "BOM line added.");
       return;
     }
 
@@ -504,6 +505,7 @@ export default function BomApp() {
           : item,
       ),
     );
+    toast("success", "BOM line added.");
   }
 
   async function removeLine(lineId: string): Promise<void> {

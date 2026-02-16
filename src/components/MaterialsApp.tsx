@@ -490,6 +490,7 @@ export default function MaterialsApp() {
             setMaterials((prev) => [...prev, row]);
             setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
             window.setTimeout(() => focusDraftNameInput("auto"), 0);
+            toast("success", "Material added.");
             return;
           }
 
@@ -520,6 +521,7 @@ export default function MaterialsApp() {
       });
       setDraftMaterial(makeDraftMaterial(settings.defaultMaterialUnit));
       window.setTimeout(() => focusDraftNameInput("auto"), 0);
+      toast("success", "Material added.");
     } finally {
       savingDraftMaterialRef.current = false;
       setSavingDraftMaterial(false);

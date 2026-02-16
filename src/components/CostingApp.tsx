@@ -994,15 +994,16 @@ export default function CostingApp() {
                       <button
                         type="button"
                         className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                        onClick={() =>
+                        onClick={() => {
                           updateSelected((s) => ({
                             ...s,
                             materials: [
                               ...(s.materials || []),
                               { id: makeId("m"), name: "", qty: 1, unit: "", unitCostCents: 0 },
                             ],
-                          }))
-                        }
+                          }));
+                          toast("success", "Material line added.");
+                        }}
                       >
                         Add line
                       </button>
@@ -1157,12 +1158,13 @@ export default function CostingApp() {
                       <button
                         type="button"
                         className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                        onClick={() =>
+                        onClick={() => {
                           updateSelected((s) => ({
                             ...s,
                             labor: [...(s.labor || []), { id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
-                          }))
-                        }
+                          }));
+                          toast("success", "Labor line added.");
+                        }}
                       >
                         Add line
                       </button>
@@ -1288,15 +1290,16 @@ export default function CostingApp() {
                       <button
                         type="button"
                         className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                        onClick={() =>
+                        onClick={() => {
                           updateSelected((s) => ({
                             ...s,
                             overhead: [
                               ...(s.overhead || []),
                               { id: makeId("o"), name: "", kind: "flat", amountCents: 0 },
                             ],
-                          }))
-                        }
+                          }));
+                          toast("success", "Overhead line added.");
+                        }}
                       >
                         Add line
                       </button>

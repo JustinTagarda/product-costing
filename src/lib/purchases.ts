@@ -139,12 +139,3 @@ export function createDemoPurchases(
     },
   ];
 }
-
-export function sortPurchasesByDateDesc(items: PurchaseRecord[]): PurchaseRecord[] {
-  return [...items].sort((a, b) => {
-    const da = Date.parse(`${a.purchaseDate}T00:00:00.000Z`);
-    const db = Date.parse(`${b.purchaseDate}T00:00:00.000Z`);
-    if (db !== da) return db - da;
-    return Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-  });
-}
