@@ -467,6 +467,7 @@ export default function BomApp() {
       }
     }
     setBoms((prev) => prev.filter((item) => item.id !== id));
+    toast("success", "BOM deleted.");
   }
 
   async function addLine(): Promise<void> {
@@ -532,6 +533,7 @@ export default function BomApp() {
         return { ...item, lines, updatedAt: now };
       }),
     );
+    toast("success", "BOM line deleted.");
   }
 
   async function signOut() {

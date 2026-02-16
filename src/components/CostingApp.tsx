@@ -567,6 +567,7 @@ export default function CostingApp() {
     const remaining = sheets.filter((s) => s.id !== selectedSheet.id);
     setSheets(remaining);
     if (selectedId === selectedSheet.id) setSelectedId(remaining[0]?.id ?? null);
+    toast("success", "Sheet deleted.");
   }
 
   function exportAll() {
@@ -1099,7 +1100,7 @@ export default function CostingApp() {
                                     <button
                                       type="button"
                                       className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                                      onClick={() =>
+                                      onClick={() => {
                                         updateSelected((s) => {
                                           const next = s.materials.filter((m) => m.id !== it.id);
                                           return {
@@ -1109,8 +1110,9 @@ export default function CostingApp() {
                                                 ? next
                                                 : [{ id: makeId("m"), name: "", qty: 1, unit: "", unitCostCents: 0 }],
                                           };
-                                        })
-                                      }
+                                        });
+                                        toast("success", "Material line deleted.");
+                                      }}
                                       aria-label="Remove material line"
                                     >
                                       Remove
@@ -1242,7 +1244,7 @@ export default function CostingApp() {
                                     <button
                                       type="button"
                                       className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                                      onClick={() =>
+                                      onClick={() => {
                                         updateSelected((s) => {
                                           const next = s.labor.filter((l) => l.id !== it.id);
                                           return {
@@ -1252,8 +1254,9 @@ export default function CostingApp() {
                                                 ? next
                                                 : [{ id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
                                           };
-                                        })
-                                      }
+                                        });
+                                        toast("success", "Labor line deleted.");
+                                      }}
                                       aria-label="Remove labor line"
                                     >
                                       Remove
@@ -1409,12 +1412,13 @@ export default function CostingApp() {
                                       <button
                                         type="button"
                                         className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                                        onClick={() =>
+                                        onClick={() => {
                                           updateSelected((s) => ({
                                             ...s,
                                             overhead: s.overhead.filter((o) => o.id !== it.id),
-                                          }))
-                                        }
+                                          }));
+                                          toast("success", "Overhead line deleted.");
+                                        }}
                                       >
                                         Remove
                                       </button>

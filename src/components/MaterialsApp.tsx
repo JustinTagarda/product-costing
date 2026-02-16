@@ -535,6 +535,7 @@ export default function MaterialsApp() {
       }
     }
     setMaterials((prev) => prev.filter((row) => row.id !== id));
+    toast("success", "Material deleted.");
   }
 
   async function signOut() {

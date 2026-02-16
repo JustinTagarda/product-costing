@@ -980,6 +980,7 @@ export default function PurchasesApp() {
       return next;
     });
     setPurchases((prev) => prev.filter((row) => row.id !== id));
+    toast("success", isImportedDraft ? "Imported row deleted." : "Purchase deleted.");
   }
 
   async function signOut() {
