@@ -74,6 +74,17 @@ type ImportedPurchaseRowMeta = {
   emptyMarketplace: boolean;
 };
 
+type DateColumnNormalizationResult =
+  | {
+      ok: true;
+      tsv: string;
+      normalizedCount: number;
+    }
+  | {
+      ok: false;
+      reason: string;
+    };
+
 type MaterialOption = Pick<
   MaterialRecord,
   "id" | "name" | "supplier" | "unit" | "isActive" | "lastPurchaseCostCents" | "lastPurchaseDate"
@@ -122,6 +133,25 @@ function parseStrictMoneyToCents(raw: string): number {
   return Math.max(0, Math.round(parsed * 100));
 }
 
+function toIsoDateParts(year: number, month: number, day: number): string {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return "";
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  const isValid =
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day;
+  if (!isValid) return "";
+  const mm = `${month}`.padStart(2, "0");
+  const dd = `${day}`.padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
+function datePreferenceToOrder(dateFormat: string): "mdy" | "dmy" | "ymd" {
+  if (dateFormat === "dd/MM/yyyy") return "dmy";
+  if (dateFormat === "yyyy-MM-dd") return "ymd";
+  return "mdy";
+}
+
 function isIsoDateInput(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [yearText, monthText, dayText] = value.split("-");
@@ -137,16 +167,92 @@ function isIsoDateInput(value: string): boolean {
   );
 }
 
-function normalizeImportedDate(raw: string): string {
-  const token = raw.trim();
+function normalizeImportedDate(raw: string, preferredDateFormat: string = "MM/dd/yyyy"): string {
+  const token = raw.trim().replace(/^["']+|["']+$/g, "");
   if (!token) return "";
   if (isIsoDateInput(token)) return token;
-  const slashIso = token.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
-  if (slashIso) {
-    const next = `${slashIso[1]}-${slashIso[2].padStart(2, "0")}-${slashIso[3].padStart(2, "0")}`;
-    return isIsoDateInput(next) ? next : "";
+
+  const order = datePreferenceToOrder(preferredDateFormat);
+  const numericPattern = /^(\d{1,4})[\/.-](\d{1,2})[\/.-](\d{1,4})$/;
+  const numericMatch = token.match(numericPattern);
+  if (numericMatch) {
+    const partA = Number(numericMatch[1]);
+    const partB = Number(numericMatch[2]);
+    const partC = Number(numericMatch[3]);
+
+    if (numericMatch[1].length === 4) {
+      return toIsoDateParts(partA, partB, partC);
+    }
+
+    if (numericMatch[3].length === 4) {
+      if (partA > 12 && partB <= 12) return toIsoDateParts(partC, partB, partA);
+      if (partB > 12 && partA <= 12) return toIsoDateParts(partC, partA, partB);
+      if (partA > 12 && partB > 12) return "";
+      if (order === "dmy") return toIsoDateParts(partC, partB, partA);
+      return toIsoDateParts(partC, partA, partB);
+    }
   }
+
+  if (/^\d{5,6}(\.\d+)?$/.test(token)) {
+    const serial = Number(token);
+    if (Number.isFinite(serial)) {
+      const excelEpochUtc = Date.UTC(1899, 11, 30);
+      const millis = excelEpochUtc + Math.trunc(serial) * 24 * 60 * 60 * 1000;
+      const date = new Date(millis);
+      return toIsoDateParts(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+    }
+  }
+
+  if (/[A-Za-z]/.test(token)) {
+    const parsed = new Date(token);
+    if (Number.isFinite(parsed.getTime())) {
+      return toIsoDateParts(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate());
+    }
+  }
+
   return "";
+}
+
+function normalizeDateColumnsInTsv(tsv: string, preferredDateFormat: string): DateColumnNormalizationResult {
+  const { header, rows } = parseTsvRows(tsv);
+  if (!header.length) {
+    return { ok: false, reason: "Validation failed: header row is empty." };
+  }
+
+  const dateColumnIndexes = header
+    .map((columnName, index) => ({ columnName, index }))
+    .filter(({ columnName }) => /\bdate\b/i.test(columnName));
+
+  if (!dateColumnIndexes.length) {
+    return { ok: true, tsv, normalizedCount: 0 };
+  }
+
+  const nextRows = rows.map((row) => [...row]);
+  let normalizedCount = 0;
+
+  for (let rowIndex = 0; rowIndex < nextRows.length; rowIndex += 1) {
+    const row = nextRows[rowIndex];
+    for (const column of dateColumnIndexes) {
+      const rawCell = (row[column.index] ?? "").trim();
+      if (!rawCell) continue;
+      const normalizedDate = normalizeImportedDate(rawCell, preferredDateFormat);
+      if (!normalizedDate) {
+        return {
+          ok: false,
+          reason:
+            `Validation failed: could not parse date value "${rawCell}" ` +
+            `for column "${column.columnName}" at row ${rowIndex + 2}.`,
+        };
+      }
+      if (normalizedDate !== rawCell) {
+        row[column.index] = normalizedDate;
+        normalizedCount += 1;
+      }
+    }
+  }
+
+  const normalizedTsv = [header, ...nextRows].map((row) => row.join("\t")).join("\n");
+  return { ok: true, tsv: normalizedTsv, normalizedCount };
 }
 
 function validateImportedPurchaseRow(row: PurchaseRecord): ImportedPurchaseField[] {
@@ -944,8 +1050,26 @@ export default function PurchasesApp() {
   }
 
   const validatePurchasesImportForPage = useCallback((tsv: string) => {
-    return validatePurchasesImportTsv(tsv);
-  }, []);
+    const headerValidation = validatePurchasesImportTsv(tsv);
+    if (!headerValidation.ok) return headerValidation;
+
+    const normalizedDatesResult = normalizeDateColumnsInTsv(tsv, settings.dateFormat);
+    if (!normalizedDatesResult.ok) {
+      return { ok: false as const, reason: normalizedDatesResult.reason };
+    }
+
+    const normalizedMessage =
+      normalizedDatesResult.normalizedCount > 0
+        ? `Normalized ${normalizedDatesResult.normalizedCount} date value(s).`
+        : undefined;
+    const message = [headerValidation.message, normalizedMessage].filter(Boolean).join(" ").trim();
+
+    return {
+      ok: true as const,
+      normalizedTsv: normalizedDatesResult.tsv,
+      message: message || undefined,
+    };
+  }, [settings.dateFormat]);
 
   const commitImportedPurchaseRow = useCallback(
     async (rowId: string): Promise<void> => {
@@ -1079,7 +1203,13 @@ export default function PurchasesApp() {
 
   const importPurchasesFromValidatedTsv = useCallback(
     (tsv: string): void => {
-      const { header, rows } = parseTsvRows(tsv);
+      const normalizedDatesResult = normalizeDateColumnsInTsv(tsv, settings.dateFormat);
+      if (!normalizedDatesResult.ok) {
+        toast("error", normalizedDatesResult.reason);
+        return;
+      }
+
+      const { header, rows } = parseTsvRows(normalizedDatesResult.tsv);
       if (!header.length || !rows.length) {
         toast("error", "No importable rows found.");
         return;
@@ -1124,7 +1254,7 @@ export default function PurchasesApp() {
         const quantity = parseStrictDecimal(cell("Quantity"));
         const unitCostCents = parseStrictMoneyToCents(cell("Cost"));
         const usableQuantity = parseStrictDecimal(cell("Usable Quantity"));
-        const normalizedDate = normalizeImportedDate(cell("Purchase Date"));
+        const normalizedDate = normalizeImportedDate(cell("Purchase Date"), settings.dateFormat);
         const store = cell("Store");
         const variation = cell("Variation");
         const description = cell("Description");
@@ -1207,6 +1337,7 @@ export default function PurchasesApp() {
       materialById,
       materialImportSelectOptions,
       settings.baseCurrency,
+      settings.dateFormat,
       settings.defaultMaterialUnit,
       toast,
     ],
