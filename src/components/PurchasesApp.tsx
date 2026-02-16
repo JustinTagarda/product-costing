@@ -15,6 +15,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { openNativeDatePicker } from "@/lib/datePicker";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import {
   createDemoMaterials,
@@ -475,6 +476,7 @@ export default function PurchasesApp() {
   const savingDraftPurchaseRef = useRef(false);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
+  const draftPurchaseDateInputRef = useRef<HTMLInputElement | null>(null);
   const purchasesRef = useRef<PurchaseRecord[]>([]);
   const importRowMetaByIdRef = useRef<Record<string, ImportedPurchaseRowMeta>>({});
   const importCommitInFlightRef = useRef<Set<string>>(new Set());
@@ -1598,6 +1600,7 @@ export default function PurchasesApp() {
                             className={inputBase + " " + inputMono + (invalidImportedField("purchaseDate") ? " !bg-[#ffe9ec]" : "")}
                             type="date"
                             value={row.purchaseDate}
+                            onFocus={(e) => openNativeDatePicker(e.currentTarget)}
                             onChange={(e) =>
                               updatePurchase(row.id, (x) => ({
                                 ...x,
@@ -1808,6 +1811,7 @@ export default function PurchasesApp() {
                     </td>
                     <td className="w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle">
                       <input
+                        ref={draftPurchaseDateInputRef}
                         className={inputBase + " " + inputMono}
                         type={
                           isDraftPurchaseDateInputActive || draftPurchase.purchaseDate
@@ -1821,7 +1825,12 @@ export default function PurchasesApp() {
                             purchaseDate: e.target.value,
                           }))
                         }
-                        onFocus={() => setIsDraftPurchaseDateInputActive(true)}
+                        onFocus={() => {
+                          setIsDraftPurchaseDateInputActive(true);
+                          window.requestAnimationFrame(() => {
+                            openNativeDatePicker(draftPurchaseDateInputRef.current);
+                          });
+                        }}
                         onBlur={() => setIsDraftPurchaseDateInputActive(false)}
                         placeholder="Purchase Date"
                         disabled={savingDraftPurchase}
