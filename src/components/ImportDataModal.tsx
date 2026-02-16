@@ -10,6 +10,14 @@ type ImportDataModalProps = {
   onValueChange: (value: string) => void;
   onClose: () => void;
   onImport?: (validatedTsv: string) => void;
+  validateTsv?: (validatedTsv: string) => {
+    ok: true;
+    normalizedTsv?: string;
+    message?: string;
+  } | {
+    ok: false;
+    reason: string;
+  };
   title?: string;
   description?: string;
   placeholder?: string;
@@ -25,6 +33,7 @@ export function ImportDataModal({
   onValueChange,
   onClose,
   onImport,
+  validateTsv,
   title = "Import data",
   description = "Paste a Tab-Separated Value below.",
   placeholder = "Paste CSV/TSV data here...",
@@ -34,6 +43,7 @@ export function ImportDataModal({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const [isValidated, setIsValidated] = useState(false);
+  const [validatedTsv, setValidatedTsv] = useState("");
   const [notice, setNotice] = useState<ValidationNotice | null>(null);
   const isTextareaEmpty = value.trim().length === 0;
 
@@ -56,6 +66,7 @@ export function ImportDataModal({
   const clearTextarea = useCallback((): void => {
     onValueChange("");
     setIsValidated(false);
+    setValidatedTsv("");
     clearNotice();
   }, [clearNotice, onValueChange]);
 
@@ -73,23 +84,42 @@ export function ImportDataModal({
     const result = validateAndNormalizeImportText(value);
     if (!result.ok) {
       setIsValidated(false);
+      setValidatedTsv("");
       showNotice(result.reason);
       return;
     }
-    onValueChange(result.tsv);
+    let nextTsv = result.tsv;
+    let nextMessage = result.message;
+    if (validateTsv) {
+      const pageResult = validateTsv(nextTsv);
+      if (!pageResult.ok) {
+        setIsValidated(false);
+        setValidatedTsv("");
+        showNotice(pageResult.reason);
+        return;
+      }
+      if (pageResult.normalizedTsv) nextTsv = pageResult.normalizedTsv;
+      if (pageResult.message) {
+        nextMessage =
+          pageResult.message === result.message ? result.message : `${result.message} ${pageResult.message}`;
+      }
+    }
+    onValueChange(nextTsv);
+    setValidatedTsv(nextTsv);
     setIsValidated(true);
-    showNotice(result.message);
-  }, [onValueChange, showNotice, value]);
+    showNotice(nextMessage);
+  }, [onValueChange, showNotice, validateTsv, value]);
 
   const handleImport = useCallback((): void => {
     if (!isValidated) return;
-    if (onImport) onImport(value);
-  }, [isValidated, onImport, value]);
+    if (onImport) onImport(validatedTsv || value);
+  }, [isValidated, onImport, validatedTsv, value]);
 
   const handleTextareaChange = useCallback(
     (next: string): void => {
       onValueChange(next);
       setIsValidated(false);
+      setValidatedTsv("");
       clearNotice();
     },
     [clearNotice, onValueChange],

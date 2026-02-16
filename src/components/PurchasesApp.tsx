@@ -29,6 +29,7 @@ import {
   type PurchaseMarketplace,
   type PurchaseRecord,
 } from "@/lib/purchases";
+import { validatePurchasesImportTsv } from "@/lib/purchasesImportValidation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import {
@@ -749,6 +750,10 @@ export default function PurchasesApp() {
     void commitDraftPurchase();
   }
 
+  const validatePurchasesImportForPage = useCallback((tsv: string) => {
+    return validatePurchasesImportTsv(tsv);
+  }, []);
+
   const filteredPurchases = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return purchases;
@@ -837,6 +842,7 @@ export default function PurchasesApp() {
             value={importTextareaValue}
             onValueChange={setImportTextareaValue}
             onClose={() => setIsImportModalOpen(false)}
+            validateTsv={validatePurchasesImportForPage}
             title="Import purchases"
             description="Paste a Tab-Separated Value below."
             placeholder="material,description,quantity,cost..."
@@ -891,7 +897,7 @@ export default function PurchasesApp() {
                       Usable Quantity
                     </th>
                     <th className="w-[110px] min-w-[110px] max-w-[110px] px-3 py-2 font-mono text-xs font-semibold text-muted">
-                      Purchased Date
+                      Purchase Date
                     </th>
                     <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
                     <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
