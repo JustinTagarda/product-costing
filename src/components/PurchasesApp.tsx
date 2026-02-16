@@ -7,6 +7,7 @@ import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PopupNotification } from "@/components/PopupNotification";
+import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
@@ -1316,7 +1317,7 @@ export default function PurchasesApp() {
         return;
       }
 
-      setPurchases((prev) => [...importedRows, ...prev]);
+      setPurchases((prev) => appendImportedRowsAtBottom(prev, importedRows));
       setImportRowMetaById((prev) => ({ ...prev, ...importedMeta }));
       setImportTextareaValue("");
       setIsImportModalOpen(false);

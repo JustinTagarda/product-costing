@@ -13,6 +13,7 @@ import {
   currencyCodeFromSettings,
   formatCentsWithSettingsSymbol,
 } from "@/lib/currency";
+import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -626,7 +627,7 @@ export default function CostingApp() {
       }
 
       const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
-      setSheets((prev) => sortSheetsByUpdatedAtDesc([...insertedSheets, ...prev]));
+      setSheets((prev) => appendImportedRowsAtBottom(prev, insertedSheets));
       setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
       toast("success", `Imported ${insertedSheets.length} sheet(s).`);
       return;
@@ -646,7 +647,7 @@ export default function CostingApp() {
         updatedAt: now,
       };
     });
-    setSheets((prev) => sortSheetsByUpdatedAtDesc([...importedLocal, ...prev]));
+    setSheets((prev) => appendImportedRowsAtBottom(prev, importedLocal));
     setSelectedId((prev) => prev ?? importedLocal[0]?.id ?? null);
     toast("success", `Imported ${importedLocal.length} local sheet(s).`);
   }
