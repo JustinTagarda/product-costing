@@ -78,16 +78,20 @@ table > thead > tr > th {
 }
 
 table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row :is(input, textarea)::placeholder {
-  color: #dcdcdc !important;
+  color: #d3d3d3 !important;
   opacity: 1;
 }
 
 table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row select:has(option[value=""]:checked) {
-  color: #dcdcdc !important;
+  color: #d3d3d3 !important;
+}
+
+table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row select option {
+  color: var(--ink) !important;
 }
 
 table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row select option[value=""] {
-  color: #dcdcdc;
+  color: #d3d3d3 !important;
 }
 
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
