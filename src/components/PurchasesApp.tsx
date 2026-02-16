@@ -461,6 +461,7 @@ export default function PurchasesApp() {
   const [query, setQuery] = useState("");
   const [draftPurchase, setDraftPurchase] = useState<DraftPurchaseRow>(() => makeDraftPurchase());
   const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
+  const [isDraftPurchaseDateInputActive, setIsDraftPurchaseDateInputActive] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTextareaValue, setImportTextareaValue] = useState("");
   const [importRowMetaById, setImportRowMetaById] = useState<Record<string, ImportedPurchaseRowMeta>>({});
@@ -539,6 +540,7 @@ export default function PurchasesApp() {
 
   const resetDraftPurchase = useCallback(() => {
     setDraftPurchase(makeDraftPurchase());
+    setIsDraftPurchaseDateInputActive(false);
   }, []);
 
   useEffect(() => {
@@ -971,6 +973,7 @@ export default function PurchasesApp() {
         setPurchases((prev) => [...prev, row]);
         await syncMaterialFromPurchase(row);
         setDraftPurchase(makeDraftPurchase());
+        setIsDraftPurchaseDateInputActive(false);
         window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
         toast("success", "Purchase added.");
         return;
@@ -980,6 +983,7 @@ export default function PurchasesApp() {
       setPurchases((prev) => [...prev, row]);
       await syncMaterialFromPurchase(row);
       setDraftPurchase(makeDraftPurchase());
+      setIsDraftPurchaseDateInputActive(false);
       window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
       toast("success", "Purchase added.");
     } finally {
@@ -1764,7 +1768,7 @@ export default function PurchasesApp() {
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({ ...prev, quantityInput: e.target.value }))
                         }
-                        placeholder="Quantity"
+                        placeholder="0"
                         disabled={savingDraftPurchase}
                       />
                     </td>
@@ -1775,7 +1779,7 @@ export default function PurchasesApp() {
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({ ...prev, unitCostInput: e.target.value }))
                         }
-                        placeholder="Cost"
+                        placeholder="0.00"
                         disabled={savingDraftPurchase}
                       />
                     </td>
@@ -1798,14 +1802,18 @@ export default function PurchasesApp() {
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({ ...prev, usableQuantityInput: e.target.value }))
                         }
-                        placeholder="Usable Quantity"
+                        placeholder="0"
                         disabled={savingDraftPurchase}
                       />
                     </td>
                     <td className="w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle">
                       <input
                         className={inputBase + " " + inputMono}
-                        type="date"
+                        type={
+                          isDraftPurchaseDateInputActive || draftPurchase.purchaseDate
+                            ? "date"
+                            : "text"
+                        }
                         value={draftPurchase.purchaseDate}
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({
@@ -1813,6 +1821,9 @@ export default function PurchasesApp() {
                             purchaseDate: e.target.value,
                           }))
                         }
+                        onFocus={() => setIsDraftPurchaseDateInputActive(true)}
+                        onBlur={() => setIsDraftPurchaseDateInputActive(false)}
+                        placeholder="Purchase Date"
                         disabled={savingDraftPurchase}
                       />
                     </td>
