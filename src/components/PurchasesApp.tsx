@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import {
+  DeferredMoneyInput,
+  DeferredNumberInput,
+  parseLooseNumber,
+  parseMoneyToCents,
+} from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -51,11 +56,11 @@ type DraftPurchaseRow = {
   materialId: string | null;
   description: string;
   variation: string;
-  quantity: number;
-  unitCostCents: number;
-  usableQuantity: number;
+  quantityInput: string;
+  unitCostInput: string;
+  usableQuantityInput: string;
   purchaseDate: string;
-  marketplace: PurchaseMarketplace;
+  marketplace: PurchaseMarketplace | "";
   store: string;
 };
 
@@ -296,29 +301,32 @@ function validateImportedPurchaseRow(row: PurchaseRecord): ImportedPurchaseField
 
 function makeDraftPurchase(defaults?: {
   purchaseDate?: string;
-  marketplace?: PurchaseMarketplace;
+  marketplace?: PurchaseMarketplace | "";
 }): DraftPurchaseRow {
   return {
     materialId: null,
     description: "",
     variation: "",
-    quantity: 0,
-    unitCostCents: 0,
-    usableQuantity: 0,
-    purchaseDate: defaults?.purchaseDate || currentDateInputValue(),
-    marketplace: defaults?.marketplace || "local",
+    quantityInput: "",
+    unitCostInput: "",
+    usableQuantityInput: "",
+    purchaseDate: defaults?.purchaseDate || "",
+    marketplace: defaults?.marketplace || "",
     store: "",
   };
 }
 
 function isDraftPurchaseComplete(row: DraftPurchaseRow): boolean {
+  const quantity = Math.max(0, parseLooseNumber(row.quantityInput));
+  const unitCostCents = Math.max(0, parseMoneyToCents(row.unitCostInput));
+  const usableQuantity = Math.max(0, parseLooseNumber(row.usableQuantityInput));
   return (
     row.materialId !== null &&
     row.description.trim().length > 0 &&
     String(row.marketplace || "").trim().length > 0 &&
-    row.quantity > 0 &&
-    row.unitCostCents > 0 &&
-    row.usableQuantity > 0
+    quantity > 0 &&
+    unitCostCents > 0 &&
+    usableQuantity > 0
   );
 }
 
@@ -451,9 +459,7 @@ export default function PurchasesApp() {
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [query, setQuery] = useState("");
-  const [draftPurchase, setDraftPurchase] = useState<DraftPurchaseRow>(() =>
-    makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }),
-  );
+  const [draftPurchase, setDraftPurchase] = useState<DraftPurchaseRow>(() => makeDraftPurchase());
   const [savingDraftPurchase, setSavingDraftPurchase] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTextareaValue, setImportTextareaValue] = useState("");
@@ -532,7 +538,7 @@ export default function PurchasesApp() {
   }, []);
 
   const resetDraftPurchase = useCallback(() => {
-    setDraftPurchase(makeDraftPurchase({ purchaseDate: currentDateInputValue(), marketplace: "local" }));
+    setDraftPurchase(makeDraftPurchase());
   }, []);
 
   useEffect(() => {
@@ -853,20 +859,23 @@ export default function PurchasesApp() {
       draftPurchase.description.trim().length > 0 ||
       draftPurchase.variation.trim().length > 0 ||
       draftPurchase.store.trim().length > 0 ||
-      draftPurchase.quantity > 0 ||
-      draftPurchase.unitCostCents > 0 ||
-      draftPurchase.usableQuantity > 0
+      draftPurchase.quantityInput.trim().length > 0 ||
+      draftPurchase.unitCostInput.trim().length > 0 ||
+      draftPurchase.usableQuantityInput.trim().length > 0 ||
+      draftPurchase.purchaseDate.trim().length > 0 ||
+      String(draftPurchase.marketplace || "").trim().length > 0
     );
   }
 
   function buildPurchaseFromDraft(id: string): PurchaseRecord {
     const material = draftPurchase.materialId ? (materialById.get(draftPurchase.materialId) ?? null) : null;
-    const quantity = Math.max(0, draftPurchase.quantity);
-    const unitCostCents = Math.max(0, Math.round(draftPurchase.unitCostCents));
-    const usableQuantity = draftPurchase.usableQuantity > 0
-      ? Math.max(0, draftPurchase.usableQuantity)
+    const quantity = Math.max(0, parseLooseNumber(draftPurchase.quantityInput));
+    const unitCostCents = Math.max(0, parseMoneyToCents(draftPurchase.unitCostInput));
+    const usableQuantity = draftPurchase.usableQuantityInput.trim().length > 0
+      ? Math.max(0, parseLooseNumber(draftPurchase.usableQuantityInput))
       : quantity;
     const purchaseDate = draftPurchase.purchaseDate || currentDateInputValue();
+    const marketplace = normalizePurchaseMarketplace(draftPurchase.marketplace || "other", "other");
     const store = draftPurchase.store.trim() || material?.supplier || "";
     const materialName = material?.name ?? "";
     const unit = material?.unit ?? settings.defaultMaterialUnit;
@@ -879,7 +888,7 @@ export default function PurchasesApp() {
       materialName,
       store,
       supplier: store,
-      marketplace: draftPurchase.marketplace,
+      marketplace,
       unit,
     });
 
@@ -897,7 +906,7 @@ export default function PurchasesApp() {
         costCents: total,
         totalCostCents: total,
         purchaseDate,
-        marketplace: draftPurchase.marketplace,
+        marketplace,
         store,
         supplier: store,
       },
@@ -961,12 +970,7 @@ export default function PurchasesApp() {
         );
         setPurchases((prev) => [...prev, row]);
         await syncMaterialFromPurchase(row);
-        setDraftPurchase(
-          makeDraftPurchase({
-            purchaseDate: currentDateInputValue(),
-            marketplace: draftPurchase.marketplace,
-          }),
-        );
+        setDraftPurchase(makeDraftPurchase());
         window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
         toast("success", "Purchase added.");
         return;
@@ -975,12 +979,7 @@ export default function PurchasesApp() {
       const row = buildPurchaseFromDraft(makeId("pur"));
       setPurchases((prev) => [...prev, row]);
       await syncMaterialFromPurchase(row);
-      setDraftPurchase(
-        makeDraftPurchase({
-          purchaseDate: currentDateInputValue(),
-          marketplace: draftPurchase.marketplace,
-        }),
-      );
+      setDraftPurchase(makeDraftPurchase());
       window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
       toast("success", "Purchase added.");
     } finally {
@@ -1759,46 +1758,47 @@ export default function PurchasesApp() {
                       />
                     </td>
                     <td className="w-[80px] p-2 align-middle">
-                      <DeferredNumberInput
+                      <input
                         className={inputBase + " " + inputMono}
-                        value={draftPurchase.quantity}
-                        onCommit={(value) =>
-                          setDraftPurchase((prev) => ({
-                            ...prev,
-                            quantity: Math.max(0, value),
-                          }))
+                        value={draftPurchase.quantityInput}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, quantityInput: e.target.value }))
                         }
+                        placeholder="Quantity"
                         disabled={savingDraftPurchase}
                       />
                     </td>
                     <td className="w-[100px] p-2 align-middle">
-                      <DeferredMoneyInput
+                      <input
                         className={inputBase + " " + inputMono}
-                        valueCents={draftPurchase.unitCostCents}
-                        onCommitCents={(valueCents) =>
-                          setDraftPurchase((prev) => ({
-                            ...prev,
-                            unitCostCents: valueCents,
-                          }))
+                        value={draftPurchase.unitCostInput}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, unitCostInput: e.target.value }))
                         }
+                        placeholder="Cost"
                         disabled={savingDraftPurchase}
                       />
                     </td>
                     <td className="w-[120px] p-2 align-middle">
                       <p className="px-3 py-2 font-mono text-sm text-ink">
-                        {formatMoney(computePurchaseTotalCents(draftPurchase.quantity, draftPurchase.unitCostCents))}
+                        {draftPurchase.quantityInput.trim().length > 0 && draftPurchase.unitCostInput.trim().length > 0
+                          ? formatMoney(
+                              computePurchaseTotalCents(
+                                Math.max(0, parseLooseNumber(draftPurchase.quantityInput)),
+                                Math.max(0, parseMoneyToCents(draftPurchase.unitCostInput)),
+                              ),
+                            )
+                          : ""}
                       </p>
                     </td>
                     <td className="w-[80px] p-2 align-middle">
-                      <DeferredNumberInput
+                      <input
                         className={inputBase + " " + inputMono}
-                        value={draftPurchase.usableQuantity}
-                        onCommit={(value) =>
-                          setDraftPurchase((prev) => ({
-                            ...prev,
-                            usableQuantity: Math.max(0, value),
-                          }))
+                        value={draftPurchase.usableQuantityInput}
+                        onChange={(e) =>
+                          setDraftPurchase((prev) => ({ ...prev, usableQuantityInput: e.target.value }))
                         }
+                        placeholder="Usable Quantity"
                         disabled={savingDraftPurchase}
                       />
                     </td>
@@ -1810,7 +1810,7 @@ export default function PurchasesApp() {
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({
                             ...prev,
-                            purchaseDate: e.target.value || currentDateInputValue(),
+                            purchaseDate: e.target.value,
                           }))
                         }
                         disabled={savingDraftPurchase}
@@ -1823,11 +1823,14 @@ export default function PurchasesApp() {
                         onChange={(e) =>
                           setDraftPurchase((prev) => ({
                             ...prev,
-                            marketplace: normalizePurchaseMarketplace(e.target.value, "other"),
+                            marketplace: e.target.value
+                              ? normalizePurchaseMarketplace(e.target.value, "other")
+                              : "",
                           }))
                         }
                         disabled={savingDraftPurchase}
                       >
+                        <option value="">Select marketplace</option>
                         {PURCHASE_MARKETPLACES.map((item) => (
                           <option key={item} value={item}>
                             {marketplaceLabels[item]}
