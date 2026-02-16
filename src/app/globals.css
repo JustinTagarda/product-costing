@@ -55,6 +55,8 @@ table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
 table > :is(thead, tbody, tfoot) > tr > th {
   padding: 2px 4px !important;
   font-weight: 700 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
 
 table > :is(thead, tbody, tfoot) > tr > td {
