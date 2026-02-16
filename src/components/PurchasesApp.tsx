@@ -1695,7 +1695,7 @@ export default function PurchasesApp() {
 
                   <tr
                     ref={draftRowRef}
-                    className="align-middle"
+                    className="app-table-new-entry-row align-middle"
                     onBlurCapture={(e) =>
                       handleDraftRowBlurCapture(e, () => {
                         void commitDraftPurchase();

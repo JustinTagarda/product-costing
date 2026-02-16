@@ -727,7 +727,7 @@ export default function MaterialsApp() {
 
                   <tr
                     ref={draftRowRef}
-                    className="align-top"
+                    className="app-table-new-entry-row align-top"
                     onBlurCapture={(e) =>
                       handleDraftRowBlurCapture(e, () => {
                         void commitDraftMaterial();

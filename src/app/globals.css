@@ -77,6 +77,22 @@ table > thead > tr > th {
   background-color: #f5f5f5;
 }
 
+table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row > :is(th, td) {
+  color: #dcdcdc !important;
+}
+
+table
+  > :is(thead, tbody, tfoot)
+  > tr.app-table-new-entry-row
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button, span, p, label) {
+  color: #dcdcdc !important;
+}
+
+table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row :is(input, textarea)::placeholder {
+  color: #dcdcdc !important;
+  opacity: 1;
+}
+
 table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   width: 100%;
   border-width: 0 !important;
