@@ -29,7 +29,12 @@ import {
   type PurchaseMarketplace,
   type PurchaseRecord,
 } from "@/lib/purchases";
-import { validatePurchasesImportTsv } from "@/lib/purchasesImportValidation";
+import { resolveImportedSelectValue } from "@/lib/importSelectRules";
+import {
+  OPTIONAL_PURCHASE_HEADERS,
+  REQUIRED_PURCHASE_HEADERS,
+  validatePurchasesImportTsv,
+} from "@/lib/purchasesImportValidation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import {
@@ -54,6 +59,21 @@ type DraftPurchaseRow = {
   store: string;
 };
 
+type ImportedPurchaseField =
+  | "description"
+  | "quantity"
+  | "unitCostCents"
+  | "usableQuantity"
+  | "purchaseDate";
+
+type ImportedPurchaseStatus = "pending" | "error" | "saving";
+
+type ImportedPurchaseRowMeta = {
+  status: ImportedPurchaseStatus;
+  invalidFields: ImportedPurchaseField[];
+  emptyMarketplace: boolean;
+};
+
 type MaterialOption = Pick<
   MaterialRecord,
   "id" | "name" | "supplier" | "unit" | "isActive" | "lastPurchaseCostCents" | "lastPurchaseDate"
@@ -70,6 +90,76 @@ const marketplaceLabels: Record<PurchaseMarketplace, string> = {
 };
 const INCOMPLETE_DRAFT_POPUP_MESSAGE =
   "Complete required fields first: Material, Description, Marketplace, Quantity, Cost, and Usable Quantity.";
+
+function parseTsvRows(tsv: string): { header: string[]; rows: string[][] } {
+  const lines = tsv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (!lines.length) return { header: [], rows: [] };
+  const header = lines[0].split("\t").map((cell) => cell.trim());
+  const rows = lines.slice(1).map((line) => line.split("\t").map((cell) => cell.trim()));
+  return { header, rows };
+}
+
+function parseStrictDecimal(raw: string): number {
+  const trimmed = raw.trim();
+  if (!trimmed) return Number.NaN;
+  const normalized = trimmed.replace(/,/g, "").replace(/\u00A0/g, "");
+  if (!normalized) return Number.NaN;
+  if (/^[\p{Sc}]/u.test(normalized)) {
+    return parseStrictDecimal(normalized.replace(/^[\p{Sc}]+/u, ""));
+  }
+  if (!/^[+-]?(\d+(\.\d+)?|\.\d+)$/.test(normalized)) return Number.NaN;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function parseStrictMoneyToCents(raw: string): number {
+  const parsed = parseStrictDecimal(raw);
+  if (!Number.isFinite(parsed)) return Number.NaN;
+  return Math.max(0, Math.round(parsed * 100));
+}
+
+function isIsoDateInput(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+  );
+}
+
+function normalizeImportedDate(raw: string): string {
+  const token = raw.trim();
+  if (!token) return "";
+  if (isIsoDateInput(token)) return token;
+  const slashIso = token.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (slashIso) {
+    const next = `${slashIso[1]}-${slashIso[2].padStart(2, "0")}-${slashIso[3].padStart(2, "0")}`;
+    return isIsoDateInput(next) ? next : "";
+  }
+  return "";
+}
+
+function validateImportedPurchaseRow(row: PurchaseRecord): ImportedPurchaseField[] {
+  const invalidFields: ImportedPurchaseField[] = [];
+
+  if (!row.description.trim()) invalidFields.push("description");
+  if (!Number.isFinite(row.quantity) || row.quantity < 0) invalidFields.push("quantity");
+  if (!Number.isFinite(row.unitCostCents) || row.unitCostCents < 0) invalidFields.push("unitCostCents");
+  if (!Number.isFinite(row.usableQuantity) || row.usableQuantity < 0) invalidFields.push("usableQuantity");
+  if (!isIsoDateInput(row.purchaseDate)) invalidFields.push("purchaseDate");
+
+  return invalidFields;
+}
 
 function makeDraftPurchase(defaults?: {
   purchaseDate?: string;
@@ -235,6 +325,7 @@ export default function PurchasesApp() {
   const [newPurchasePopup, setNewPurchasePopup] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTextareaValue, setImportTextareaValue] = useState("");
+  const [importRowMetaById, setImportRowMetaById] = useState<Record<string, ImportedPurchaseRowMeta>>({});
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -246,6 +337,9 @@ export default function PurchasesApp() {
   const newPurchasePopupTimerRef = useRef<number | null>(null);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
+  const purchasesRef = useRef<PurchaseRecord[]>([]);
+  const importRowMetaByIdRef = useRef<Record<string, ImportedPurchaseRowMeta>>({});
+  const importCommitInFlightRef = useRef<Set<string>>(new Set());
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -272,6 +366,24 @@ export default function PurchasesApp() {
   const materialById = useMemo(() => {
     return new Map(materials.map((item) => [item.id, item]));
   }, [materials]);
+
+  const materialImportSelectOptions = useMemo(
+    () =>
+      materials.map((item) => ({
+        value: item.id,
+        aliases: [item.name],
+      })),
+    [materials],
+  );
+
+  const marketplaceImportSelectOptions = useMemo(
+    () =>
+      PURCHASE_MARKETPLACES.map((item) => ({
+        value: item,
+        aliases: [item, marketplaceLabels[item]],
+      })),
+    [],
+  );
 
   const formatMoney = useCallback(
     (cents: number) =>
@@ -306,36 +418,47 @@ export default function PurchasesApp() {
     newPurchasePopupTimerRef.current = null;
   }, []);
 
-  function normalizePurchaseRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
-    const quantity = Number.isFinite(row.quantity) ? Math.max(0, row.quantity) : 0;
-    const usableQuantity = Number.isFinite(row.usableQuantity)
-      ? Math.max(0, row.usableQuantity)
-      : quantity;
-    const unitCostRaw = Number.isFinite(row.unitCostCents)
-      ? row.unitCostCents
-      : quantity > 0
-        ? computeUnitCostCentsFromCost(
-            quantity,
-            Number.isFinite(row.costCents) ? row.costCents : row.totalCostCents,
-          )
-        : 0;
-    const unitCostCents = Math.max(0, Math.round(unitCostRaw));
-    const totalCostCents = computePurchaseTotalCents(quantity, unitCostCents);
-    const store = (row.store || row.supplier || "").trim();
-    return {
-      ...row,
-      quantity,
-      usableQuantity,
-      unitCostCents,
-      costCents: totalCostCents,
-      totalCostCents,
-      currency: settings.baseCurrency,
-      marketplace: normalizePurchaseMarketplace(row.marketplace, "other"),
-      store,
-      supplier: store,
-      updatedAt,
-    };
-  }
+  useEffect(() => {
+    purchasesRef.current = purchases;
+  }, [purchases]);
+
+  useEffect(() => {
+    importRowMetaByIdRef.current = importRowMetaById;
+  }, [importRowMetaById]);
+
+  const normalizePurchaseRow = useCallback(
+    (row: PurchaseRecord, updatedAt: string): PurchaseRecord => {
+      const quantity = Number.isFinite(row.quantity) ? Math.max(0, row.quantity) : 0;
+      const usableQuantity = Number.isFinite(row.usableQuantity)
+        ? Math.max(0, row.usableQuantity)
+        : quantity;
+      const unitCostRaw = Number.isFinite(row.unitCostCents)
+        ? row.unitCostCents
+        : quantity > 0
+          ? computeUnitCostCentsFromCost(
+              quantity,
+              Number.isFinite(row.costCents) ? row.costCents : row.totalCostCents,
+            )
+          : 0;
+      const unitCostCents = Math.max(0, Math.round(unitCostRaw));
+      const totalCostCents = computePurchaseTotalCents(quantity, unitCostCents);
+      const store = (row.store || row.supplier || "").trim();
+      return {
+        ...row,
+        quantity,
+        usableQuantity,
+        unitCostCents,
+        costCents: totalCostCents,
+        totalCostCents,
+        currency: settings.baseCurrency,
+        marketplace: normalizePurchaseMarketplace(row.marketplace, "other"),
+        store,
+        supplier: store,
+        updatedAt,
+      };
+    },
+    [settings.baseCurrency],
+  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -400,6 +523,8 @@ export default function PurchasesApp() {
     async function loadData() {
       hasHydratedRef.current = false;
       setLoading(true);
+      importCommitInFlightRef.current.clear();
+      setImportRowMetaById({});
 
       if (isCloudMode && userId && supabase) {
         const [purchasesRes, materialsRes] = await Promise.all([
@@ -475,32 +600,50 @@ export default function PurchasesApp() {
 
   useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedRef.current) return;
-    writeLocalPurchases(purchases);
-  }, [authReady, isCloudMode, purchases]);
+    const rowsToPersist = purchases.filter((row) => !(row.id in importRowMetaById));
+    writeLocalPurchases(rowsToPersist);
+  }, [authReady, importRowMetaById, isCloudMode, purchases]);
 
-  async function syncMaterialFromPurchase(next: PurchaseRecord): Promise<void> {
-    if (!next.materialId) return;
-    const updatedAt = new Date().toISOString();
+  const syncMaterialFromPurchase = useCallback(
+    async (next: PurchaseRecord): Promise<void> => {
+      if (!next.materialId) return;
+      const updatedAt = new Date().toISOString();
 
-    if (isCloudMode && supabase) {
-      const { error } = await supabase
-        .from("materials")
-        .update({
-          supplier: next.store,
-          unit: next.unit,
-          last_purchase_cost_cents: next.unitCostCents,
-          last_purchase_date: next.purchaseDate || null,
-          updated_at: updatedAt,
-        })
-        .eq("id", next.materialId);
-      if (error) {
-        toast("error", `Material sync failed: ${error.message}`);
+      if (isCloudMode && supabase) {
+        const { error } = await supabase
+          .from("materials")
+          .update({
+            supplier: next.store,
+            unit: next.unit,
+            last_purchase_cost_cents: next.unitCostCents,
+            last_purchase_date: next.purchaseDate || null,
+            updated_at: updatedAt,
+          })
+          .eq("id", next.materialId);
+        if (error) {
+          toast("error", `Material sync failed: ${error.message}`);
+        }
+        return;
       }
-      return;
-    }
 
-    setMaterials((prev) => {
-      const updated = prev.map((item) =>
+      setMaterials((prev) => {
+        const updated = prev.map((item) =>
+          item.id === next.materialId
+            ? {
+                ...item,
+                supplier: next.store,
+                unit: next.unit,
+                lastPurchaseCostCents: next.unitCostCents,
+                lastPurchaseDate: next.purchaseDate,
+              }
+            : item,
+        );
+        return updated;
+      });
+
+      const localMaterials = readLocalMaterialRecords();
+      if (!localMaterials.length) return;
+      const nextMaterials = localMaterials.map((item) =>
         item.id === next.materialId
           ? {
               ...item,
@@ -508,28 +651,14 @@ export default function PurchasesApp() {
               unit: next.unit,
               lastPurchaseCostCents: next.unitCostCents,
               lastPurchaseDate: next.purchaseDate,
+              updatedAt,
             }
           : item,
       );
-      return updated;
-    });
-
-    const localMaterials = readLocalMaterialRecords();
-    if (!localMaterials.length) return;
-    const nextMaterials = localMaterials.map((item) =>
-      item.id === next.materialId
-        ? {
-            ...item,
-            supplier: next.store,
-            unit: next.unit,
-            lastPurchaseCostCents: next.unitCostCents,
-            lastPurchaseDate: next.purchaseDate,
-            updatedAt,
-          }
-        : item,
-    );
-    writeLocalMaterialRecords(nextMaterials);
-  }
+      writeLocalMaterialRecords(nextMaterials);
+    },
+    [isCloudMode, supabase, toast],
+  );
 
   async function persistPurchase(next: PurchaseRecord): Promise<void> {
     if (!isCloudMode || !supabase) return;
@@ -551,20 +680,76 @@ export default function PurchasesApp() {
     saveTimersRef.current.set(next.id, timer);
   }
 
+  function normalizeImportedDraftRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
+    const quantity = Number.isFinite(row.quantity) ? Math.max(0, row.quantity) : row.quantity;
+    const usableQuantity = Number.isFinite(row.usableQuantity)
+      ? Math.max(0, row.usableQuantity)
+      : row.usableQuantity;
+    const unitCostCents = Number.isFinite(row.unitCostCents)
+      ? Math.max(0, Math.round(row.unitCostCents))
+      : row.unitCostCents;
+    const totalCostCents = Number.isFinite(quantity) && Number.isFinite(unitCostCents)
+      ? computePurchaseTotalCents(quantity, unitCostCents)
+      : 0;
+    const store = (row.store || row.supplier || "").trim();
+    return {
+      ...row,
+      quantity,
+      usableQuantity,
+      unitCostCents,
+      costCents: totalCostCents,
+      totalCostCents,
+      currency: settings.baseCurrency,
+      store,
+      supplier: store,
+      updatedAt,
+    };
+  }
+
   function updatePurchase(id: string, updater: (row: PurchaseRecord) => PurchaseRecord): void {
     const now = new Date().toISOString();
+    const isImportedRow = Boolean(importRowMetaByIdRef.current[id]);
     setPurchases((prev) => {
       let changed: PurchaseRecord | null = null;
       const next = prev.map((row) => {
         if (row.id !== id) return row;
         const updated = updater(row);
-        const normalized = normalizePurchaseRow(updated, now);
+        const normalized = isImportedRow
+          ? normalizeImportedDraftRow(updated, now)
+          : normalizePurchaseRow(updated, now);
         changed = normalized;
         return normalized;
       });
 
-      if (changed && isCloudMode) schedulePersist(changed);
-      if (changed && !isCloudMode) void syncMaterialFromPurchase(changed);
+      if (changed && isImportedRow) {
+        const invalidFields = validateImportedPurchaseRow(changed);
+        setImportRowMetaById((prevMeta) => {
+          const currentMeta = prevMeta[id];
+          if (!currentMeta) return prevMeta;
+          const nextStatus: ImportedPurchaseStatus =
+            currentMeta.status === "saving"
+              ? "saving"
+              : invalidFields.length > 0
+                ? "error"
+                : "pending";
+          const hasSameStatus = currentMeta.status === nextStatus;
+          const hasSameInvalidFields =
+            currentMeta.invalidFields.length === invalidFields.length &&
+            currentMeta.invalidFields.every((field, idx) => field === invalidFields[idx]);
+          if (hasSameStatus && hasSameInvalidFields) return prevMeta;
+          return {
+            ...prevMeta,
+            [id]: {
+              ...currentMeta,
+              status: nextStatus,
+              invalidFields,
+            },
+          };
+        });
+      }
+
+      if (changed && !isImportedRow && isCloudMode) schedulePersist(changed);
+      if (changed && !isImportedRow && !isCloudMode) void syncMaterialFromPurchase(changed);
       return next;
     });
   }
@@ -710,15 +895,23 @@ export default function PurchasesApp() {
   }
 
   async function deletePurchase(id: string) {
-    if (isCloudMode && supabase) {
+    const isImportedDraft = Boolean(importRowMetaByIdRef.current[id]);
+    if (isCloudMode && supabase && !isImportedDraft) {
       const { error } = await supabase.from("purchases").delete().eq("id", id);
       if (error) {
         toast("error", error.message);
         return;
       }
     }
+    importCommitInFlightRef.current.delete(id);
+    setImportRowMetaById((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     setPurchases((prev) => prev.filter((row) => row.id !== id));
-    toast("info", "Purchase deleted.");
+    toast("info", isImportedDraft ? "Imported draft row removed." : "Purchase deleted.");
   }
 
   async function signOut() {
@@ -753,6 +946,281 @@ export default function PurchasesApp() {
   const validatePurchasesImportForPage = useCallback((tsv: string) => {
     return validatePurchasesImportTsv(tsv);
   }, []);
+
+  const commitImportedPurchaseRow = useCallback(
+    async (rowId: string): Promise<void> => {
+      const existingMeta = importRowMetaByIdRef.current[rowId];
+      if (!existingMeta) return;
+      if (existingMeta.status === "saving") return;
+      if (importCommitInFlightRef.current.has(rowId)) return;
+
+      const row = purchasesRef.current.find((item) => item.id === rowId);
+      if (!row) return;
+
+      const invalidFields = validateImportedPurchaseRow(row);
+      if (invalidFields.length > 0) {
+        setImportRowMetaById((prev) => {
+          const current = prev[rowId];
+          if (!current) return prev;
+          return {
+            ...prev,
+            [rowId]: {
+              ...current,
+              status: "error",
+              invalidFields,
+            },
+          };
+        });
+        return;
+      }
+
+      importCommitInFlightRef.current.add(rowId);
+      setImportRowMetaById((prev) => {
+        const current = prev[rowId];
+        if (!current) return prev;
+        return {
+          ...prev,
+          [rowId]: {
+            ...current,
+            status: "saving",
+            invalidFields: [],
+          },
+        };
+      });
+
+      try {
+        const normalizedRow = normalizePurchaseRow(
+          {
+            ...row,
+            quantity: Math.max(0, row.quantity),
+            unitCostCents: Math.max(0, Math.round(row.unitCostCents)),
+            usableQuantity: Math.max(0, row.usableQuantity),
+            purchaseDate: row.purchaseDate || currentDateInputValue(),
+          },
+          new Date().toISOString(),
+        );
+
+        if (isCloudMode && supabase && userId) {
+          const insert = makeBlankPurchaseInsert(userId, {
+            currency: normalizedRow.currency,
+            purchaseDate: normalizedRow.purchaseDate,
+            materialId: normalizedRow.materialId,
+            materialName: normalizedRow.materialName,
+            description: normalizedRow.description,
+            variation: normalizedRow.variation,
+            usableQuantity: normalizedRow.usableQuantity,
+            costCents: normalizedRow.costCents,
+            marketplace: normalizedRow.marketplace,
+            store: normalizedRow.store,
+            supplier: normalizedRow.supplier,
+            unit: normalizedRow.unit,
+          });
+          insert.purchase_date = normalizedRow.purchaseDate;
+          insert.material_id = normalizedRow.materialId;
+          insert.material_name = normalizedRow.materialName;
+          insert.description = normalizedRow.description;
+          insert.variation = normalizedRow.variation;
+          insert.supplier = normalizedRow.supplier;
+          insert.store = normalizedRow.store;
+          insert.quantity = normalizedRow.quantity;
+          insert.usable_quantity = normalizedRow.usableQuantity;
+          insert.unit = normalizedRow.unit;
+          insert.unit_cost_cents = normalizedRow.unitCostCents;
+          insert.total_cost_cents = normalizedRow.totalCostCents;
+          insert.cost_cents = normalizedRow.costCents;
+          insert.currency = normalizedRow.currency;
+          insert.marketplace = normalizedRow.marketplace;
+
+          const { data, error } = await supabase.from("purchases").insert(insert).select("*");
+          if (error || !data?.[0]) {
+            toast("error", error?.message || "Could not import purchase row.");
+            setImportRowMetaById((prev) => {
+              const current = prev[rowId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [rowId]: {
+                  ...current,
+                  status: "error",
+                  invalidFields: validateImportedPurchaseRow(row),
+                },
+              };
+            });
+            return;
+          }
+
+          const savedRow = normalizePurchaseRow(
+            {
+              ...rowToPurchase(data[0] as DbPurchaseRow),
+              currency: settings.baseCurrency,
+            },
+            new Date().toISOString(),
+          );
+
+          setPurchases((prev) => prev.map((item) => (item.id === rowId ? savedRow : item)));
+          await syncMaterialFromPurchase(savedRow);
+        } else {
+          setPurchases((prev) => prev.map((item) => (item.id === rowId ? normalizedRow : item)));
+          await syncMaterialFromPurchase(normalizedRow);
+        }
+
+        setImportRowMetaById((prev) => {
+          if (!(rowId in prev)) return prev;
+          const next = { ...prev };
+          delete next[rowId];
+          return next;
+        });
+      } finally {
+        importCommitInFlightRef.current.delete(rowId);
+      }
+    },
+    [isCloudMode, normalizePurchaseRow, settings.baseCurrency, supabase, syncMaterialFromPurchase, toast, userId],
+  );
+
+  const importPurchasesFromValidatedTsv = useCallback(
+    (tsv: string): void => {
+      const { header, rows } = parseTsvRows(tsv);
+      if (!header.length || !rows.length) {
+        toast("error", "No importable rows found.");
+        return;
+      }
+
+      const missingRequiredHeader = REQUIRED_PURCHASE_HEADERS.filter((item) => !header.includes(item));
+      if (missingRequiredHeader.length > 0) {
+        toast("error", `Missing required header(s): ${missingRequiredHeader.join(", ")}.`);
+        return;
+      }
+
+      const unknownHeader = header.find(
+        (item) =>
+          !REQUIRED_PURCHASE_HEADERS.includes(item as (typeof REQUIRED_PURCHASE_HEADERS)[number]) &&
+          !OPTIONAL_PURCHASE_HEADERS.includes(item as (typeof OPTIONAL_PURCHASE_HEADERS)[number]),
+      );
+      if (unknownHeader) {
+        toast("error", `Unsupported header: ${unknownHeader}`);
+        return;
+      }
+
+      const headerIndex = new Map<string, number>(header.map((item, idx) => [item, idx]));
+      const now = new Date().toISOString();
+      const importedRows: PurchaseRecord[] = [];
+      const importedMeta: Record<string, ImportedPurchaseRowMeta> = {};
+
+      for (const rowCells of rows) {
+        const cell = (name: string): string => {
+          const idx = headerIndex.get(name);
+          if (idx === undefined) return "";
+          return (rowCells[idx] || "").trim();
+        };
+
+        const rawMaterial = cell("Material");
+        const resolvedMaterialId = resolveImportedSelectValue(rawMaterial, materialImportSelectOptions);
+        const resolvedMaterial = resolvedMaterialId ? materialById.get(resolvedMaterialId) ?? null : null;
+
+        const rawMarketplace = cell("Marketplace");
+        const resolvedMarketplace = resolveImportedSelectValue(rawMarketplace, marketplaceImportSelectOptions);
+        const emptyMarketplace = rawMarketplace.length > 0 && !resolvedMarketplace;
+
+        const quantity = parseStrictDecimal(cell("Quantity"));
+        const unitCostCents = parseStrictMoneyToCents(cell("Cost"));
+        const usableQuantity = parseStrictDecimal(cell("Usable Quantity"));
+        const normalizedDate = normalizeImportedDate(cell("Purchase Date"));
+        const store = cell("Store");
+        const variation = cell("Variation");
+        const description = cell("Description");
+        const id = makeId("pur");
+
+        const quantityValue = Number.isFinite(quantity) ? Math.max(0, quantity) : Number.NaN;
+        const unitCostCentsValue = Number.isFinite(unitCostCents)
+          ? Math.max(0, Math.round(unitCostCents))
+          : Number.NaN;
+        const usableQuantityValue = Number.isFinite(usableQuantity)
+          ? Math.max(0, usableQuantity)
+          : Number.NaN;
+        const totalCostCents = Number.isFinite(quantityValue) && Number.isFinite(unitCostCentsValue)
+          ? computePurchaseTotalCents(quantityValue, unitCostCentsValue)
+          : 0;
+
+        const base = makeBlankPurchase(id, {
+          currency: settings.baseCurrency,
+          purchaseDate: normalizedDate || currentDateInputValue(),
+          materialId: resolvedMaterial?.id ?? null,
+          materialName: resolvedMaterial?.name ?? "",
+          marketplace: resolvedMarketplace ?? "other",
+          store,
+          supplier: store,
+          unit: resolvedMaterial?.unit ?? settings.defaultMaterialUnit,
+        });
+
+        const importedRow: PurchaseRecord = {
+          ...base,
+          purchaseDate: normalizedDate,
+          materialId: resolvedMaterial?.id ?? null,
+          materialName: resolvedMaterial?.name ?? "",
+          description,
+          variation,
+          quantity: quantityValue,
+          usableQuantity: usableQuantityValue,
+          unitCostCents: unitCostCentsValue,
+          costCents: totalCostCents,
+          totalCostCents,
+          marketplace: resolvedMarketplace ?? "other",
+          store,
+          supplier: store,
+          currency: settings.baseCurrency,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const invalidFields = validateImportedPurchaseRow(importedRow);
+        importedRows.push(importedRow);
+        importedMeta[id] = {
+          status: invalidFields.length > 0 ? "error" : "pending",
+          invalidFields,
+          emptyMarketplace,
+        };
+      }
+
+      if (!importedRows.length) {
+        toast("error", "No rows were imported.");
+        return;
+      }
+
+      setPurchases((prev) => [...importedRows, ...prev]);
+      setImportRowMetaById((prev) => ({ ...prev, ...importedMeta }));
+      setImportTextareaValue("");
+      setIsImportModalOpen(false);
+
+      const errorCount = Object.values(importedMeta).filter((item) => item.status === "error").length;
+      if (errorCount > 0) {
+        toast(
+          "info",
+          `Imported ${importedRows.length} row(s). ${errorCount} row(s) need correction before auto-save.`,
+        );
+      } else {
+        toast("success", `Imported ${importedRows.length} row(s). Saving to ${isCloudMode ? "cloud" : "local"}...`);
+      }
+    },
+    [
+      isCloudMode,
+      marketplaceImportSelectOptions,
+      materialById,
+      materialImportSelectOptions,
+      settings.baseCurrency,
+      settings.defaultMaterialUnit,
+      toast,
+    ],
+  );
+
+  useEffect(() => {
+    for (const [rowId, meta] of Object.entries(importRowMetaById)) {
+      if (meta.status !== "pending") continue;
+      const row = purchases.find((item) => item.id === rowId);
+      if (!row) continue;
+      if (validateImportedPurchaseRow(row).length > 0) continue;
+      void commitImportedPurchaseRow(rowId);
+    }
+  }, [commitImportedPurchaseRow, importRowMetaById, purchases]);
 
   const filteredPurchases = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -842,6 +1310,7 @@ export default function PurchasesApp() {
             value={importTextareaValue}
             onValueChange={setImportTextareaValue}
             onClose={() => setIsImportModalOpen(false)}
+            onImport={importPurchasesFromValidatedTsv}
             validateTsv={validatePurchasesImportForPage}
             title="Import purchases"
             description="Paste a Tab-Separated Value below."
@@ -905,153 +1374,215 @@ export default function PurchasesApp() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPurchases.map((row) => (
-                    <tr key={row.id} className="align-middle">
-                      <td className="w-[230px] min-w-[230px] max-w-[230px] p-2 align-middle">
-                        <select
-                          className={inputBase}
-                          value={row.materialId ?? ""}
-                          onChange={(e) => {
-                            const materialId = e.target.value || null;
-                            const material = materialId ? materialById.get(materialId) : null;
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              materialId,
-                              materialName: material ? material.name : x.materialName,
-                              store: material ? x.store || material.supplier : x.store,
-                              supplier: material ? x.store || material.supplier : x.supplier,
-                              unit: material ? material.unit : x.unit,
-                            }));
-                          }}
-                        >
-                          <option value="">
-                            {row.materialName ? `Unlinked (${row.materialName})` : "Select material"}
-                          </option>
-                          {materials.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.name}
-                              {item.isActive ? "" : " (inactive)"}
+                  {filteredPurchases.map((row) => {
+                    const importedMeta = importRowMetaById[row.id];
+                    const isImportedDraftRow = Boolean(importedMeta);
+                    const isImportedRowSaving = importedMeta?.status === "saving";
+                    const invalidImportedField = (field: ImportedPurchaseField): boolean =>
+                      Boolean(importedMeta && importedMeta.invalidFields.includes(field));
+                    const marketplaceSelectValue = importedMeta?.emptyMarketplace ? "" : row.marketplace;
+
+                    return (
+                      <tr
+                        key={row.id}
+                        className="align-middle"
+                        style={isImportedDraftRow ? { backgroundColor: "#F8F8FF" } : undefined}
+                      >
+                        <td className="w-[230px] min-w-[230px] max-w-[230px] p-2 align-middle">
+                          <select
+                            className={inputBase}
+                            value={row.materialId ?? ""}
+                            onChange={(e) => {
+                              const materialId = e.target.value || null;
+                              const material = materialId ? materialById.get(materialId) : null;
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                materialId,
+                                materialName: material ? material.name : x.materialName,
+                                store: material ? x.store || material.supplier : x.store,
+                                supplier: material ? x.store || material.supplier : x.supplier,
+                                unit: material ? material.unit : x.unit,
+                              }));
+                            }}
+                            disabled={isImportedRowSaving}
+                          >
+                            <option value="">
+                              {row.materialName ? `Unlinked (${row.materialName})` : "Select material"}
                             </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-2 align-middle">
-                        <input
-                          className={inputBase}
-                          value={row.description}
-                          onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({ ...x, description: e.target.value }))
-                          }
-                          placeholder="Description"
-                        />
-                      </td>
-                      <td className="p-2 align-middle">
-                        <input
-                          className={inputBase}
-                          value={row.variation}
-                          onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({ ...x, variation: e.target.value }))
-                          }
-                          placeholder="Variation"
-                        />
-                      </td>
-                      <td className="w-[80px] p-2 align-middle">
-                        <DeferredNumberInput
-                          className={inputBase + " " + inputMono}
-                          value={row.quantity}
-                          onCommit={(value) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              quantity: Math.max(0, value),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="w-[100px] p-2 align-middle">
-                        <DeferredMoneyInput
-                          className={inputBase + " " + inputMono}
-                          valueCents={row.unitCostCents}
-                          onCommitCents={(valueCents) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              unitCostCents: valueCents,
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="w-[120px] p-2 align-middle">
-                        <p className="px-3 py-2 font-mono text-sm text-ink">
-                          {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
-                        </p>
-                      </td>
-                      <td className="w-[80px] p-2 align-middle">
-                        <DeferredNumberInput
-                          className={inputBase + " " + inputMono}
-                          value={row.usableQuantity}
-                          onCommit={(value) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              usableQuantity: Math.max(0, value),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle">
-                        <input
-                          className={inputBase + " " + inputMono}
-                          type="date"
-                          value={row.purchaseDate}
-                          onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              purchaseDate: e.target.value || currentDateInputValue(),
-                            }))
-                          }
-                        />
-                      </td>
-                      <td className="w-[120px] p-2 align-middle">
-                        <select
-                          className={inputBase}
-                          value={row.marketplace}
-                          onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              marketplace: normalizePurchaseMarketplace(e.target.value, "other"),
-                            }))
-                          }
-                        >
-                          {PURCHASE_MARKETPLACES.map((item) => (
-                            <option key={item} value={item}>
-                              {marketplaceLabels[item]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="w-[120px] p-2 align-middle">
-                        <input
-                          className={inputBase}
-                          value={row.store}
-                          onChange={(e) =>
-                            updatePurchase(row.id, (x) => ({
-                              ...x,
-                              store: e.target.value,
-                              supplier: e.target.value,
-                            }))
-                          }
-                          placeholder="Store"
-                        />
-                      </td>
-                      <td className="w-[75px] p-2 align-middle">
-                        <button
-                          type="button"
-                          className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
-                          onClick={() => void deletePurchase(row.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                            {materials.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                                {item.isActive ? "" : " (inactive)"}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className={"p-2 align-middle" + (invalidImportedField("description") ? " bg-danger/10" : "")}>
+                          <input
+                            className={inputBase + (invalidImportedField("description") ? " !bg-[#ffe9ec]" : "")}
+                            value={row.description}
+                            onChange={(e) =>
+                              updatePurchase(row.id, (x) => ({ ...x, description: e.target.value }))
+                            }
+                            placeholder="Description"
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className="p-2 align-middle">
+                          <input
+                            className={inputBase}
+                            value={row.variation}
+                            onChange={(e) =>
+                              updatePurchase(row.id, (x) => ({ ...x, variation: e.target.value }))
+                            }
+                            placeholder="Variation"
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className={"w-[80px] p-2 align-middle" + (invalidImportedField("quantity") ? " bg-danger/10" : "")}>
+                          <DeferredNumberInput
+                            className={
+                              inputBase + " " + inputMono + (invalidImportedField("quantity") ? " !bg-[#ffe9ec]" : "")
+                            }
+                            value={row.quantity}
+                            onCommit={(value) =>
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                quantity: Math.max(0, value),
+                              }))
+                            }
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className={"w-[100px] p-2 align-middle" + (invalidImportedField("unitCostCents") ? " bg-danger/10" : "")}>
+                          <DeferredMoneyInput
+                            className={
+                              inputBase + " " + inputMono + (invalidImportedField("unitCostCents") ? " !bg-[#ffe9ec]" : "")
+                            }
+                            valueCents={row.unitCostCents}
+                            onCommitCents={(valueCents) =>
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                unitCostCents: valueCents,
+                              }))
+                            }
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className="w-[120px] p-2 align-middle">
+                          <p className="px-3 py-2 font-mono text-sm text-ink">
+                            {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
+                          </p>
+                        </td>
+                        <td className={"w-[80px] p-2 align-middle" + (invalidImportedField("usableQuantity") ? " bg-danger/10" : "")}>
+                          <DeferredNumberInput
+                            className={
+                              inputBase + " " + inputMono + (invalidImportedField("usableQuantity") ? " !bg-[#ffe9ec]" : "")
+                            }
+                            value={row.usableQuantity}
+                            onCommit={(value) =>
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                usableQuantity: Math.max(0, value),
+                              }))
+                            }
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className={"w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle" + (invalidImportedField("purchaseDate") ? " bg-danger/10" : "")}>
+                          <input
+                            className={inputBase + " " + inputMono + (invalidImportedField("purchaseDate") ? " !bg-[#ffe9ec]" : "")}
+                            type="date"
+                            value={row.purchaseDate}
+                            onChange={(e) =>
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                purchaseDate: e.target.value || (isImportedDraftRow ? "" : currentDateInputValue()),
+                              }))
+                            }
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className="w-[120px] p-2 align-middle">
+                          <select
+                            className={inputBase}
+                            value={marketplaceSelectValue}
+                            onChange={(e) => {
+                              const nextMarketplaceValue = e.target.value;
+                              if (isImportedDraftRow) {
+                                setImportRowMetaById((prev) => {
+                                  const current = prev[row.id];
+                                  if (!current) return prev;
+                                  const nextEmptyMarketplace = nextMarketplaceValue.trim().length === 0;
+                                  if (current.emptyMarketplace === nextEmptyMarketplace) return prev;
+                                  return {
+                                    ...prev,
+                                    [row.id]: {
+                                      ...current,
+                                      emptyMarketplace: nextEmptyMarketplace,
+                                    },
+                                  };
+                                });
+                              }
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                marketplace: nextMarketplaceValue
+                                  ? normalizePurchaseMarketplace(nextMarketplaceValue, "other")
+                                  : x.marketplace,
+                              }));
+                            }}
+                            disabled={isImportedRowSaving}
+                          >
+                            {isImportedDraftRow ? <option value="">Select marketplace</option> : null}
+                            {PURCHASE_MARKETPLACES.map((item) => (
+                              <option key={item} value={item}>
+                                {marketplaceLabels[item]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="w-[120px] p-2 align-middle">
+                          <input
+                            className={inputBase}
+                            value={row.store}
+                            onChange={(e) =>
+                              updatePurchase(row.id, (x) => ({
+                                ...x,
+                                store: e.target.value,
+                                supplier: e.target.value,
+                              }))
+                            }
+                            placeholder="Store"
+                            disabled={isImportedRowSaving}
+                          />
+                        </td>
+                        <td className="w-[75px] p-2 align-middle">
+                          {importedMeta ? (
+                            <p
+                              className={[
+                                "mb-1 rounded px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+                                importedMeta.status === "error"
+                                  ? "bg-danger/15 text-danger"
+                                  : importedMeta.status === "saving"
+                                    ? "bg-accent/15 text-ink"
+                                    : "bg-paper text-muted",
+                              ].join(" ")}
+                            >
+                              {importedMeta.status}
+                            </p>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void deletePurchase(row.id)}
+                            disabled={isImportedRowSaving}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {!loading && filteredPurchases.length === 0 ? (
                     <tr>

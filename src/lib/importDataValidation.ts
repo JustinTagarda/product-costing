@@ -144,8 +144,6 @@ function validateUniformRows(rows: string[][]): { ok: true } | { ok: false; reas
     };
   }
 
-  const headerArrangement = rows[0].map((cell) => cell.length > 0);
-
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex];
     const displayRowNumber = rowIndex + 1;
@@ -154,23 +152,6 @@ function validateUniformRows(rows: string[][]): { ok: true } | { ok: false; reas
       return {
         ok: false,
         reason: `Validation failed: not all rows have the same number of columns (row ${displayRowNumber}).`,
-      };
-    }
-
-    const hasEmptyCell = row.some((cell) => cell.length === 0);
-    if (hasEmptyCell) {
-      return {
-        ok: false,
-        reason: `Validation failed: some rows are not complete (row ${displayRowNumber}).`,
-      };
-    }
-
-    const arrangement = row.map((cell) => cell.length > 0);
-    const hasDifferentArrangement = arrangement.some((isFilled, i) => isFilled !== headerArrangement[i]);
-    if (hasDifferentArrangement) {
-      return {
-        ok: false,
-        reason: `Validation failed: rows do not have the same cell arrangement (row ${displayRowNumber}).`,
       };
     }
   }

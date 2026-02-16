@@ -8,7 +8,7 @@ export type PurchasesImportValidationResult =
       reason: string;
     };
 
-const REQUIRED_PURCHASE_HEADERS = [
+export const REQUIRED_PURCHASE_HEADERS = [
   "Description",
   "Quantity",
   "Cost",
@@ -16,14 +16,17 @@ const REQUIRED_PURCHASE_HEADERS = [
   "Purchase Date",
 ] as const;
 
-const OPTIONAL_PURCHASE_HEADERS = [
+export const OPTIONAL_PURCHASE_HEADERS = [
   "Material",
   "Variation",
   "Marketplace",
   "Store",
 ] as const;
 
-const ALLOWED_PURCHASE_HEADERS = [...REQUIRED_PURCHASE_HEADERS, ...OPTIONAL_PURCHASE_HEADERS];
+export const ALLOWED_PURCHASE_HEADERS = [
+  ...REQUIRED_PURCHASE_HEADERS,
+  ...OPTIONAL_PURCHASE_HEADERS,
+] as const;
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values));
