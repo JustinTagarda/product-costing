@@ -166,6 +166,7 @@ export function ImportDataModal({
             value={value}
             onChange={(event) => handleTextareaChange(event.target.value)}
             placeholder={placeholder}
+            wrap="off"
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"

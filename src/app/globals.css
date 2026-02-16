@@ -173,6 +173,11 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
   width: 100%;
   min-height: 260px;
   resize: vertical;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
   border: 1px solid var(--border);
   border-radius: 10px;
   background-color: color-mix(in srgb, var(--paper) 96%, #f4f4f5 4%);
