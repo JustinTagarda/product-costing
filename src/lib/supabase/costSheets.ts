@@ -84,6 +84,7 @@ export function rowToSheet(row: DbCostSheetRow): CostSheet {
 
   return {
     id: row.id,
+    ownerUserId: row.user_id,
     name: row.name ?? "Untitled",
     sku: row.sku ?? "",
     currency: row.currency ?? "USD",

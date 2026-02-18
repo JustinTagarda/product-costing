@@ -30,6 +30,7 @@ export type OverheadItem =
 
 export type CostSheet = {
   id: string;
+  ownerUserId?: string;
   name: string;
   sku: string;
   currency: string;

@@ -9,6 +9,7 @@ import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/co
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { formatShortDate } from "@/lib/format";
 import {
   currencyCodeFromSettings,
@@ -195,6 +196,7 @@ export default function CostingApp() {
   const [sheets, setSheets] = useState<CostSheet[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcomeGate, setShowWelcomeGate] = useState(() => !readWelcomeGateDismissed());
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
@@ -278,7 +280,6 @@ export default function CostingApp() {
       const { data: rows, error } = await supabase
         .from("cost_sheets")
         .select("*")
-        .eq("user_id", userId)
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -670,6 +671,15 @@ export default function CostingApp() {
 
   async function deleteSelected() {
     if (!selectedSheet) return;
+    if (
+      isCloudMode &&
+      selectedSheet.ownerUserId &&
+      userId &&
+      selectedSheet.ownerUserId !== userId
+    ) {
+      toast("error", "Only the owner can delete this shared sheet.");
+      return;
+    }
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
@@ -937,6 +947,7 @@ export default function CostingApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search sheets..."
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
@@ -1061,6 +1072,9 @@ export default function CostingApp() {
                     type="button"
                     className="rounded-xl border border-border bg-danger/10 px-3 py-2 text-sm font-semibold text-danger shadow-sm transition hover:bg-danger/15 active:translate-y-px"
                     onClick={deleteSelected}
+                    disabled={
+                      Boolean(isCloudMode && selectedSheet.ownerUserId && userId && selectedSheet.ownerUserId !== userId)
+                    }
                   >
                     Delete
                   </button>
@@ -1746,6 +1760,17 @@ export default function CostingApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="synced via Supabase"
             guestLabel="saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            sheetId={selectedSheet.id}
+            sheetName={selectedSheet.name || "Untitled"}
+            currentUserId={userId}
+            ownerUserId={selectedSheet.ownerUserId}
+            onNotify={toast}
           />
 
         </div>

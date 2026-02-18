@@ -11,6 +11,7 @@ import { parseStoredDataJson } from "@/lib/importExport";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
@@ -65,6 +66,7 @@ export default function ProductDetailsApp() {
   const [sheet, setSheet] = useState<CostSheet | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [query, setQuery] = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -144,7 +146,6 @@ export default function ProductDetailsApp() {
         const { data, error } = await supabase
           .from("cost_sheets")
           .select("*")
-          .eq("user_id", userId)
           .eq("id", productId)
           .maybeSingle();
 
@@ -241,6 +242,7 @@ export default function ProductDetailsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Filter product lines, categories, notes"
+        onShare={isCloudMode && sheet ? () => setShowShareModal(true) : undefined}
         profileLabel={session?.user?.email || "Profile"}
       />
 
@@ -432,6 +434,17 @@ export default function ProductDetailsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="product detail sync via Supabase"
             guestLabel="product details loaded from localStorage"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            sheetId={sheet?.id ?? null}
+            sheetName={sheet?.name || "Untitled"}
+            currentUserId={userId}
+            ownerUserId={sheet?.ownerUserId}
+            onNotify={toast}
           />
         </div>
       </div>

@@ -51,6 +51,264 @@ create trigger cost_sheets_set_updated_at
 before update on public.cost_sheets
 for each row execute function public.set_updated_at();
 
+create table if not exists public.cost_sheet_shares (
+  id uuid primary key default gen_random_uuid(),
+  sheet_id uuid not null references public.cost_sheets(id) on delete cascade,
+  owner_user_id uuid not null references auth.users(id) on delete cascade,
+  shared_with_user_id uuid not null references auth.users(id) on delete cascade,
+  shared_with_email text not null default '',
+  role text not null default 'editor',
+  created_at timestamptz not null default now(),
+  constraint cost_sheet_shares_sheet_shared_user_key unique (sheet_id, shared_with_user_id),
+  constraint cost_sheet_shares_role_check check (role in ('viewer', 'editor'))
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'cost_sheet_shares'
+      and column_name = 'shared_with_email'
+  ) then
+    alter table public.cost_sheet_shares add column shared_with_email text not null default '';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'cost_sheet_shares'
+      and column_name = 'role'
+  ) then
+    alter table public.cost_sheet_shares add column role text not null default 'editor';
+  end if;
+
+  update public.cost_sheet_shares
+    set role = 'editor'
+    where role not in ('viewer', 'editor');
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'cost_sheet_shares_role_check'
+      and conrelid = 'public.cost_sheet_shares'::regclass
+  ) then
+    alter table public.cost_sheet_shares
+      add constraint cost_sheet_shares_role_check
+      check (role in ('viewer', 'editor'));
+  end if;
+end $$;
+
+create index if not exists cost_sheet_shares_sheet_id_idx
+  on public.cost_sheet_shares (sheet_id);
+
+create index if not exists cost_sheet_shares_shared_with_user_id_idx
+  on public.cost_sheet_shares (shared_with_user_id);
+
+create index if not exists cost_sheet_shares_owner_user_id_idx
+  on public.cost_sheet_shares (owner_user_id);
+
+alter table public.cost_sheet_shares enable row level security;
+
+drop policy if exists "cost_sheet_shares_owner_all" on public.cost_sheet_shares;
+create policy "cost_sheet_shares_owner_all"
+  on public.cost_sheet_shares
+  for all
+  using (auth.uid() = owner_user_id)
+  with check (auth.uid() = owner_user_id);
+
+drop policy if exists "cost_sheet_shares_shared_read" on public.cost_sheet_shares;
+create policy "cost_sheet_shares_shared_read"
+  on public.cost_sheet_shares
+  for select
+  using (auth.uid() = shared_with_user_id);
+
+drop policy if exists "cost_sheets_shared_select" on public.cost_sheets;
+create policy "cost_sheets_shared_select"
+  on public.cost_sheets
+  for select
+  using (
+    exists (
+      select 1
+      from public.cost_sheet_shares css
+      where css.sheet_id = cost_sheets.id
+        and css.shared_with_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "cost_sheets_shared_update" on public.cost_sheets;
+create policy "cost_sheets_shared_update"
+  on public.cost_sheets
+  for update
+  using (
+    exists (
+      select 1
+      from public.cost_sheet_shares css
+      where css.sheet_id = cost_sheets.id
+        and css.shared_with_user_id = auth.uid()
+        and css.role = 'editor'
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.cost_sheet_shares css
+      where css.sheet_id = cost_sheets.id
+        and css.shared_with_user_id = auth.uid()
+        and css.role = 'editor'
+    )
+  );
+
+create or replace function public.share_cost_sheet_with_google_email(
+  p_sheet_id uuid,
+  p_email text,
+  p_role text default 'editor'
+)
+returns public.cost_sheet_shares
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_owner_user_id uuid;
+  v_target_user_id uuid;
+  v_email text;
+  v_role text;
+  v_row public.cost_sheet_shares;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_sheet_id is null then
+    raise exception 'Sheet is required';
+  end if;
+
+  v_email := lower(trim(coalesce(p_email, '')));
+  if v_email = '' then
+    raise exception 'Google email is required';
+  end if;
+
+  if v_email !~* '^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$' then
+    raise exception 'Invalid email address';
+  end if;
+
+  select cs.user_id
+    into v_owner_user_id
+    from public.cost_sheets cs
+    where cs.id = p_sheet_id;
+
+  if v_owner_user_id is null then
+    raise exception 'Sheet not found';
+  end if;
+
+  if v_owner_user_id <> auth.uid() then
+    raise exception 'Only the owner can share this sheet';
+  end if;
+
+  select u.id
+    into v_target_user_id
+    from auth.users u
+    where lower(coalesce(u.email, '')) = v_email
+    limit 1;
+
+  if v_target_user_id is null then
+    raise exception 'No account found for this email';
+  end if;
+
+  if v_target_user_id = v_owner_user_id then
+    raise exception 'You already own this sheet';
+  end if;
+
+  if not exists (
+    select 1
+    from auth.identities i
+    where i.user_id = v_target_user_id
+      and lower(coalesce(i.provider, '')) = 'google'
+  ) then
+    raise exception 'Only Google accounts are allowed';
+  end if;
+
+  v_role := case
+    when lower(coalesce(p_role, 'editor')) = 'viewer' then 'viewer'
+    else 'editor'
+  end;
+
+  insert into public.cost_sheet_shares (
+    sheet_id,
+    owner_user_id,
+    shared_with_user_id,
+    shared_with_email,
+    role
+  )
+  values (
+    p_sheet_id,
+    v_owner_user_id,
+    v_target_user_id,
+    v_email,
+    v_role
+  )
+  on conflict (sheet_id, shared_with_user_id)
+  do update
+    set shared_with_email = excluded.shared_with_email,
+        role = excluded.role
+  returning *
+    into v_row;
+
+  return v_row;
+end;
+$$;
+
+create or replace function public.unshare_cost_sheet_by_email(
+  p_sheet_id uuid,
+  p_email text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_owner_user_id uuid;
+  v_email text;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_sheet_id is null then
+    raise exception 'Sheet is required';
+  end if;
+
+  v_email := lower(trim(coalesce(p_email, '')));
+  if v_email = '' then
+    raise exception 'Email is required';
+  end if;
+
+  select cs.user_id
+    into v_owner_user_id
+    from public.cost_sheets cs
+    where cs.id = p_sheet_id;
+
+  if v_owner_user_id is null then
+    raise exception 'Sheet not found';
+  end if;
+
+  if v_owner_user_id <> auth.uid() then
+    raise exception 'Only the owner can remove sharing';
+  end if;
+
+  delete from public.cost_sheet_shares css
+  where css.sheet_id = p_sheet_id
+    and lower(css.shared_with_email) = v_email;
+end;
+$$;
+
+grant execute on function public.share_cost_sheet_with_google_email(uuid, text, text) to authenticated;
+grant execute on function public.unshare_cost_sheet_by_email(uuid, text) to authenticated;
+
 create table if not exists public.materials (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,

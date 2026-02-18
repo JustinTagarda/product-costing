@@ -154,7 +154,6 @@ export default function DashboardApp() {
         const { data, error } = await supabase
           .from("cost_sheets")
           .select("*")
-          .eq("user_id", userId)
           .order("updated_at", { ascending: false });
 
         if (cancelled) return;

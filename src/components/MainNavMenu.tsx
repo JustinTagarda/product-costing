@@ -11,6 +11,9 @@ type MainNavMenuProps = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
+  onShare?: () => void;
+  shareLabel?: string;
+  shareDisabled?: boolean;
   onQuickAdd?: () => void;
   quickAddLabel?: string;
   profileLabel?: string;
@@ -37,6 +40,9 @@ export function MainNavMenu({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  onShare,
+  shareLabel,
+  shareDisabled,
   onQuickAdd,
   quickAddLabel,
   profileLabel,
@@ -185,6 +191,19 @@ export function MainNavMenu({
           >
             <BellIcon />
           </button>
+
+          {onShare ? (
+            <button
+              type="button"
+              aria-label={shareLabel || "Share"}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-paper px-3 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => onShare()}
+              disabled={Boolean(shareDisabled)}
+            >
+              <ShareIcon />
+              <span className="hidden sm:inline">{shareLabel || "Share"}</span>
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -436,6 +455,27 @@ function CloseIcon({ className }: IconProps) {
     >
       <path d="M6 6l12 12" />
       <path d="M18 6L6 18" />
+    </svg>
+  );
+}
+
+function ShareIcon({ className }: IconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      className={className}
+    >
+      <g>
+        <path
+          transform="rotate(0,12,12) translate(1,4.07312518358231) scale(0.6875,0.6875)"
+          fill="currentColor"
+          d="M22.134003,13.192995C27.583008,13.192995,32,17.610019,32,23.06L12.267029,23.06C12.267029,17.610019,16.685028,13.192995,22.134003,13.192995z M9.8650208,12.192995C11.811005,12.192995 13.622009,12.765016 15.150024,13.738008 12.440002,15.645998 10.548004,18.627017 10.085022,22.06L0,22.06C0,16.610019,4.4170227,12.192995,9.8650208,12.192995z M22.134003,1.6340032C25,1.634003 27.323029,3.9570013 27.323029,6.8229989 27.323029,9.6879891 25,12.011995 22.134003,12.011995 19.267029,12.011995 16.945007,9.6879891 16.945007,6.8229989 16.945007,3.9570013 19.267029,1.634003 22.134003,1.6340032z M9.8660278,0C12.731018,1.156568E-07 15.054016,2.3229984 15.054016,5.1879891 15.054016,8.0549935 12.731018,10.377993 9.8660278,10.377993 7,10.377993 4.677002,8.0549935 4.677002,5.1879891 4.677002,2.3229984 7,1.156568E-07 9.8660278,0z"
+        />
+      </g>
     </svg>
   );
 }

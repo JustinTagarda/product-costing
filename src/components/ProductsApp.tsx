@@ -145,7 +145,6 @@ export default function ProductsApp() {
         const { data, error } = await supabase
           .from("cost_sheets")
           .select("*")
-          .eq("user_id", userId)
           .order("updated_at", { ascending: false });
 
         if (cancelled) return;
@@ -191,13 +190,23 @@ export default function ProductsApp() {
     window.location.assign("/settings");
   }
 
-  async function deleteProduct(productId: string): Promise<void> {
+  function canDeleteProduct(sheet: CostSheet): boolean {
+    if (!isCloudMode) return true;
+    if (!sheet.ownerUserId || !userId) return true;
+    return sheet.ownerUserId === userId;
+  }
+
+  async function deleteProduct(sheet: CostSheet): Promise<void> {
     if (deletingProductId) return;
-    setDeletingProductId(productId);
+    if (!canDeleteProduct(sheet)) {
+      toast("error", "Only the owner can delete this shared product.");
+      return;
+    }
+    setDeletingProductId(sheet.id);
 
     try {
       if (isCloudMode && supabase) {
-        const { error } = await supabase.from("cost_sheets").delete().eq("id", productId);
+        const { error } = await supabase.from("cost_sheets").delete().eq("id", sheet.id);
         if (error) {
           toast("error", error.message);
           return;
@@ -205,12 +214,11 @@ export default function ProductsApp() {
       }
 
       setProducts((prev) => {
-        const next = prev.filter((sheet) => sheet.id !== productId);
+        const next = prev.filter((entry) => entry.id !== sheet.id);
         if (!isCloudMode) {
           const local = readLocalSheets();
           const selectedId = local?.selectedId ?? null;
-          const nextSelectedId =
-            selectedId === productId ? (next[0]?.id ?? null) : selectedId;
+          const nextSelectedId = selectedId === sheet.id ? (next[0]?.id ?? null) : selectedId;
           writeLocalSheets(next, nextSelectedId);
         }
         return next;
@@ -329,8 +337,8 @@ export default function ProductsApp() {
                             <button
                               type="button"
                               className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
-                              onClick={() => void deleteProduct(sheet.id)}
-                              disabled={deletingProductId === sheet.id}
+                              onClick={() => void deleteProduct(sheet)}
+                              disabled={deletingProductId === sheet.id || !canDeleteProduct(sheet)}
                             >
                               {deletingProductId === sheet.id ? "Deleting..." : "Delete"}
                             </button>
