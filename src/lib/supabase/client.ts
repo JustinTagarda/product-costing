@@ -16,7 +16,8 @@ export function getSupabaseClient(): SupabaseClient {
   cached = createClient(url, anonKey, {
     auth: {
       flowType: "pkce",
-      persistSession: true,
+      // Force explicit sign-in per app open (no persisted local session).
+      persistSession: false,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
