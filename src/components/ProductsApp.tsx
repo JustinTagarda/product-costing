@@ -249,23 +249,33 @@ export default function ProductsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products by name or code"
-        onQuickAdd={() => window.location.assign("/calculator")}
-        quickAddLabel="+ New Product"
         profileLabel={session?.user?.email || "Profile"}
       />
 
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.25rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.75rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3.25rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
-          <header>
-            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Products</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-              Browse all product cost sheets, open details with tabbed insights, or jump into the calculator for edits.
-            </p>
-            {!supabase ? (
-              <p className="mt-2 text-xs text-muted">
-                {supabaseError || "Supabase is not configured. Product data remains local in this browser."}
+          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Products</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+                Browse all product cost sheets, open details with tabbed insights, or jump into the calculator for edits.
               </p>
-            ) : null}
+              {!supabase ? (
+                <p className="mt-2 text-xs text-muted">
+                  {supabaseError || "Supabase is not configured. Product data remains local in this browser."}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                onClick={() => window.location.assign("/calculator")}
+              >
+                New product
+              </button>
+            </div>
           </header>
 
           <GlobalAppToast notice={notice} />
