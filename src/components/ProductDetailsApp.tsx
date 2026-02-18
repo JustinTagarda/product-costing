@@ -8,6 +8,7 @@ import type { CostSheet, StoredData } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { currencyCodeFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
@@ -15,6 +16,7 @@ import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -69,18 +71,38 @@ export default function ProductDetailsApp() {
   const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -136,16 +158,17 @@ export default function ProductDetailsApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
-    if (!authReady || !productId) return;
+    if (!dataAuthReady || !productId) return;
     let cancelled = false;
 
     async function loadProduct() {
       setLoading(true);
 
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const { data, error } = await supabase
           .from("cost_sheets")
           .select("*")
+          .eq("user_id", activeOwnerUserId)
           .eq("id", productId)
           .maybeSingle();
 
@@ -174,7 +197,7 @@ export default function ProductDetailsApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, productId, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, productId, supabase, toast]);
 
   async function signOut() {
     if (supabase) {
@@ -242,7 +265,7 @@ export default function ProductDetailsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Filter product lines, categories, notes"
-        onShare={isCloudMode && sheet ? () => setShowShareModal(true) : undefined}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         profileLabel={session?.user?.email || "Profile"}
       />
 
@@ -440,11 +463,20 @@ export default function ProductDetailsApp() {
             isOpen={showShareModal}
             onClose={() => setShowShareModal(false)}
             supabase={supabase}
-            sheetId={sheet?.id ?? null}
-            sheetName={sheet?.name || "Untitled"}
             currentUserId={userId}
-            ownerUserId={sheet?.ownerUserId}
+            activeOwnerUserId={activeOwnerUserId}
             onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
         </div>
       </div>

@@ -51,16 +51,21 @@ create trigger cost_sheets_set_updated_at
 before update on public.cost_sheets
 for each row execute function public.set_updated_at();
 
-create table if not exists public.cost_sheet_shares (
+create or replace function public.current_user_email()
+returns text
+language sql
+stable
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', ''));
+$$;
+
+create table if not exists public.account_shares (
   id uuid primary key default gen_random_uuid(),
-  sheet_id uuid not null references public.cost_sheets(id) on delete cascade,
   owner_user_id uuid not null references auth.users(id) on delete cascade,
-  shared_with_user_id uuid not null references auth.users(id) on delete cascade,
   shared_with_email text not null default '',
-  role text not null default 'editor',
   created_at timestamptz not null default now(),
-  constraint cost_sheet_shares_sheet_shared_user_key unique (sheet_id, shared_with_user_id),
-  constraint cost_sheet_shares_role_check check (role in ('viewer', 'editor'))
+  updated_at timestamptz not null default now(),
+  constraint account_shares_owner_email_key unique (owner_user_id, shared_with_email)
 );
 
 do $$
@@ -69,191 +74,117 @@ begin
     select 1
     from information_schema.columns
     where table_schema = 'public'
-      and table_name = 'cost_sheet_shares'
-      and column_name = 'shared_with_email'
+      and table_name = 'account_shares'
+      and column_name = 'updated_at'
   ) then
-    alter table public.cost_sheet_shares add column shared_with_email text not null default '';
+    alter table public.account_shares add column updated_at timestamptz not null default now();
   end if;
 
-  if not exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'cost_sheet_shares'
-      and column_name = 'role'
-  ) then
-    alter table public.cost_sheet_shares add column role text not null default 'editor';
-  end if;
+  update public.account_shares
+    set shared_with_email = lower(trim(shared_with_email));
 
-  update public.cost_sheet_shares
-    set role = 'editor'
-    where role not in ('viewer', 'editor');
-
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'cost_sheet_shares_role_check'
-      and conrelid = 'public.cost_sheet_shares'::regclass
-  ) then
-    alter table public.cost_sheet_shares
-      add constraint cost_sheet_shares_role_check
-      check (role in ('viewer', 'editor'));
+  -- Migrate historical sheet-level shares into account-level shares (best effort).
+  if to_regclass('public.cost_sheet_shares') is not null then
+    insert into public.account_shares (owner_user_id, shared_with_email, created_at, updated_at)
+    select
+      css.owner_user_id,
+      lower(trim(css.shared_with_email)),
+      min(css.created_at),
+      now()
+    from public.cost_sheet_shares css
+    where trim(coalesce(css.shared_with_email, '')) <> ''
+    group by css.owner_user_id, lower(trim(css.shared_with_email))
+    on conflict (owner_user_id, shared_with_email) do nothing;
   end if;
 end $$;
 
-create index if not exists cost_sheet_shares_sheet_id_idx
-  on public.cost_sheet_shares (sheet_id);
+create index if not exists account_shares_owner_user_id_idx
+  on public.account_shares (owner_user_id);
 
-create index if not exists cost_sheet_shares_shared_with_user_id_idx
-  on public.cost_sheet_shares (shared_with_user_id);
+create index if not exists account_shares_shared_with_email_idx
+  on public.account_shares (shared_with_email);
 
-create index if not exists cost_sheet_shares_owner_user_id_idx
-  on public.cost_sheet_shares (owner_user_id);
+alter table public.account_shares enable row level security;
 
-alter table public.cost_sheet_shares enable row level security;
-
-drop policy if exists "cost_sheet_shares_owner_all" on public.cost_sheet_shares;
-create policy "cost_sheet_shares_owner_all"
-  on public.cost_sheet_shares
+drop policy if exists "account_shares_owner_all" on public.account_shares;
+create policy "account_shares_owner_all"
+  on public.account_shares
   for all
   using (auth.uid() = owner_user_id)
   with check (auth.uid() = owner_user_id);
 
-drop policy if exists "cost_sheet_shares_shared_read" on public.cost_sheet_shares;
-create policy "cost_sheet_shares_shared_read"
-  on public.cost_sheet_shares
+drop policy if exists "account_shares_recipient_read" on public.account_shares;
+create policy "account_shares_recipient_read"
+  on public.account_shares
   for select
-  using (auth.uid() = shared_with_user_id);
+  using (public.current_user_email() = lower(shared_with_email));
+
+drop trigger if exists account_shares_set_updated_at on public.account_shares;
+create trigger account_shares_set_updated_at
+before update on public.account_shares
+for each row execute function public.set_updated_at();
+
+create or replace function public.has_account_access(p_owner_user_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select
+    auth.uid() = p_owner_user_id
+    or exists (
+      select 1
+      from public.account_shares s
+      where s.owner_user_id = p_owner_user_id
+        and lower(s.shared_with_email) = public.current_user_email()
+    );
+$$;
 
 drop policy if exists "cost_sheets_shared_select" on public.cost_sheets;
-create policy "cost_sheets_shared_select"
-  on public.cost_sheets
-  for select
-  using (
-    exists (
-      select 1
-      from public.cost_sheet_shares css
-      where css.sheet_id = cost_sheets.id
-        and css.shared_with_user_id = auth.uid()
-    )
-  );
-
 drop policy if exists "cost_sheets_shared_update" on public.cost_sheets;
-create policy "cost_sheets_shared_update"
+drop policy if exists "cost_sheets_owner_all" on public.cost_sheets;
+drop policy if exists "cost_sheets_account_access_all" on public.cost_sheets;
+create policy "cost_sheets_account_access_all"
   on public.cost_sheets
-  for update
-  using (
-    exists (
-      select 1
-      from public.cost_sheet_shares css
-      where css.sheet_id = cost_sheets.id
-        and css.shared_with_user_id = auth.uid()
-        and css.role = 'editor'
-    )
-  )
-  with check (
-    exists (
-      select 1
-      from public.cost_sheet_shares css
-      where css.sheet_id = cost_sheets.id
-        and css.shared_with_user_id = auth.uid()
-        and css.role = 'editor'
-    )
-  );
+  for all
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
-create or replace function public.share_cost_sheet_with_google_email(
-  p_sheet_id uuid,
-  p_email text,
-  p_role text default 'editor'
+create or replace function public.share_account_with_email(
+  p_email text
 )
-returns public.cost_sheet_shares
+returns public.account_shares
 language plpgsql
 security definer
 set search_path = public, auth
 as $$
 declare
-  v_owner_user_id uuid;
-  v_target_user_id uuid;
   v_email text;
-  v_role text;
-  v_row public.cost_sheet_shares;
+  v_row public.account_shares;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
   end if;
 
-  if p_sheet_id is null then
-    raise exception 'Sheet is required';
-  end if;
-
   v_email := lower(trim(coalesce(p_email, '')));
   if v_email = '' then
-    raise exception 'Google email is required';
+    raise exception 'Email is required';
   end if;
 
   if v_email !~* '^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$' then
     raise exception 'Invalid email address';
   end if;
 
-  select cs.user_id
-    into v_owner_user_id
-    from public.cost_sheets cs
-    where cs.id = p_sheet_id;
-
-  if v_owner_user_id is null then
-    raise exception 'Sheet not found';
-  end if;
-
-  if v_owner_user_id <> auth.uid() then
-    raise exception 'Only the owner can share this sheet';
-  end if;
-
-  select u.id
-    into v_target_user_id
-    from auth.users u
-    where lower(coalesce(u.email, '')) = v_email
-    limit 1;
-
-  if v_target_user_id is null then
-    raise exception 'No account found for this email';
-  end if;
-
-  if v_target_user_id = v_owner_user_id then
-    raise exception 'You already own this sheet';
-  end if;
-
-  if not exists (
-    select 1
-    from auth.identities i
-    where i.user_id = v_target_user_id
-      and lower(coalesce(i.provider, '')) = 'google'
-  ) then
-    raise exception 'Only Google accounts are allowed';
-  end if;
-
-  v_role := case
-    when lower(coalesce(p_role, 'editor')) = 'viewer' then 'viewer'
-    else 'editor'
-  end;
-
-  insert into public.cost_sheet_shares (
-    sheet_id,
+  insert into public.account_shares (
     owner_user_id,
-    shared_with_user_id,
-    shared_with_email,
-    role
+    shared_with_email
   )
   values (
-    p_sheet_id,
-    v_owner_user_id,
-    v_target_user_id,
-    v_email,
-    v_role
+    auth.uid(),
+    v_email
   )
-  on conflict (sheet_id, shared_with_user_id)
+  on conflict (owner_user_id, shared_with_email)
   do update
-    set shared_with_email = excluded.shared_with_email,
-        role = excluded.role
+    set updated_at = now()
   returning *
     into v_row;
 
@@ -261,8 +192,7 @@ begin
 end;
 $$;
 
-create or replace function public.unshare_cost_sheet_by_email(
-  p_sheet_id uuid,
+create or replace function public.unshare_account_by_email(
   p_email text
 )
 returns void
@@ -271,15 +201,10 @@ security definer
 set search_path = public, auth
 as $$
 declare
-  v_owner_user_id uuid;
   v_email text;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated';
-  end if;
-
-  if p_sheet_id is null then
-    raise exception 'Sheet is required';
   end if;
 
   v_email := lower(trim(coalesce(p_email, '')));
@@ -287,27 +212,37 @@ begin
     raise exception 'Email is required';
   end if;
 
-  select cs.user_id
-    into v_owner_user_id
-    from public.cost_sheets cs
-    where cs.id = p_sheet_id;
-
-  if v_owner_user_id is null then
-    raise exception 'Sheet not found';
-  end if;
-
-  if v_owner_user_id <> auth.uid() then
-    raise exception 'Only the owner can remove sharing';
-  end if;
-
-  delete from public.cost_sheet_shares css
-  where css.sheet_id = p_sheet_id
-    and lower(css.shared_with_email) = v_email;
+  delete from public.account_shares s
+  where s.owner_user_id = auth.uid()
+    and lower(s.shared_with_email) = v_email;
 end;
 $$;
 
-grant execute on function public.share_cost_sheet_with_google_email(uuid, text, text) to authenticated;
-grant execute on function public.unshare_cost_sheet_by_email(uuid, text) to authenticated;
+create or replace function public.list_shared_accounts_for_current_user()
+returns table (
+  owner_user_id uuid,
+  owner_email text,
+  shared_at timestamptz
+)
+language sql
+security definer
+set search_path = public, auth
+as $$
+  select
+    s.owner_user_id,
+    lower(coalesce(u.email, '')) as owner_email,
+    min(s.created_at) as shared_at
+  from public.account_shares s
+  left join auth.users u
+    on u.id = s.owner_user_id
+  where lower(s.shared_with_email) = public.current_user_email()
+  group by s.owner_user_id, lower(coalesce(u.email, ''))
+  order by min(s.created_at) desc, lower(coalesce(u.email, ''));
+$$;
+
+grant execute on function public.share_account_with_email(text) to authenticated;
+grant execute on function public.unshare_account_by_email(text) to authenticated;
+grant execute on function public.list_shared_accounts_for_current_user() to authenticated;
 
 create table if not exists public.materials (
   id uuid primary key default gen_random_uuid(),
@@ -402,11 +337,12 @@ create index if not exists materials_user_id_active_name_idx
 alter table public.materials enable row level security;
 
 drop policy if exists "materials_owner_all" on public.materials;
-create policy "materials_owner_all"
+drop policy if exists "materials_account_access_all" on public.materials;
+create policy "materials_account_access_all"
   on public.materials
   for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
 drop trigger if exists materials_set_updated_at on public.materials;
 create trigger materials_set_updated_at
@@ -545,11 +481,12 @@ create index if not exists purchases_user_id_material_id_idx
 alter table public.purchases enable row level security;
 
 drop policy if exists "purchases_owner_all" on public.purchases;
-create policy "purchases_owner_all"
+drop policy if exists "purchases_account_access_all" on public.purchases;
+create policy "purchases_account_access_all"
   on public.purchases
   for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
 drop trigger if exists purchases_set_updated_at on public.purchases;
 create trigger purchases_set_updated_at
@@ -676,11 +613,12 @@ create index if not exists bom_items_user_id_type_active_name_idx
 alter table public.bom_items enable row level security;
 
 drop policy if exists "bom_items_owner_all" on public.bom_items;
-create policy "bom_items_owner_all"
+drop policy if exists "bom_items_account_access_all" on public.bom_items;
+create policy "bom_items_account_access_all"
   on public.bom_items
   for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
 drop trigger if exists bom_items_set_updated_at on public.bom_items;
 create trigger bom_items_set_updated_at
@@ -718,11 +656,12 @@ create index if not exists bom_item_lines_user_id_component_bom_item_id_idx
 alter table public.bom_item_lines enable row level security;
 
 drop policy if exists "bom_item_lines_owner_all" on public.bom_item_lines;
-create policy "bom_item_lines_owner_all"
+drop policy if exists "bom_item_lines_account_access_all" on public.bom_item_lines;
+create policy "bom_item_lines_account_access_all"
   on public.bom_item_lines
   for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
 drop trigger if exists bom_item_lines_set_updated_at on public.bom_item_lines;
 create trigger bom_item_lines_set_updated_at
@@ -764,11 +703,12 @@ create index if not exists app_settings_updated_at_idx
 alter table public.app_settings enable row level security;
 
 drop policy if exists "app_settings_owner_all" on public.app_settings;
-create policy "app_settings_owner_all"
+drop policy if exists "app_settings_account_access_all" on public.app_settings;
+create policy "app_settings_account_access_all"
   on public.app_settings
   for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (public.has_account_access(user_id))
+  with check (public.has_account_access(user_id));
 
 drop trigger if exists app_settings_set_updated_at on public.app_settings;
 create trigger app_settings_set_updated_at

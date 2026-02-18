@@ -9,19 +9,15 @@ type ShareSheetModalProps = {
   isOpen: boolean;
   onClose: () => void;
   supabase: SupabaseClient | null;
-  sheetId: string | null;
-  sheetName: string;
   currentUserId: string | null;
-  ownerUserId?: string;
+  activeOwnerUserId?: string | null;
   onNotify?: (kind: NoticeKind, message: string) => void;
 };
 
 type ShareRow = {
   id: string;
   owner_user_id: string;
-  shared_with_user_id: string;
   shared_with_email: string;
-  role: "viewer" | "editor";
   created_at: string;
 };
 
@@ -31,24 +27,21 @@ export function ShareSheetModal({
   isOpen,
   onClose,
   supabase,
-  sheetId,
-  sheetName,
   currentUserId,
-  ownerUserId,
+  activeOwnerUserId,
   onNotify,
 }: ShareSheetModalProps) {
   const titleId = useId();
   const descriptionId = useId();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"editor" | "viewer">("editor");
   const [savingShare, setSavingShare] = useState(false);
   const [shares, setShares] = useState<ShareRow[]>([]);
   const [removingShareId, setRemovingShareId] = useState<string | null>(null);
 
   const canManageShares = useMemo(() => {
-    if (!currentUserId || !ownerUserId) return false;
-    return currentUserId === ownerUserId;
-  }, [currentUserId, ownerUserId]);
+    if (!currentUserId || !activeOwnerUserId) return false;
+    return currentUserId === activeOwnerUserId;
+  }, [currentUserId, activeOwnerUserId]);
 
   const notify = useCallback(
     (kind: NoticeKind, message: string) => {
@@ -58,15 +51,15 @@ export function ShareSheetModal({
   );
 
   const loadShares = useCallback(async () => {
-    if (!supabase || !sheetId) {
+    if (!supabase || !activeOwnerUserId) {
       setShares([]);
       return;
     }
 
     const { data, error } = await supabase
-      .from("cost_sheet_shares")
-      .select("id, owner_user_id, shared_with_user_id, shared_with_email, role, created_at")
-      .eq("sheet_id", sheetId)
+      .from("account_shares")
+      .select("id, owner_user_id, shared_with_email, created_at")
+      .eq("owner_user_id", activeOwnerUserId)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -75,11 +68,10 @@ export function ShareSheetModal({
     }
 
     setShares((data ?? []) as ShareRow[]);
-  }, [sheetId, supabase, notify]);
+  }, [activeOwnerUserId, supabase, notify]);
 
   const requestClose = useCallback(() => {
     setEmail("");
-    setRole("editor");
     setSavingShare(false);
     setRemovingShareId(null);
     onClose();
@@ -109,7 +101,7 @@ export function ShareSheetModal({
   }, [isOpen, requestClose]);
 
   const addShare = useCallback(async () => {
-    if (!supabase || !sheetId) return;
+    if (!supabase) return;
     if (!canManageShares) {
       notify("error", "Only the owner can manage sharing.");
       return;
@@ -126,10 +118,8 @@ export function ShareSheetModal({
     }
 
     setSavingShare(true);
-    const { error } = await supabase.rpc("share_cost_sheet_with_google_email", {
-      p_sheet_id: sheetId,
+    const { error } = await supabase.rpc("share_account_with_email", {
       p_email: normalizedEmail,
-      p_role: role,
     });
 
     if (error) {
@@ -140,20 +130,19 @@ export function ShareSheetModal({
 
     setEmail("");
     setSavingShare(false);
-    notify("success", "Access updated.");
+    notify("success", "Account access updated.");
     void loadShares();
-  }, [canManageShares, email, loadShares, notify, role, sheetId, supabase]);
+  }, [canManageShares, email, loadShares, notify, supabase]);
 
   const removeShare = useCallback(
     async (share: ShareRow) => {
-      if (!supabase || !sheetId) return;
+      if (!supabase) return;
       if (!canManageShares) {
         notify("error", "Only the owner can manage sharing.");
         return;
       }
       setRemovingShareId(share.id);
-      const { error } = await supabase.rpc("unshare_cost_sheet_by_email", {
-        p_sheet_id: sheetId,
+      const { error } = await supabase.rpc("unshare_account_by_email", {
         p_email: share.shared_with_email,
       });
 
@@ -167,7 +156,7 @@ export function ShareSheetModal({
       notify("success", "Access removed.");
       void loadShares();
     },
-    [canManageShares, loadShares, notify, sheetId, supabase],
+    [canManageShares, loadShares, notify, supabase],
   );
 
   if (!isOpen) return null;
@@ -193,7 +182,7 @@ export function ShareSheetModal({
               Share
             </h2>
             <p id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
-              Share <span className="font-semibold text-ink">{sheetName || "Untitled"}</span> with Google accounts.
+              Share your full account data with Google emails.
             </p>
           </div>
           <button
@@ -208,24 +197,16 @@ export function ShareSheetModal({
 
         {!canManageShares ? (
           <div className="mt-4 rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm text-muted">
-            Only the owner can add or remove people. You can view your access below.
+            Only the selected account owner can add or remove people.
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_120px_auto]">
+          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
             <input
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="name@company.com"
               className="rounded-xl border border-border bg-paper px-3 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
             />
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value === "viewer" ? "viewer" : "editor")}
-              className="rounded-xl border border-border bg-paper px-3 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
-            >
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
             <button
               type="button"
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
@@ -248,9 +229,7 @@ export function ShareSheetModal({
                   <li key={share.id} className="flex items-center justify-between gap-3 px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm text-ink">{share.shared_with_email}</p>
-                      <p className="font-mono text-xs text-muted">
-                        {share.role === "viewer" ? "Viewer" : "Editor"}
-                      </p>
+                      <p className="font-mono text-xs text-muted">Full account access</p>
                     </div>
                     {canManageShares ? (
                       <button

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import {
   DeferredMoneyInput,
   DeferredNumberInput,
@@ -12,6 +13,7 @@ import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
@@ -50,6 +52,7 @@ import {
   type DbPurchaseRow,
 } from "@/lib/supabase/purchases";
 import { goToWelcomePage } from "@/lib/navigation";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -466,10 +469,9 @@ export default function PurchasesApp() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTextareaValue, setImportTextareaValue] = useState("");
   const [importRowMetaById, setImportRowMetaById] = useState<Record<string, ImportedPurchaseRowMeta>>({});
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
@@ -486,10 +488,32 @@ export default function PurchasesApp() {
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -622,7 +646,7 @@ export default function PurchasesApp() {
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadData() {
@@ -631,13 +655,13 @@ export default function PurchasesApp() {
       importCommitInFlightRef.current.clear();
       setImportRowMetaById({});
 
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const [purchasesRes, materialsRes] = await Promise.all([
           supabase
             .from("purchases")
             .select("*")
-            .eq("user_id", userId),
-          supabase.from("materials").select("*").eq("user_id", userId).order("name", { ascending: true }),
+            .eq("user_id", activeOwnerUserId),
+          supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
         ]);
 
         if (cancelled) return;
@@ -699,13 +723,13 @@ export default function PurchasesApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, settings.baseCurrency, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, settings.baseCurrency, supabase, toast]);
 
   useEffect(() => {
-    if (!authReady || isCloudMode || !hasHydratedRef.current) return;
+    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
     const rowsToPersist = purchases.filter((row) => !(row.id in importRowMetaById));
     writeLocalPurchases(rowsToPersist);
-  }, [authReady, importRowMetaById, isCloudMode, purchases]);
+  }, [dataAuthReady, importRowMetaById, isCloudMode, purchases]);
 
   const syncMaterialFromPurchase = useCallback(
     async (next: PurchaseRecord): Promise<void> => {
@@ -929,8 +953,8 @@ export default function PurchasesApp() {
     try {
       const draftRecord = buildPurchaseFromDraft("tmp");
 
-      if (isCloudMode && supabase && userId) {
-        const insert = makeBlankPurchaseInsert(userId, {
+      if (isCloudMode && supabase && activeOwnerUserId) {
+        const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
           currency: draftRecord.currency,
           purchaseDate: draftRecord.purchaseDate,
           materialId: draftRecord.materialId,
@@ -1118,8 +1142,8 @@ export default function PurchasesApp() {
           new Date().toISOString(),
         );
 
-        if (isCloudMode && supabase && userId) {
-          const insert = makeBlankPurchaseInsert(userId, {
+        if (isCloudMode && supabase && activeOwnerUserId) {
+          const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
             currency: normalizedRow.currency,
             purchaseDate: normalizedRow.purchaseDate,
             materialId: normalizedRow.materialId,
@@ -1192,7 +1216,15 @@ export default function PurchasesApp() {
         importCommitInFlightRef.current.delete(rowId);
       }
     },
-    [isCloudMode, normalizePurchaseRow, settings.baseCurrency, supabase, syncMaterialFromPurchase, toast, userId],
+    [
+      activeOwnerUserId,
+      isCloudMode,
+      normalizePurchaseRow,
+      settings.baseCurrency,
+      supabase,
+      syncMaterialFromPurchase,
+      toast,
+    ],
   );
 
   const importPurchasesFromValidatedTsv = useCallback(
@@ -1368,7 +1400,7 @@ export default function PurchasesApp() {
     });
   }, [purchases, query]);
 
-  if (!authReady) {
+  if (!dataAuthReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
@@ -1386,6 +1418,7 @@ export default function PurchasesApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
@@ -1891,6 +1924,26 @@ export default function PurchasesApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="purchases sync via Supabase"
             guestLabel="saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            currentUserId={userId}
+            activeOwnerUserId={activeOwnerUserId}
+            onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
         </div>
       </div>

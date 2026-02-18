@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
@@ -38,6 +40,7 @@ import {
 } from "@/lib/supabase/bom";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -170,10 +173,9 @@ export default function BomApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
   const hasHydratedRef = useRef(false);
   const itemSaveTimersRef = useRef<Map<string, number>>(new Map());
   const lineSaveTimersRef = useRef<Map<string, number>>(new Map());
@@ -183,10 +185,32 @@ export default function BomApp() {
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -271,18 +295,26 @@ export default function BomApp() {
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadData() {
       hasHydratedRef.current = false;
       setLoading(true);
 
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const [itemsRes, linesRes, materialsRes] = await Promise.all([
-          supabase.from("bom_items").select("*").eq("user_id", userId).order("updated_at", { ascending: false }),
-          supabase.from("bom_item_lines").select("*").eq("user_id", userId).order("sort_order", { ascending: true }),
-          supabase.from("materials").select("*").eq("user_id", userId).order("name", { ascending: true }),
+          supabase
+            .from("bom_items")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("updated_at", { ascending: false }),
+          supabase
+            .from("bom_item_lines")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("sort_order", { ascending: true }),
+          supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
         ]);
 
         if (cancelled) return;
@@ -338,12 +370,12 @@ export default function BomApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
 
   useEffect(() => {
-    if (!authReady || isCloudMode || !hasHydratedRef.current) return;
+    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
     writeLocalBoms(boms);
-  }, [authReady, boms, isCloudMode]);
+  }, [boms, dataAuthReady, isCloudMode]);
 
   async function persistBomItem(next: BomRecord): Promise<void> {
     if (!isCloudMode || !supabase) return;
@@ -422,15 +454,15 @@ export default function BomApp() {
       outputUnit: settings.defaultMaterialUnit,
     };
 
-    if (isCloudMode && supabase && userId) {
-      const insert = makeBlankBomItemInsert(userId, defaults);
+    if (isCloudMode && supabase && activeOwnerUserId) {
+      const insert = makeBlankBomItemInsert(activeOwnerUserId, defaults);
       const { data, error } = await supabase.from("bom_items").insert(insert).select("*");
       if (error || !data?.[0]) {
         toast("error", error?.message || "Could not create BOM.");
         return;
       }
       const itemRow = data[0] as DbBomItemRow;
-      const lineInsert = makeBlankBomLineInsert(userId, itemRow.id, 0, {
+      const lineInsert = makeBlankBomLineInsert(activeOwnerUserId, itemRow.id, 0, {
         unit: settings.defaultMaterialUnit,
       });
       const { data: lineData, error: lineError } = await supabase
@@ -473,8 +505,8 @@ export default function BomApp() {
   async function addLine(): Promise<void> {
     if (!selectedBom) return;
     const now = new Date().toISOString();
-    if (isCloudMode && supabase && userId) {
-      const insert = makeBlankBomLineInsert(userId, selectedBom.id, selectedBom.lines.length, {
+    if (isCloudMode && supabase && activeOwnerUserId) {
+      const insert = makeBlankBomLineInsert(activeOwnerUserId, selectedBom.id, selectedBom.lines.length, {
         unit: settings.defaultMaterialUnit,
       });
       const { data, error } = await supabase.from("bom_item_lines").insert(insert).select("*");
@@ -554,7 +586,7 @@ export default function BomApp() {
     window.location.assign("/settings");
   }
 
-  if (!authReady) {
+  if (!dataAuthReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
@@ -573,6 +605,7 @@ export default function BomApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search BOM..."
@@ -847,6 +880,26 @@ export default function BomApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="BOM sync via Supabase"
             guestLabel="saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            currentUserId={userId}
+            activeOwnerUserId={activeOwnerUserId}
+            onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
         </div>
       </div>

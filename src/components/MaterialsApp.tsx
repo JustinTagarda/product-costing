@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
@@ -23,6 +25,7 @@ import {
   rowToMaterial,
   type DbMaterialRow,
 } from "@/lib/supabase/materials";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { goToWelcomePage } from "@/lib/navigation";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -290,10 +293,9 @@ export default function MaterialsApp() {
   const [draftMaterial, setDraftMaterial] = useState<DraftMaterialRow>(() => makeDraftMaterial());
   const [savingDraftMaterial, setSavingDraftMaterial] = useState(false);
   const [duplicateNameModal, setDuplicateNameModal] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedRef = useRef(false);
@@ -307,10 +309,32 @@ export default function MaterialsApp() {
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -385,24 +409,24 @@ export default function MaterialsApp() {
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadMaterials() {
       hasHydratedRef.current = false;
       setLoading(true);
 
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const [materialsRes, purchasesRes] = await Promise.all([
           supabase
             .from("materials")
             .select("*")
-            .eq("user_id", userId)
+            .eq("user_id", activeOwnerUserId)
             .order("name", { ascending: true }),
           supabase
             .from("purchases")
             .select("material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
-            .eq("user_id", userId)
+            .eq("user_id", activeOwnerUserId)
             .not("material_id", "is", null),
         ]);
 
@@ -460,12 +484,12 @@ export default function MaterialsApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
 
   useEffect(() => {
-    if (!authReady || isCloudMode || !hasHydratedRef.current) return;
+    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
     writeLocalMaterials(materials);
-  }, [authReady, isCloudMode, materials]);
+  }, [dataAuthReady, isCloudMode, materials]);
 
   useEffect(() => {
     const pendingId = pendingScrollMaterialIdRef.current;
@@ -540,13 +564,13 @@ export default function MaterialsApp() {
         MATERIAL_CODE_PREFIX,
       );
 
-      if (isCloudMode && supabase && userId) {
+      if (isCloudMode && supabase && activeOwnerUserId) {
         for (let offset = 0; offset < 1000; offset += 1) {
           const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
           const { data: existing, error: lookupError } = await supabase
             .from("materials")
             .select("id")
-            .eq("user_id", userId)
+            .eq("user_id", activeOwnerUserId)
             .eq("code", code)
             .limit(1);
           if (lookupError) {
@@ -555,7 +579,7 @@ export default function MaterialsApp() {
           }
           if ((existing ?? []).length > 0) continue;
 
-          const insert = makeBlankMaterialInsert(userId, { defaultUnit: normalizedUnit });
+          const insert = makeBlankMaterialInsert(activeOwnerUserId, { defaultUnit: normalizedUnit });
           insert.code = code;
           insert.name = trimmedName;
           insert.unit = normalizedUnit;
@@ -650,7 +674,7 @@ export default function MaterialsApp() {
     });
   }, [materials, query, showInactive]);
 
-  if (!authReady) {
+  if (!dataAuthReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
@@ -668,6 +692,7 @@ export default function MaterialsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
@@ -922,6 +947,26 @@ export default function MaterialsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="materials sync via Supabase"
             guestLabel="saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            currentUserId={userId}
+            activeOwnerUserId={activeOwnerUserId}
+            onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
         </div>
       </div>

@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatCents } from "@/lib/format";
 import {
@@ -17,6 +19,7 @@ import {
 } from "@/lib/settings";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -65,9 +68,9 @@ export default function SettingsApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [saving, setSaving] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -100,10 +103,32 @@ export default function SettingsApp() {
     };
   }, [supabase, toast]);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings, setSettings, settingsReady, saveSettings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -206,7 +231,7 @@ export default function SettingsApp() {
     [settings.baseCurrency],
   );
 
-  if (!settingsReady) {
+  if (!dataAuthReady || !settingsReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
@@ -224,6 +249,7 @@ export default function SettingsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettingsPage}
         onLogout={() => void signOut()}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         searchPlaceholder="Search settings..."
         onQuickAdd={() => void onSave()}
         quickAddLabel={saving ? "Saving..." : "Save Settings"}
@@ -593,6 +619,26 @@ export default function SettingsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="settings sync via Supabase"
             guestLabel="settings saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            currentUserId={userId}
+            activeOwnerUserId={activeOwnerUserId}
+            onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
 
         </div>

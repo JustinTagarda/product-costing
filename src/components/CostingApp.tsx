@@ -8,6 +8,7 @@ import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { formatShortDate } from "@/lib/format";
@@ -30,6 +31,7 @@ import {
 import { createDemoMaterials, readLocalMaterialRecords, sortMaterialsByNameAsc } from "@/lib/materials";
 import { rowToMaterial, type DbMaterialRow } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 type MaterialOption = {
@@ -215,8 +217,6 @@ export default function CostingApp() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
 
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
@@ -230,10 +230,32 @@ export default function CostingApp() {
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -300,12 +322,13 @@ export default function CostingApp() {
   }, []);
 
   const fetchSheetsForUser = useCallback(
-    async (userId: string, seedDemoIfEmpty: boolean): Promise<CostSheet[]> => {
+    async (ownerUserId: string, seedDemoIfEmpty: boolean): Promise<CostSheet[]> => {
       if (!supabase) return [];
 
       const { data: rows, error } = await supabase
         .from("cost_sheets")
         .select("*")
+        .eq("user_id", ownerUserId)
         .order("updated_at", { ascending: false });
 
       if (error) {
@@ -321,7 +344,7 @@ export default function CostingApp() {
       const demo = createDemoSheet();
       demo.currency = settingsCurrencyCode;
       const demoInsert: DbCostSheetInsert = {
-        user_id: userId,
+        user_id: ownerUserId,
         name: demo.name,
         sku: demo.sku,
         currency: settingsCurrencyCode,
@@ -352,15 +375,15 @@ export default function CostingApp() {
   );
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function load() {
       hasHydratedSheetsRef.current = false;
       setLoadingSheets(true);
 
-      if (isCloudMode && userId) {
-        const nextSheets = await fetchSheetsForUser(userId, !requestNewSheetFromQuery);
+      if (isCloudMode && activeOwnerUserId) {
+        const nextSheets = await fetchSheetsForUser(activeOwnerUserId, !requestNewSheetFromQuery);
         if (cancelled) return;
         setSheets(nextSheets);
         setSelectedId((prev) => {
@@ -400,18 +423,18 @@ export default function CostingApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, fetchSheetsForUser, isCloudMode, requestNewSheetFromQuery, settingsCurrencyCode, userId]);
+  }, [activeOwnerUserId, dataAuthReady, fetchSheetsForUser, isCloudMode, requestNewSheetFromQuery, settingsCurrencyCode]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadMaterials() {
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const { data, error } = await supabase
           .from("materials")
           .select("*")
-          .eq("user_id", userId)
+          .eq("user_id", activeOwnerUserId)
           .order("name", { ascending: true });
         if (cancelled) return;
         if (error) {
@@ -441,12 +464,12 @@ export default function CostingApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
 
   useEffect(() => {
-    if (!authReady || isCloudMode || !hasHydratedSheetsRef.current) return;
+    if (!dataAuthReady || isCloudMode || !hasHydratedSheetsRef.current) return;
     writeLocalSheets(sheets, selectedId);
-  }, [authReady, isCloudMode, selectedId, sheets]);
+  }, [dataAuthReady, isCloudMode, selectedId, sheets]);
 
   const selectedSheet = useMemo(() => {
     if (!sheets.length) return null;
@@ -547,13 +570,13 @@ export default function CostingApp() {
       PRODUCT_CODE_PREFIX,
     );
 
-    if (isCloudMode && supabase && user) {
+    if (isCloudMode && supabase && activeOwnerUserId) {
       for (let offset = 0; offset < 1000; offset += 1) {
         const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
         const { data: existing, error: lookupError } = await supabase
           .from("cost_sheets")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("user_id", activeOwnerUserId)
           .eq("sku", code)
           .limit(1);
         if (lookupError) {
@@ -562,7 +585,7 @@ export default function CostingApp() {
         }
         if ((existing ?? []).length > 0) continue;
 
-        const insert = makeBlankSheetInsert(user.id, {
+        const insert = makeBlankSheetInsert(activeOwnerUserId, {
           currency: settingsCurrencyCode,
           wastePct: settings.defaultWastePct,
           markupPct: settings.defaultMarkupPct,
@@ -606,7 +629,7 @@ export default function CostingApp() {
     sheets,
     supabase,
     toast,
-    user,
+    activeOwnerUserId,
   ]);
 
   useEffect(() => {
@@ -632,11 +655,7 @@ export default function CostingApp() {
     clearShareQueryParam();
 
     if (!isCloudMode) {
-      toast("info", "Sign in with Google to share sheets.");
-      return;
-    }
-    if (!selectedSheet) {
-      toast("info", "Create or select a product first, then share.");
+      toast("info", "Sign in with Google to share account data.");
       return;
     }
 
@@ -646,7 +665,6 @@ export default function CostingApp() {
     isCloudMode,
     loadingSheets,
     requestShareFromQuery,
-    selectedSheet,
     session,
     showWelcomeGate,
     toast,
@@ -659,13 +677,13 @@ export default function CostingApp() {
       PRODUCT_CODE_PREFIX,
     );
 
-    if (isCloudMode && supabase && user) {
+    if (isCloudMode && supabase && activeOwnerUserId) {
       for (let offset = 0; offset < 1000; offset += 1) {
         const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
         const { data: existing, error: lookupError } = await supabase
           .from("cost_sheets")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("user_id", activeOwnerUserId)
           .eq("sku", code)
           .limit(1);
         if (lookupError) {
@@ -675,7 +693,7 @@ export default function CostingApp() {
         if ((existing ?? []).length > 0) continue;
 
         const insert: DbCostSheetInsert = {
-          user_id: user.id,
+          user_id: activeOwnerUserId,
           name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
           sku: code,
           currency: settingsCurrencyCode,
@@ -728,19 +746,10 @@ export default function CostingApp() {
 
   async function deleteSelected() {
     if (!selectedSheet) return;
-    if (
-      isCloudMode &&
-      selectedSheet.ownerUserId &&
-      userId &&
-      selectedSheet.ownerUserId !== userId
-    ) {
-      toast("error", "Only the owner can delete this shared sheet.");
-      return;
-    }
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
-    if (isCloudMode && supabase && user) {
+    if (isCloudMode && supabase) {
       const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
       if (error) {
         toast("error", error.message);
@@ -788,9 +797,9 @@ export default function CostingApp() {
       return;
     }
 
-    if (isCloudMode && supabase && user) {
+    if (isCloudMode && supabase && activeOwnerUserId) {
       const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
-        user_id: user.id,
+        user_id: activeOwnerUserId,
         name: s.name || "Untitled",
         sku: s.sku || "",
         currency: settingsCurrencyCode,
@@ -853,7 +862,7 @@ export default function CostingApp() {
     return computeTotals({ ...selectedSheet, materials: resolvedMaterials });
   }, [materialById, selectedSheet]);
 
-  if (!authReady) {
+  if (!dataAuthReady) {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
@@ -1129,9 +1138,6 @@ export default function CostingApp() {
                     type="button"
                     className="rounded-xl border border-border bg-danger/10 px-3 py-2 text-sm font-semibold text-danger shadow-sm transition hover:bg-danger/15 active:translate-y-px"
                     onClick={deleteSelected}
-                    disabled={
-                      Boolean(isCloudMode && selectedSheet.ownerUserId && userId && selectedSheet.ownerUserId !== userId)
-                    }
                   >
                     Delete
                   </button>
@@ -1823,11 +1829,20 @@ export default function CostingApp() {
             isOpen={showShareModal}
             onClose={() => setShowShareModal(false)}
             supabase={supabase}
-            sheetId={selectedSheet.id}
-            sheetName={selectedSheet.name || "Untitled"}
             currentUserId={userId}
-            ownerUserId={selectedSheet.ownerUserId}
+            activeOwnerUserId={activeOwnerUserId}
             onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
 
         </div>

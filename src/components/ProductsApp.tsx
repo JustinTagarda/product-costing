@@ -6,12 +6,15 @@ import { computeTotals, createDemoSheet } from "@/lib/costing";
 import type { CostSheet, StoredData } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
+import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
@@ -80,20 +83,41 @@ export default function ProductsApp() {
   const [products, setProducts] = useState<CostSheet[]>([]);
   const [query, setQuery] = useState("");
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const user = session?.user ?? null;
-  const userId = user?.id ?? null;
-  const isCloudMode = Boolean(userId && supabase);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
     window.setTimeout(() => setNotice(null), 2600);
   }, []);
 
+  const {
+    signedInUserId,
+    signedInEmail,
+    activeOwnerUserId,
+    scopeReady,
+    sharedAccounts,
+    showSelectionModal,
+    setShowSelectionModal,
+    selectOwnData,
+    selectSharedData,
+  } = useAccountDataScope({
+    supabase,
+    session,
+    authReady,
+    onError: (message) => toast("error", message),
+  });
+
+  const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
+  const dataAuthReady = authReady && !waitingForScope;
+
   const { settings } = useAppSettings({
     supabase,
-    userId,
-    authReady,
+    userId: activeOwnerUserId,
+    authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
 
@@ -135,16 +159,17 @@ export default function ProductsApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadProducts() {
       setLoading(true);
 
-      if (isCloudMode && userId && supabase) {
+      if (isCloudMode && activeOwnerUserId && supabase) {
         const { data, error } = await supabase
           .from("cost_sheets")
           .select("*")
+          .eq("user_id", activeOwnerUserId)
           .order("updated_at", { ascending: false });
 
         if (cancelled) return;
@@ -172,7 +197,7 @@ export default function ProductsApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, isCloudMode, supabase, toast, userId]);
+  }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
 
   async function signOut() {
     if (supabase) {
@@ -190,18 +215,8 @@ export default function ProductsApp() {
     window.location.assign("/settings");
   }
 
-  function canDeleteProduct(sheet: CostSheet): boolean {
-    if (!isCloudMode) return true;
-    if (!sheet.ownerUserId || !userId) return true;
-    return sheet.ownerUserId === userId;
-  }
-
   async function deleteProduct(sheet: CostSheet): Promise<void> {
     if (deletingProductId) return;
-    if (!canDeleteProduct(sheet)) {
-      toast("error", "Only the owner can delete this shared product.");
-      return;
-    }
     setDeletingProductId(sheet.id);
 
     try {
@@ -244,6 +259,7 @@ export default function ProductsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
+        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products by name or code"
@@ -338,7 +354,7 @@ export default function ProductsApp() {
                               type="button"
                               className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
                               onClick={() => void deleteProduct(sheet)}
-                              disabled={deletingProductId === sheet.id || !canDeleteProduct(sheet)}
+                              disabled={deletingProductId === sheet.id}
                             >
                               {deletingProductId === sheet.id ? "Deleting..." : "Delete"}
                             </button>
@@ -364,6 +380,26 @@ export default function ProductsApp() {
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="products sync via Supabase"
             guestLabel="products saved in this browser (localStorage)"
+          />
+
+          <ShareSheetModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            supabase={supabase}
+            currentUserId={userId}
+            activeOwnerUserId={activeOwnerUserId}
+            onNotify={toast}
+          />
+
+          <DataSelectionModal
+            isOpen={showSelectionModal}
+            ownEmail={signedInEmail || session?.user?.email || ""}
+            activeOwnerUserId={activeOwnerUserId}
+            signedInUserId={signedInUserId}
+            sharedAccounts={sharedAccounts}
+            onSelectOwn={selectOwnData}
+            onSelectShared={selectSharedData}
+            onClose={() => setShowSelectionModal(false)}
           />
         </div>
       </div>
