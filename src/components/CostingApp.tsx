@@ -894,7 +894,7 @@ export default function CostingApp() {
                   className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                   onClick={() => void newSheet()}
                 >
-                  New sheet
+                  New product
                 </button>
               </div>
             </div>
@@ -941,7 +941,7 @@ export default function CostingApp() {
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
               onClick={() => void newSheet()}
             >
-              New sheet
+              New product
             </button>
             <button
               type="button"
@@ -971,21 +971,7 @@ export default function CostingApp() {
 
           <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <aside className={cardClassName()}>
-            <div className="p-3">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
-                  onClick={newSheet}
-                  aria-label="Create new sheet"
-                >
-                  +
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-muted">{filteredSheets.length} sheet(s)</p>
-            </div>
-
-            <div className="border-t border-border p-1">
+            <div className="p-1">
               <ul className="space-y-1">
                 {filteredSheets.map((sheet) => {
                   const isActive = selectedSheet.id === sheet.id;
@@ -1241,7 +1227,7 @@ export default function CostingApp() {
                       </table>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 border-t border-border px-4 py-3">
+                    <div className="flex flex-wrap items-end gap-3 border-t border-border px-4 py-3">
                         <div className="flex-1">
                           <label className="block font-mono text-xs text-muted">Waste %</label>
                           <DeferredNumberInput
@@ -1254,7 +1240,7 @@ export default function CostingApp() {
                         </div>
                         <div className="min-w-[240px]">
                           <p className="font-mono text-xs text-muted">Materials subtotal</p>
-                          <p className="mt-1 font-mono text-sm tabular-nums text-ink">
+                          <p className="mt-1 flex min-h-[38px] items-center font-mono text-sm tabular-nums text-ink">
                             {formatMoney(totals.materialsSubtotalCents)}{" "}
                             <span className="text-muted">
                               -&gt; {formatMoney(totals.materialsWithWasteCents)} with waste

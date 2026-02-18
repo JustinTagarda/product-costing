@@ -241,23 +241,33 @@ export default function ProductDetailsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Filter product lines, categories, notes"
-        onQuickAdd={() => window.location.assign("/calculator")}
-        quickAddLabel="+ New Product"
         profileLabel={session?.user?.email || "Profile"}
       />
 
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.25rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.75rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3.25rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
-          <header>
-            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Product Details</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-              Header information, cost breakdown, change history, and notes for a single product.
-            </p>
-            {!supabase ? (
-              <p className="mt-2 text-xs text-muted">
-                {supabaseError || "Supabase is not configured. Product detail data is local only."}
+          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Product Details</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+                Header information, cost breakdown, change history, and notes for a single product.
               </p>
-            ) : null}
+              {!supabase ? (
+                <p className="mt-2 text-xs text-muted">
+                  {supabaseError || "Supabase is not configured. Product detail data is local only."}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                onClick={() => window.location.assign("/calculator?new=1")}
+              >
+                New product
+              </button>
+            </div>
           </header>
 
           <GlobalAppToast notice={notice} />
@@ -361,7 +371,7 @@ export default function ProductDetailsApp() {
                       Cost lines filtered by top bar search: <span className="font-mono text-ink">{query || "(none)"}</span>
                     </div>
                     <div className="overflow-x-auto">
-                      <table className="min-w-[760px] w-full text-left text-sm">
+                      <table className="min-w-[760px] w-full border border-border text-left text-sm">
                         <thead className="bg-paper/55">
                           <tr>
                             <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Category</th>
