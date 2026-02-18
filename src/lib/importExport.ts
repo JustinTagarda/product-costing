@@ -30,6 +30,7 @@ function normalizeSheet(v: unknown): CostSheet | null {
       if (!mid) return null;
       return {
         id: mid,
+        materialId: asString(m.materialId ?? m.material_id) || null,
         name: asString(m.name),
         qty: asNumber(m.qty, 0),
         unit: asString(m.unit),
@@ -134,4 +135,3 @@ export function parseStoredDataJson(jsonText: string): StoredData | null {
   const selectedOk = selectedId && sheets.some((s) => s.id === selectedId);
   return { version: 1, sheets, selectedId: selectedOk ? selectedId : sheets[0].id };
 }
-

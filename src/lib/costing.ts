@@ -1,5 +1,6 @@
 export type MaterialItem = {
   id: string;
+  materialId?: string | null;
   name: string;
   qty: number;
   unit: string;
@@ -87,7 +88,7 @@ export function makeBlankSheet(id: string): CostSheet {
     markupPct: 40,
     taxPct: 0,
     materials: [
-      { id: makeId("m"), name: "", qty: 1, unit: "", unitCostCents: 0 },
+      { id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 },
     ],
     labor: [{ id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
     overhead: [],
@@ -113,6 +114,7 @@ export function createDemoSheet(): CostSheet {
     materials: [
       {
         id: "m_canvas",
+        materialId: "material_demo_canvas",
         name: "Canvas fabric",
         qty: 6.2,
         unit: "yd",
@@ -120,6 +122,7 @@ export function createDemoSheet(): CostSheet {
       },
       {
         id: "m_thread",
+        materialId: "material_demo_thread",
         name: "Thread",
         qty: 1,
         unit: "spool",
@@ -127,6 +130,7 @@ export function createDemoSheet(): CostSheet {
       },
       {
         id: "m_label",
+        materialId: null,
         name: "Woven label",
         qty: 10,
         unit: "ea",
@@ -249,4 +253,3 @@ export function computeTotals(sheet: CostSheet): SheetTotals {
     pricePerUnitWithTaxCents,
   };
 }
-

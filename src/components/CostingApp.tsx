@@ -26,9 +26,18 @@ import {
   type DbCostSheetInsert,
   type DbCostSheetRow,
 } from "@/lib/supabase/costSheets";
+import { createDemoMaterials, readLocalMaterialRecords, sortMaterialsByNameAsc } from "@/lib/materials";
+import { rowToMaterial, type DbMaterialRow } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
+type MaterialOption = {
+  id: string;
+  name: string;
+  unit: string;
+  unitCostCents: number;
+  isActive: boolean;
+};
 
 const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
@@ -84,6 +93,17 @@ function cardClassName(): string {
 
 function panelClassName(): string {
   return ["rounded-2xl border border-border bg-paper/45", "shadow-sm"].join(" ");
+}
+
+function toMaterialOptionFromRow(row: DbMaterialRow): MaterialOption {
+  const material = rowToMaterial(row);
+  return {
+    id: material.id,
+    name: material.name,
+    unit: material.unit,
+    unitCostCents: material.unitCostCents,
+    isActive: material.isActive,
+  };
 }
 
 function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
@@ -173,6 +193,7 @@ export default function CostingApp() {
 
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
+  const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showWelcomeGate, setShowWelcomeGate] = useState(() => !readWelcomeGateDismissed());
 
@@ -355,6 +376,47 @@ export default function CostingApp() {
   }, [authReady, fetchSheetsForUser, isCloudMode, requestNewSheetFromQuery, settingsCurrencyCode, userId]);
 
   useEffect(() => {
+    if (!authReady) return;
+    let cancelled = false;
+
+    async function loadMaterials() {
+      if (isCloudMode && userId && supabase) {
+        const { data, error } = await supabase
+          .from("materials")
+          .select("*")
+          .eq("user_id", userId)
+          .order("name", { ascending: true });
+        if (cancelled) return;
+        if (error) {
+          toast("error", error.message);
+          setMaterials([]);
+          return;
+        }
+        setMaterials(((data ?? []) as DbMaterialRow[]).map(toMaterialOptionFromRow));
+        return;
+      }
+
+      const localMaterials = readLocalMaterialRecords();
+      const baseMaterials = localMaterials.length ? sortMaterialsByNameAsc(localMaterials) : createDemoMaterials();
+      if (cancelled) return;
+      setMaterials(
+        baseMaterials.map((item) => ({
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          unitCostCents: item.unitCostCents,
+          isActive: item.isActive,
+        })),
+      );
+    }
+
+    void loadMaterials();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, isCloudMode, supabase, toast, userId]);
+
+  useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedSheetsRef.current) return;
     writeLocalSheets(sheets, selectedId);
   }, [authReady, isCloudMode, selectedId, sheets]);
@@ -374,6 +436,8 @@ export default function CostingApp() {
       return name.includes(q) || sku.includes(q);
     });
   }, [sheets, query]);
+
+  const materialById = useMemo(() => new Map(materials.map((item) => [item.id, item])), [materials]);
 
   async function persistSheet(next: CostSheet): Promise<void> {
     if (!isCloudMode || !supabase) return;
@@ -706,7 +770,21 @@ export default function CostingApp() {
     toast("success", `Imported ${importedLocal.length} local sheet(s).`);
   }
 
-  const totals = useMemo(() => (selectedSheet ? computeTotals(selectedSheet) : null), [selectedSheet]);
+  const totals = useMemo(() => {
+    if (!selectedSheet) return null;
+    const resolvedMaterials = (selectedSheet.materials || []).map((line) => {
+      if (!line.materialId) return line;
+      const linked = materialById.get(line.materialId);
+      if (!linked) return line;
+      return {
+        ...line,
+        name: linked.name,
+        unit: linked.unit,
+        unitCostCents: linked.unitCostCents,
+      };
+    });
+    return computeTotals({ ...selectedSheet, materials: resolvedMaterials });
+  }, [materialById, selectedSheet]);
 
   if (!authReady) {
     return (
@@ -1000,16 +1078,6 @@ export default function CostingApp() {
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-xs text-muted">Currency</label>
-                        <input
-                          className={inputBase + " mt-1 font-mono uppercase"}
-                          value={settingsCurrencyCode}
-                          readOnly
-                          aria-readonly="true"
-                        />
-                        <p className="mt-1 text-[11px] text-muted">Managed from Settings - Currency and Rounding.</p>
-                      </div>
-                      <div>
                         <label className="block font-mono text-xs text-muted">Batch size</label>
                         <DeferredNumberInput
                           className={inputBase + " mt-1 " + inputMono}
@@ -1022,17 +1090,6 @@ export default function CostingApp() {
                           }
                         />
                       </div>
-                      <div>
-                        <label className="block font-mono text-xs text-muted">Unit name</label>
-                        <input
-                          className={inputBase + " mt-1"}
-                          value={selectedSheet.unitName}
-                          onChange={(e) =>
-                            updateSelected((s) => ({ ...s, unitName: e.target.value || "unit" }))
-                          }
-                          placeholder="unit"
-                        />
-                      </div>
                     </div>
                   </section>
 
@@ -1041,7 +1098,7 @@ export default function CostingApp() {
                       <div className="min-w-0">
                         <h2 className="font-serif text-lg tracking-tight text-ink">Materials</h2>
                         <p className="mt-0.5 text-xs text-muted">
-                          Direct materials (waste applied below)
+                          Direct materials from your catalog (weighted average cost)
                         </p>
                       </div>
                       <button
@@ -1052,7 +1109,7 @@ export default function CostingApp() {
                             ...s,
                             materials: [
                               ...(s.materials || []),
-                              { id: makeId("m"), name: "", qty: 1, unit: "", unitCostCents: 0 },
+                              { id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 },
                             ],
                           }));
                           toast("success", "Material line added.");
@@ -1067,7 +1124,7 @@ export default function CostingApp() {
                           <thead>
                             <tr>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
-                                Item
+                                Material
                               </th>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 90 }}>
                                 Qty
@@ -1076,7 +1133,7 @@ export default function CostingApp() {
                                 Unit
                               </th>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 120 }}>
-                                Unit cost
+                                Weighted avg cost
                               </th>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 160 }}>
                                 Total
@@ -1084,22 +1141,47 @@ export default function CostingApp() {
                             </tr>
                           </thead>
                           <tbody className="align-top">
-                            {selectedSheet.materials.map((it, idx) => (
+                            {selectedSheet.materials.map((it) => {
+                              const linkedMaterial = it.materialId ? materialById.get(it.materialId) : null;
+                              const displayName = linkedMaterial?.name || it.name;
+                              const displayUnit = linkedMaterial?.unit || it.unit;
+                              const displayUnitCostCents = linkedMaterial?.unitCostCents ?? it.unitCostCents;
+                              return (
                               <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
                                 <td className="p-2">
-                                  <input
+                                  <select
                                     className={inputBase}
-                                    value={it.name}
-                                    onChange={(e) =>
+                                    value={it.materialId ?? ""}
+                                    onChange={(e) => {
+                                      const materialId = e.target.value || null;
+                                      const material = materialId ? materialById.get(materialId) : null;
                                       updateSelected((s) => ({
                                         ...s,
-                                        materials: s.materials.map((m) =>
-                                          m.id === it.id ? { ...m, name: e.target.value } : m,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder={idx === 0 ? "e.g., Cedar oil" : ""}
-                                  />
+                                        materials: s.materials.map((m) => {
+                                          if (m.id !== it.id) return m;
+                                          if (!materialId) return { ...m, materialId: null };
+                                          if (!material) return { ...m, materialId };
+                                          return {
+                                            ...m,
+                                            materialId,
+                                            name: material.name,
+                                            unit: material.unit,
+                                            unitCostCents: material.unitCostCents,
+                                          };
+                                        }),
+                                      }));
+                                    }}
+                                  >
+                                    <option value="">
+                                      {displayName ? `Unlinked (${displayName})` : "Select material"}
+                                    </option>
+                                    {materials.map((item) => (
+                                      <option key={item.id} value={item.id}>
+                                        {item.name || "Unnamed material"}
+                                        {item.isActive ? "" : " (inactive)"}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
                                 <td className="p-2">
                                   <DeferredNumberInput
@@ -1115,41 +1197,20 @@ export default function CostingApp() {
                                     }
                                   />
                                 </td>
-                                <td className="p-2">
-                                  <input
-                                    className={inputBase}
-                                    value={it.unit}
-                                    onChange={(e) =>
-                                      updateSelected((s) => ({
-                                        ...s,
-                                        materials: s.materials.map((m) =>
-                                          m.id === it.id ? { ...m, unit: e.target.value } : m,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder="ea / g / yd"
-                                  />
+                                <td className="p-2 align-middle">
+                                  <p className="font-mono text-sm text-ink">{displayUnit || "--"}</p>
                                 </td>
-                                <td className="p-2">
-                                  <DeferredMoneyInput
-                                    className={inputBase + " " + inputMono}
-                                    valueCents={it.unitCostCents}
-                                    onCommitCents={(valueCents) =>
-                                      updateSelected((s) => ({
-                                        ...s,
-                                        materials: s.materials.map((m) =>
-                                          m.id === it.id
-                                            ? { ...m, unitCostCents: valueCents }
-                                            : m,
-                                        ),
-                                      }))
-                                    }
-                                  />
+                                <td className="p-2 align-middle">
+                                  <p className="font-mono text-sm tabular-nums text-ink">
+                                    {it.materialId || displayUnitCostCents > 0
+                                      ? formatMoney(displayUnitCostCents)
+                                      : "--"}
+                                  </p>
                                 </td>
                                 <td className="p-2">
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="font-mono text-sm tabular-nums text-ink">
-                                      {formatMoney(Math.round(it.qty * it.unitCostCents))}
+                                      {formatMoney(Math.round(it.qty * displayUnitCostCents))}
                                     </span>
                                     <button
                                       type="button"
@@ -1162,7 +1223,7 @@ export default function CostingApp() {
                                             materials:
                                               next.length > 0
                                                 ? next
-                                                : [{ id: makeId("m"), name: "", qty: 1, unit: "", unitCostCents: 0 }],
+                                                : [{ id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 }],
                                           };
                                         });
                                         toast("success", "Material line deleted.");
@@ -1174,7 +1235,8 @@ export default function CostingApp() {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                            );
+                            })}
                           </tbody>
                       </table>
                     </div>
