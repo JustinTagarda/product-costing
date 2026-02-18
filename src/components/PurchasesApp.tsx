@@ -20,17 +20,12 @@ import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { openNativeDatePicker } from "@/lib/datePicker";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import {
-  createDemoMaterials,
-  readLocalMaterialRecords,
-  writeLocalMaterialRecords,
   type MaterialRecord,
 } from "@/lib/materials";
 import {
   computeUnitCostCentsFromCost,
   computePurchaseTotalCents,
-  createDemoPurchases,
   currentDateInputValue,
-  LOCAL_PURCHASES_STORAGE_KEY,
   makeBlankPurchase,
   normalizePurchaseMarketplace,
   PURCHASE_MARKETPLACES,
@@ -354,92 +349,6 @@ function toMaterialOption(material: MaterialRecord): MaterialOption {
   };
 }
 
-function parseLocalPurchases(raw: unknown): PurchaseRecord[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((item) => item && typeof item === "object")
-    .map((item) => {
-      const row = item as Partial<PurchaseRecord>;
-      const id = typeof row.id === "string" ? row.id : makeId("pur");
-      const fallback = makeBlankPurchase(id);
-      const quantityRaw = Number(row.quantity);
-      const quantity = Number.isFinite(quantityRaw) ? Math.max(0, quantityRaw) : fallback.quantity;
-      const usableQuantityRaw = Number(row.usableQuantity);
-      const usableQuantity = Number.isFinite(usableQuantityRaw)
-        ? Math.max(0, usableQuantityRaw)
-        : quantity;
-      const explicitUnitCostRaw = Number(row.unitCostCents);
-      const explicitTotalRaw = Number(row.costCents);
-      const legacyTotalRaw = Number(row.totalCostCents);
-      const storedTotalCents = Number.isFinite(explicitTotalRaw)
-        ? Math.max(0, Math.round(explicitTotalRaw))
-        : Number.isFinite(legacyTotalRaw)
-          ? Math.max(0, Math.round(legacyTotalRaw))
-          : 0;
-      const unitCostCents = Number.isFinite(explicitUnitCostRaw)
-        ? Math.max(0, Math.round(explicitUnitCostRaw))
-        : quantity > 0 && storedTotalCents > 0
-          ? computeUnitCostCentsFromCost(quantity, storedTotalCents)
-          : fallback.unitCostCents;
-      const totalCostCents = computePurchaseTotalCents(quantity, unitCostCents);
-      const store = typeof row.store === "string"
-        ? row.store
-        : typeof row.supplier === "string"
-          ? row.supplier
-          : fallback.store;
-      return {
-        ...fallback,
-        ...row,
-        id,
-        purchaseDate:
-          typeof row.purchaseDate === "string" && row.purchaseDate
-            ? row.purchaseDate
-            : fallback.purchaseDate,
-        materialId: typeof row.materialId === "string" ? row.materialId : null,
-        materialName: typeof row.materialName === "string" ? row.materialName : fallback.materialName,
-        description: typeof row.description === "string" ? row.description : fallback.description,
-        variation: typeof row.variation === "string" ? row.variation : fallback.variation,
-        quantity,
-        usableQuantity,
-        unit: typeof row.unit === "string" ? row.unit : fallback.unit,
-        unitCostCents,
-        costCents: totalCostCents,
-        totalCostCents,
-        currency: typeof row.currency === "string" ? row.currency.toUpperCase() : fallback.currency,
-        marketplace: normalizePurchaseMarketplace(
-          typeof row.marketplace === "string" ? row.marketplace : fallback.marketplace,
-          "other",
-        ),
-        store,
-        supplier: store,
-        referenceNo: typeof row.referenceNo === "string" ? row.referenceNo : fallback.referenceNo,
-        notes: typeof row.notes === "string" ? row.notes : fallback.notes,
-      };
-    });
-}
-
-function readLocalPurchases(): PurchaseRecord[] {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_PURCHASES_STORAGE_KEY);
-    if (!raw) return [];
-    return parseLocalPurchases(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalPurchases(purchases: PurchaseRecord[]): void {
-  try {
-    if (!purchases.length) {
-      window.localStorage.removeItem(LOCAL_PURCHASES_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(LOCAL_PURCHASES_STORAGE_KEY, JSON.stringify(purchases));
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
 export default function PurchasesApp() {
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -638,6 +547,14 @@ export default function PurchasesApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     const timers = saveTimersRef.current;
     return () => {
       for (const timer of timers.values()) window.clearTimeout(timer);
@@ -655,66 +572,43 @@ export default function PurchasesApp() {
       importCommitInFlightRef.current.clear();
       setImportRowMetaById({});
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const [purchasesRes, materialsRes] = await Promise.all([
-          supabase
-            .from("purchases")
-            .select("*")
-            .eq("user_id", activeOwnerUserId),
-          supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
-        ]);
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-
-        if (purchasesRes.error) {
-          toast("error", purchasesRes.error.message);
-          setPurchases([]);
-        } else {
-          const rows = (purchasesRes.data ?? [])
-            .map((row) => rowToPurchase(row as DbPurchaseRow))
-            .map((row) => ({ ...row, currency: settings.baseCurrency }));
-          setPurchases(sortPurchasesForInitialLoad(rows));
-        }
-
-        if (materialsRes.error) {
-          toast("error", materialsRes.error.message);
-          setMaterials([]);
-        } else {
-          const mats = (materialsRes.data ?? []).map((row) => rowToMaterial(row as DbMaterialRow));
-          setMaterials(
-            mats.map((m) => ({
-              id: m.id,
-              name: m.name,
-              supplier: m.supplier,
-              unit: m.unit,
-              isActive: m.isActive,
-              lastPurchaseCostCents: m.lastPurchaseCostCents,
-              lastPurchaseDate: m.lastPurchaseDate,
-            })),
-          );
-        }
-
+        setMaterials([]);
+        setPurchases([]);
         hasHydratedRef.current = true;
         setLoading(false);
         return;
       }
 
-      const localMaterialRecords = readLocalMaterialRecords();
-      const baseMaterialRecords = localMaterialRecords.length ? localMaterialRecords : createDemoMaterials();
-      const baseMaterials = baseMaterialRecords.map(toMaterialOption);
-      if (!localMaterialRecords.length) writeLocalMaterialRecords(baseMaterialRecords);
-
-      const localPurchases = readLocalPurchases();
-      const nextPurchases = (localPurchases.length
-        ? localPurchases
-        : createDemoPurchases(baseMaterials, { currency: settings.baseCurrency })
-      ).map((row) => ({ ...row, currency: settings.baseCurrency }));
-      const sortedInitialPurchases = sortPurchasesForInitialLoad(nextPurchases);
-      if (!localPurchases.length) writeLocalPurchases(sortedInitialPurchases);
+      const [purchasesRes, materialsRes] = await Promise.all([
+        supabase
+          .from("purchases")
+          .select("*")
+          .eq("user_id", activeOwnerUserId),
+        supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
+      ]);
 
       if (cancelled) return;
-      setMaterials(baseMaterials);
-      setPurchases(sortedInitialPurchases);
+
+      if (purchasesRes.error) {
+        toast("error", purchasesRes.error.message);
+        setPurchases([]);
+      } else {
+        const rows = (purchasesRes.data ?? [])
+          .map((row) => rowToPurchase(row as DbPurchaseRow))
+          .map((row) => ({ ...row, currency: settings.baseCurrency }));
+        setPurchases(sortPurchasesForInitialLoad(rows));
+      }
+
+      if (materialsRes.error) {
+        toast("error", materialsRes.error.message);
+        setMaterials([]);
+      } else {
+        const mats = (materialsRes.data ?? []).map((row) => rowToMaterial(row as DbMaterialRow));
+        setMaterials(mats.map(toMaterialOption));
+      }
+
       hasHydratedRef.current = true;
       setLoading(false);
     }
@@ -725,64 +619,27 @@ export default function PurchasesApp() {
     };
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, settings.baseCurrency, supabase, toast]);
 
-  useEffect(() => {
-    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
-    const rowsToPersist = purchases.filter((row) => !(row.id in importRowMetaById));
-    writeLocalPurchases(rowsToPersist);
-  }, [dataAuthReady, importRowMetaById, isCloudMode, purchases]);
-
   const syncMaterialFromPurchase = useCallback(
     async (next: PurchaseRecord): Promise<void> => {
       if (!next.materialId) return;
       const updatedAt = new Date().toISOString();
 
-      if (isCloudMode && supabase) {
-        const { error } = await supabase
-          .from("materials")
-          .update({
-            supplier: next.store,
-            unit: next.unit,
-            last_purchase_cost_cents: next.unitCostCents,
-            last_purchase_date: next.purchaseDate || null,
-            updated_at: updatedAt,
-          })
-          .eq("id", next.materialId);
-        if (error) {
-          toast("error", `Material sync failed: ${error.message}`);
-        }
-        return;
+      if (!isCloudMode || !supabase) return;
+
+      const { error } = await supabase
+        .from("materials")
+        .update({
+          supplier: next.store,
+          unit: next.unit,
+          last_purchase_cost_cents: next.unitCostCents,
+          last_purchase_date: next.purchaseDate || null,
+          updated_at: updatedAt,
+        })
+        .eq("id", next.materialId);
+      if (error) {
+        toast("error", `Material sync failed: ${error.message}`);
       }
-
-      setMaterials((prev) => {
-        const updated = prev.map((item) =>
-          item.id === next.materialId
-            ? {
-                ...item,
-                supplier: next.store,
-                unit: next.unit,
-                lastPurchaseCostCents: next.unitCostCents,
-                lastPurchaseDate: next.purchaseDate,
-              }
-            : item,
-        );
-        return updated;
-      });
-
-      const localMaterials = readLocalMaterialRecords();
-      if (!localMaterials.length) return;
-      const nextMaterials = localMaterials.map((item) =>
-        item.id === next.materialId
-          ? {
-              ...item,
-              supplier: next.store,
-              unit: next.unit,
-              lastPurchaseCostCents: next.unitCostCents,
-              lastPurchaseDate: next.purchaseDate,
-              updatedAt,
-            }
-          : item,
-      );
-      writeLocalMaterialRecords(nextMaterials);
+      return;
     },
     [isCloudMode, supabase, toast],
   );
@@ -876,7 +733,6 @@ export default function PurchasesApp() {
       }
 
       if (changed && !isImportedRow && isCloudMode) schedulePersist(changed);
-      if (changed && !isImportedRow && !isCloudMode) void syncMaterialFromPurchase(changed);
       return next;
     });
   }
@@ -946,6 +802,10 @@ export default function PurchasesApp() {
     if (savingDraftPurchaseRef.current) return;
     if (!hasDraftPurchaseValues()) return;
     if (!isDraftPurchaseComplete(draftPurchase)) return;
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to add purchases.");
+      return;
+    }
 
     savingDraftPurchaseRef.current = true;
     setSavingDraftPurchase(true);
@@ -953,59 +813,48 @@ export default function PurchasesApp() {
     try {
       const draftRecord = buildPurchaseFromDraft("tmp");
 
-      if (isCloudMode && supabase && activeOwnerUserId) {
-        const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
-          currency: draftRecord.currency,
-          purchaseDate: draftRecord.purchaseDate,
-          materialId: draftRecord.materialId,
-          materialName: draftRecord.materialName,
-          description: draftRecord.description,
-          variation: draftRecord.variation,
-          usableQuantity: draftRecord.usableQuantity,
-          costCents: draftRecord.costCents,
-          marketplace: draftRecord.marketplace,
-          store: draftRecord.store,
-          supplier: draftRecord.supplier,
-          unit: draftRecord.unit,
-        });
-        insert.purchase_date = draftRecord.purchaseDate;
-        insert.material_id = draftRecord.materialId;
-        insert.material_name = draftRecord.materialName;
-        insert.description = draftRecord.description;
-        insert.variation = draftRecord.variation;
-        insert.supplier = draftRecord.supplier;
-        insert.store = draftRecord.store;
-        insert.quantity = draftRecord.quantity;
-        insert.usable_quantity = draftRecord.usableQuantity;
-        insert.unit = draftRecord.unit;
-        insert.unit_cost_cents = draftRecord.unitCostCents;
-        insert.total_cost_cents = draftRecord.totalCostCents;
-        insert.cost_cents = draftRecord.costCents;
-        insert.currency = draftRecord.currency;
-        insert.marketplace = draftRecord.marketplace;
+      const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
+        currency: draftRecord.currency,
+        purchaseDate: draftRecord.purchaseDate,
+        materialId: draftRecord.materialId,
+        materialName: draftRecord.materialName,
+        description: draftRecord.description,
+        variation: draftRecord.variation,
+        usableQuantity: draftRecord.usableQuantity,
+        costCents: draftRecord.costCents,
+        marketplace: draftRecord.marketplace,
+        store: draftRecord.store,
+        supplier: draftRecord.supplier,
+        unit: draftRecord.unit,
+      });
+      insert.purchase_date = draftRecord.purchaseDate;
+      insert.material_id = draftRecord.materialId;
+      insert.material_name = draftRecord.materialName;
+      insert.description = draftRecord.description;
+      insert.variation = draftRecord.variation;
+      insert.supplier = draftRecord.supplier;
+      insert.store = draftRecord.store;
+      insert.quantity = draftRecord.quantity;
+      insert.usable_quantity = draftRecord.usableQuantity;
+      insert.unit = draftRecord.unit;
+      insert.unit_cost_cents = draftRecord.unitCostCents;
+      insert.total_cost_cents = draftRecord.totalCostCents;
+      insert.cost_cents = draftRecord.costCents;
+      insert.currency = draftRecord.currency;
+      insert.marketplace = draftRecord.marketplace;
 
-        const { data, error } = await supabase.from("purchases").insert(insert).select("*");
-        if (error || !data?.[0]) {
-          toast("error", error?.message || "Could not create purchase.");
-          return;
-        }
-        const row = normalizePurchaseRow(
-          {
-            ...rowToPurchase(data[0] as DbPurchaseRow),
-            currency: settings.baseCurrency,
-          },
-          new Date().toISOString(),
-        );
-        setPurchases((prev) => [...prev, row]);
-        await syncMaterialFromPurchase(row);
-        setDraftPurchase(makeDraftPurchase());
-        setIsDraftPurchaseDateInputActive(false);
-        window.setTimeout(() => focusDraftMaterialSelect("auto"), 0);
-        toast("success", "Purchase added.");
+      const { data, error } = await supabase.from("purchases").insert(insert).select("*");
+      if (error || !data?.[0]) {
+        toast("error", error?.message || "Could not create purchase.");
         return;
       }
-
-      const row = buildPurchaseFromDraft(makeId("pur"));
+      const row = normalizePurchaseRow(
+        {
+          ...rowToPurchase(data[0] as DbPurchaseRow),
+          currency: settings.baseCurrency,
+        },
+        new Date().toISOString(),
+      );
       setPurchases((prev) => [...prev, row]);
       await syncMaterialFromPurchase(row);
       setDraftPurchase(makeDraftPurchase());
@@ -1020,7 +869,11 @@ export default function PurchasesApp() {
 
   async function deletePurchase(id: string) {
     const isImportedDraft = Boolean(importRowMetaByIdRef.current[id]);
-    if (isCloudMode && supabase && !isImportedDraft) {
+    if (!isImportedDraft) {
+      if (!isCloudMode || !supabase) {
+        toast("error", "Sign in with Google to delete purchases.");
+        return;
+      }
       const { error } = await supabase.from("purchases").delete().eq("id", id);
       if (error) {
         toast("error", error.message);
@@ -1142,69 +995,81 @@ export default function PurchasesApp() {
           new Date().toISOString(),
         );
 
-        if (isCloudMode && supabase && activeOwnerUserId) {
-          const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
-            currency: normalizedRow.currency,
-            purchaseDate: normalizedRow.purchaseDate,
-            materialId: normalizedRow.materialId,
-            materialName: normalizedRow.materialName,
-            description: normalizedRow.description,
-            variation: normalizedRow.variation,
-            usableQuantity: normalizedRow.usableQuantity,
-            costCents: normalizedRow.costCents,
-            marketplace: normalizedRow.marketplace,
-            store: normalizedRow.store,
-            supplier: normalizedRow.supplier,
-            unit: normalizedRow.unit,
+        if (!isCloudMode || !supabase || !activeOwnerUserId) {
+          toast("error", "Sign in with Google to save imported purchases.");
+          setImportRowMetaById((prev) => {
+            const current = prev[rowId];
+            if (!current) return prev;
+            return {
+              ...prev,
+              [rowId]: {
+                ...current,
+                status: "error",
+                invalidFields: validateImportedPurchaseRow(row),
+              },
+            };
           });
-          insert.purchase_date = normalizedRow.purchaseDate;
-          insert.material_id = normalizedRow.materialId;
-          insert.material_name = normalizedRow.materialName;
-          insert.description = normalizedRow.description;
-          insert.variation = normalizedRow.variation;
-          insert.supplier = normalizedRow.supplier;
-          insert.store = normalizedRow.store;
-          insert.quantity = normalizedRow.quantity;
-          insert.usable_quantity = normalizedRow.usableQuantity;
-          insert.unit = normalizedRow.unit;
-          insert.unit_cost_cents = normalizedRow.unitCostCents;
-          insert.total_cost_cents = normalizedRow.totalCostCents;
-          insert.cost_cents = normalizedRow.costCents;
-          insert.currency = normalizedRow.currency;
-          insert.marketplace = normalizedRow.marketplace;
-
-          const { data, error } = await supabase.from("purchases").insert(insert).select("*");
-          if (error || !data?.[0]) {
-            toast("error", error?.message || "Could not import purchase row.");
-            setImportRowMetaById((prev) => {
-              const current = prev[rowId];
-              if (!current) return prev;
-              return {
-                ...prev,
-                [rowId]: {
-                  ...current,
-                  status: "error",
-                  invalidFields: validateImportedPurchaseRow(row),
-                },
-              };
-            });
-            return;
-          }
-
-          const savedRow = normalizePurchaseRow(
-            {
-              ...rowToPurchase(data[0] as DbPurchaseRow),
-              currency: settings.baseCurrency,
-            },
-            new Date().toISOString(),
-          );
-
-          setPurchases((prev) => prev.map((item) => (item.id === rowId ? savedRow : item)));
-          await syncMaterialFromPurchase(savedRow);
-        } else {
-          setPurchases((prev) => prev.map((item) => (item.id === rowId ? normalizedRow : item)));
-          await syncMaterialFromPurchase(normalizedRow);
+          return;
         }
+
+        const insert = makeBlankPurchaseInsert(activeOwnerUserId, {
+          currency: normalizedRow.currency,
+          purchaseDate: normalizedRow.purchaseDate,
+          materialId: normalizedRow.materialId,
+          materialName: normalizedRow.materialName,
+          description: normalizedRow.description,
+          variation: normalizedRow.variation,
+          usableQuantity: normalizedRow.usableQuantity,
+          costCents: normalizedRow.costCents,
+          marketplace: normalizedRow.marketplace,
+          store: normalizedRow.store,
+          supplier: normalizedRow.supplier,
+          unit: normalizedRow.unit,
+        });
+        insert.purchase_date = normalizedRow.purchaseDate;
+        insert.material_id = normalizedRow.materialId;
+        insert.material_name = normalizedRow.materialName;
+        insert.description = normalizedRow.description;
+        insert.variation = normalizedRow.variation;
+        insert.supplier = normalizedRow.supplier;
+        insert.store = normalizedRow.store;
+        insert.quantity = normalizedRow.quantity;
+        insert.usable_quantity = normalizedRow.usableQuantity;
+        insert.unit = normalizedRow.unit;
+        insert.unit_cost_cents = normalizedRow.unitCostCents;
+        insert.total_cost_cents = normalizedRow.totalCostCents;
+        insert.cost_cents = normalizedRow.costCents;
+        insert.currency = normalizedRow.currency;
+        insert.marketplace = normalizedRow.marketplace;
+
+        const { data, error } = await supabase.from("purchases").insert(insert).select("*");
+        if (error || !data?.[0]) {
+          toast("error", error?.message || "Could not import purchase row.");
+          setImportRowMetaById((prev) => {
+            const current = prev[rowId];
+            if (!current) return prev;
+            return {
+              ...prev,
+              [rowId]: {
+                ...current,
+                status: "error",
+                invalidFields: validateImportedPurchaseRow(row),
+              },
+            };
+          });
+          return;
+        }
+
+        const savedRow = normalizePurchaseRow(
+          {
+            ...rowToPurchase(data[0] as DbPurchaseRow),
+            currency: settings.baseCurrency,
+          },
+          new Date().toISOString(),
+        );
+
+        setPurchases((prev) => prev.map((item) => (item.id === rowId ? savedRow : item)));
+        await syncMaterialFromPurchase(savedRow);
 
         setImportRowMetaById((prev) => {
           if (!(rowId in prev)) return prev;
@@ -1356,12 +1221,11 @@ export default function PurchasesApp() {
       } else {
         toast(
           "success",
-          `All ${importedRows.length} row(s) imported successfully. Saving to ${isCloudMode ? "cloud" : "local"}...`,
+          `All ${importedRows.length} row(s) imported successfully. Saving to cloud...`,
         );
       }
     },
     [
-      isCloudMode,
       marketplaceImportSelectOptions,
       materialById,
       materialImportSelectOptions,
@@ -1418,7 +1282,7 @@ export default function PurchasesApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
@@ -1436,7 +1300,7 @@ export default function PurchasesApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Purchases will stay local in this browser."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -1478,9 +1342,7 @@ export default function PurchasesApp() {
               <p className="font-mono text-xs text-muted">
                 {loading ? "Loading purchases..." : `${filteredPurchases.length} purchase(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">
-                {isCloudMode ? "Cloud mode" : "Local mode"}
-              </p>
+              <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -1923,7 +1785,7 @@ export default function PurchasesApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="purchases sync via Supabase"
-            guestLabel="saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

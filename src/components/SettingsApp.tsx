@@ -103,6 +103,14 @@ export default function SettingsApp() {
     };
   }, [supabase, toast]);
 
+  useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
   const {
     signedInUserId,
     signedInEmail,
@@ -121,7 +129,6 @@ export default function SettingsApp() {
   });
 
   const userId = signedInUserId;
-  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -249,7 +256,7 @@ export default function SettingsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettingsPage}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchPlaceholder="Search settings..."
         onQuickAdd={() => void onSave()}
         quickAddLabel={saving ? "Saving..." : "Save Settings"}
@@ -266,7 +273,7 @@ export default function SettingsApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Settings will remain local only."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -618,7 +625,7 @@ export default function SettingsApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="settings sync via Supabase"
-            guestLabel="settings saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

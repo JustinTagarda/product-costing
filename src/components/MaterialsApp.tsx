@@ -7,12 +7,9 @@ import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
-import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import {
-  createDemoMaterials,
-  makeBlankMaterial,
   sortMaterialsByNameAsc,
   type MaterialRecord,
 } from "@/lib/materials";
@@ -38,8 +35,6 @@ type DraftMaterialRow = {
 const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 const inputMono = "tabular-nums font-mono tracking-tight";
-const LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
-const LOCAL_PURCHASES_STORAGE_KEY = "product-costing:purchases:local:v1";
 const MATERIAL_CODE_PREFIX = "MA-";
 const STANDARD_USABLE_UNITS = [
   "each",
@@ -147,17 +142,6 @@ function toFiniteNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function readLocalPurchaseRows(): unknown[] {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_PURCHASES_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function getObjectString(source: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
     const value = source[key];
@@ -211,52 +195,6 @@ function computeWeightedAverageCostByMaterialId(
     computed[materialId] = Math.max(0, Math.round(total.costCents / total.usableQuantity));
   }
   return computed;
-}
-
-function parseLocalMaterials(raw: unknown): MaterialRecord[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((item) => item && typeof item === "object")
-    .map((item) => {
-      const row = item as Partial<MaterialRecord>;
-      const fallback = makeBlankMaterial(typeof row.id === "string" ? row.id : makeId("mat"));
-      return {
-        ...fallback,
-        ...row,
-        unit: normalizeUsableUnit(typeof row.unit === "string" ? row.unit : fallback.unit),
-        unitCostCents: (() => {
-          const n = Number(row.unitCostCents);
-          return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback.unitCostCents;
-        })(),
-        lastPurchaseCostCents: (() => {
-          const n = Number(row.lastPurchaseCostCents);
-          return Number.isFinite(n) ? Math.max(0, Math.round(n)) : fallback.lastPurchaseCostCents;
-        })(),
-        isActive: row.isActive !== undefined ? Boolean(row.isActive) : true,
-      };
-    });
-}
-
-function readLocalMaterials(): MaterialRecord[] {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return [];
-    return parseLocalMaterials(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalMaterials(materials: MaterialRecord[]) {
-  try {
-    if (!materials.length) {
-      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(materials));
-  } catch {
-    // Ignore localStorage failures.
-  }
 }
 
 function cardClassName(): string {
@@ -401,6 +339,14 @@ export default function MaterialsApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     const timers = saveTimersRef.current;
     return () => {
       for (const timer of timers.values()) window.clearTimeout(timer);
@@ -416,66 +362,54 @@ export default function MaterialsApp() {
       hasHydratedRef.current = false;
       setLoading(true);
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const [materialsRes, purchasesRes] = await Promise.all([
-          supabase
-            .from("materials")
-            .select("*")
-            .eq("user_id", activeOwnerUserId)
-            .order("name", { ascending: true }),
-          supabase
-            .from("purchases")
-            .select("material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
-            .eq("user_id", activeOwnerUserId)
-            .not("material_id", "is", null),
-        ]);
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-        if (materialsRes.error) {
-          toast("error", materialsRes.error.message);
-          setMaterials([]);
-          hasHydratedRef.current = true;
-          setLoading(false);
-          return;
-        }
-
-        if (purchasesRes.error) toast("error", purchasesRes.error.message);
-
-        const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
-          purchasesRes.data ?? [],
-        );
-
-        setMaterials(
-          sortMaterialsByNameAsc(
-            (materialsRes.data ?? []).map((row) => {
-              const material = rowToMaterial(row as DbMaterialRow);
-              return {
-                ...material,
-                unit: normalizeUsableUnit(material.unit),
-                unitCostCents: weightedAverageCostByMaterialId[material.id] ?? 0,
-              };
-            }),
-          ),
-        );
+        setMaterials([]);
         hasHydratedRef.current = true;
         setLoading(false);
         return;
       }
 
-      const localMaterials = readLocalMaterials();
-      const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
-        readLocalPurchaseRows(),
-      );
-      const next = sortMaterialsByNameAsc(
-        (localMaterials.length ? localMaterials : createDemoMaterials()).map((row) => ({
-          ...row,
-          unit: normalizeUsableUnit(row.unit),
-          unitCostCents: weightedAverageCostByMaterialId[row.id] ?? 0,
-        })),
-      );
-      writeLocalMaterials(next);
+      const [materialsRes, purchasesRes] = await Promise.all([
+        supabase
+          .from("materials")
+          .select("*")
+          .eq("user_id", activeOwnerUserId)
+          .order("name", { ascending: true }),
+        supabase
+          .from("purchases")
+          .select("material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
+          .eq("user_id", activeOwnerUserId)
+          .not("material_id", "is", null),
+      ]);
+
       if (cancelled) return;
-      setMaterials(next);
+      if (materialsRes.error) {
+        toast("error", materialsRes.error.message);
+        setMaterials([]);
+        hasHydratedRef.current = true;
+        setLoading(false);
+        return;
+      }
+
+      if (purchasesRes.error) toast("error", purchasesRes.error.message);
+
+      const weightedAverageCostByMaterialId = computeWeightedAverageCostByMaterialId(
+        purchasesRes.data ?? [],
+      );
+
+      setMaterials(
+        sortMaterialsByNameAsc(
+          (materialsRes.data ?? []).map((row) => {
+            const material = rowToMaterial(row as DbMaterialRow);
+            return {
+              ...material,
+              unit: normalizeUsableUnit(material.unit),
+              unitCostCents: weightedAverageCostByMaterialId[material.id] ?? 0,
+            };
+          }),
+        ),
+      );
       hasHydratedRef.current = true;
       setLoading(false);
     }
@@ -485,11 +419,6 @@ export default function MaterialsApp() {
       cancelled = true;
     };
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
-
-  useEffect(() => {
-    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
-    writeLocalMaterials(materials);
-  }, [dataAuthReady, isCloudMode, materials]);
 
   useEffect(() => {
     const pendingId = pendingScrollMaterialIdRef.current;
@@ -538,6 +467,10 @@ export default function MaterialsApp() {
   async function commitDraftMaterial(): Promise<void> {
     const trimmedName = draftMaterial.name.trim();
     if (!trimmedName || savingDraftMaterialRef.current || duplicateNameModal) return;
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to add materials.");
+      return;
+    }
 
     const normalizedName = trimmedName.toLowerCase();
     const hasDuplicateName = materials.some(
@@ -564,67 +497,44 @@ export default function MaterialsApp() {
         MATERIAL_CODE_PREFIX,
       );
 
-      if (isCloudMode && supabase && activeOwnerUserId) {
-        for (let offset = 0; offset < 1000; offset += 1) {
-          const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
-          const { data: existing, error: lookupError } = await supabase
-            .from("materials")
-            .select("id")
-            .eq("user_id", activeOwnerUserId)
-            .eq("code", code)
-            .limit(1);
-          if (lookupError) {
-            toast("error", lookupError.message);
-            return;
-          }
-          if ((existing ?? []).length > 0) continue;
+      for (let offset = 0; offset < 1000; offset += 1) {
+        const code = formatCode(MATERIAL_CODE_PREFIX, nextCodeNumber + offset);
+        const { data: existing, error: lookupError } = await supabase
+          .from("materials")
+          .select("id")
+          .eq("user_id", activeOwnerUserId)
+          .eq("code", code)
+          .limit(1);
+        if (lookupError) {
+          toast("error", lookupError.message);
+          return;
+        }
+        if ((existing ?? []).length > 0) continue;
 
-          const insert = makeBlankMaterialInsert(activeOwnerUserId, { defaultUnit: normalizedUnit });
-          insert.code = code;
-          insert.name = trimmedName;
-          insert.unit = normalizedUnit;
-          insert.weighted_average_cost_cents = unitCostCents;
-          insert.is_active = isActive;
+        const insert = makeBlankMaterialInsert(activeOwnerUserId, { defaultUnit: normalizedUnit });
+        insert.code = code;
+        insert.name = trimmedName;
+        insert.unit = normalizedUnit;
+        insert.weighted_average_cost_cents = unitCostCents;
+        insert.is_active = isActive;
 
-          const { data, error } = await supabase.from("materials").insert(insert).select("*");
-          if (!error && data?.[0]) {
-            const row = rowToMaterial(data[0] as DbMaterialRow);
-            pendingScrollMaterialIdRef.current = row.id;
-            setMaterials((prev) => [...prev, row]);
-            setDraftMaterial(makeDraftMaterial());
-            window.setTimeout(() => focusDraftNameInput("auto"), 0);
-            toast("success", "Material added.");
-            return;
-          }
-
-          if (error && isDuplicateKeyError(error)) continue;
-          toast("error", error?.message || "Could not create material.");
+        const { data, error } = await supabase.from("materials").insert(insert).select("*");
+        if (!error && data?.[0]) {
+          const row = rowToMaterial(data[0] as DbMaterialRow);
+          pendingScrollMaterialIdRef.current = row.id;
+          setMaterials((prev) => [...prev, row]);
+          setDraftMaterial(makeDraftMaterial());
+          window.setTimeout(() => focusDraftNameInput("auto"), 0);
+          toast("success", "Material added.");
           return;
         }
 
-        toast("error", "Could not create material. Failed to generate a unique code.");
+        if (error && isDuplicateKeyError(error)) continue;
+        toast("error", error?.message || "Could not create material.");
         return;
       }
 
-      setMaterials((prev) => {
-        const row = makeBlankMaterial(makeId("mat"));
-        row.name = trimmedName;
-        row.unit = normalizedUnit;
-        row.unitCostCents = unitCostCents;
-        row.isActive = isActive;
-        row.code = formatCode(
-          MATERIAL_CODE_PREFIX,
-          getNextCodeNumber(
-            prev.map((item) => item.code),
-            MATERIAL_CODE_PREFIX,
-          ),
-        );
-        pendingScrollMaterialIdRef.current = row.id;
-        return [...prev, row];
-      });
-      setDraftMaterial(makeDraftMaterial());
-      window.setTimeout(() => focusDraftNameInput("auto"), 0);
-      toast("success", "Material added.");
+      toast("error", "Could not create material. Failed to generate a unique code.");
     } finally {
       savingDraftMaterialRef.current = false;
       setSavingDraftMaterial(false);
@@ -632,12 +542,14 @@ export default function MaterialsApp() {
   }
 
   async function deleteMaterial(id: string) {
-    if (isCloudMode && supabase) {
-      const { error } = await supabase.from("materials").delete().eq("id", id);
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    if (!isCloudMode || !supabase) {
+      toast("error", "Sign in with Google to delete materials.");
+      return;
+    }
+    const { error } = await supabase.from("materials").delete().eq("id", id);
+    if (error) {
+      toast("error", error.message);
+      return;
     }
     setMaterials((prev) => prev.filter((row) => row.id !== id));
     toast("success", "Material deleted.");
@@ -692,7 +604,7 @@ export default function MaterialsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
@@ -710,7 +622,7 @@ export default function MaterialsApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Materials will stay local in this browser."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -741,9 +653,7 @@ export default function MaterialsApp() {
               <p className="font-mono text-xs text-muted">
                 {loading ? "Loading materials..." : `${filteredMaterials.length} material(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">
-                {isCloudMode ? "Cloud mode" : "Local mode"}
-              </p>
+              <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -946,7 +856,7 @@ export default function MaterialsApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="materials sync via Supabase"
-            guestLabel="saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

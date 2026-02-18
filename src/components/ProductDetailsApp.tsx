@@ -4,10 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals } from "@/lib/costing";
-import type { CostSheet, StoredData } from "@/lib/costing";
+import type { CostSheet } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { currencyCodeFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
-import { parseStoredDataJson } from "@/lib/importExport";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -22,24 +21,12 @@ import { useAppSettings } from "@/lib/useAppSettings";
 type Notice = { kind: "info" | "success" | "error"; message: string };
 type TabKey = "overview" | "cost-breakdown" | "history" | "notes";
 
-const LOCAL_STORAGE_KEY = "product-costing:local:v1";
-
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
     "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
     "backdrop-blur-md",
   ].join(" ");
-}
-
-function readLocalSheets(): StoredData | null {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return parseStoredDataJson(raw);
-  } catch {
-    return null;
-  }
 }
 
 export default function ProductDetailsApp() {
@@ -158,38 +145,44 @@ export default function ProductDetailsApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     if (!dataAuthReady || !productId) return;
     let cancelled = false;
 
     async function loadProduct() {
       setLoading(true);
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const { data, error } = await supabase
-          .from("cost_sheets")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .eq("id", productId)
-          .maybeSingle();
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-
-        if (error) {
-          toast("error", error.message);
-          setSheet(null);
-          setLoading(false);
-          return;
-        }
-
-        setSheet(data ? rowToSheet(data as DbCostSheetRow) : null);
+        setSheet(null);
         setLoading(false);
         return;
       }
 
-      const local = readLocalSheets();
-      const found = local?.sheets?.find((item) => item.id === productId) ?? null;
+      const { data, error } = await supabase
+        .from("cost_sheets")
+        .select("*")
+        .eq("user_id", activeOwnerUserId)
+        .eq("id", productId)
+        .maybeSingle();
+
       if (cancelled) return;
-      setSheet(found);
+
+      if (error) {
+        toast("error", error.message);
+        setSheet(null);
+        setLoading(false);
+        return;
+      }
+
+      setSheet(data ? rowToSheet(data as DbCostSheetRow) : null);
       setLoading(false);
     }
 
@@ -265,7 +258,7 @@ export default function ProductDetailsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Filter product lines, categories, notes"
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         profileLabel={session?.user?.email || "Profile"}
       />
 
@@ -279,7 +272,7 @@ export default function ProductDetailsApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Product detail data is local only."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -434,7 +427,7 @@ export default function ProductDetailsApp() {
                     <InfoCard label="Last Updated" value={formatAppDate(sheet.updatedAt)} />
                     <InfoCard
                       label="Mode"
-                      value={isCloudMode ? "Cloud sync (Supabase)" : "Local browser storage"}
+                      value="Cloud sync (Supabase)"
                     />
                     <InfoCard label="Items" value={`${sheet.materials.length + sheet.labor.length + sheet.overhead.length} line(s)`} />
                   </div>
@@ -456,7 +449,7 @@ export default function ProductDetailsApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="product detail sync via Supabase"
-            guestLabel="product details loaded from localStorage"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

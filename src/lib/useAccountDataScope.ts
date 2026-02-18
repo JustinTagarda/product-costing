@@ -16,37 +16,11 @@ type UseAccountDataScopeArgs = {
   onError?: (message: string) => void;
 };
 
-const STORAGE_PREFIX = "product-costing:data-owner:";
-
 type SharedAccountRpcRow = {
   owner_user_id: string;
   owner_email: string | null;
   shared_at: string | null;
 };
-
-function storageKeyForUser(userId: string): string {
-  return `${STORAGE_PREFIX}${userId}`;
-}
-
-function readStoredOwnerId(userId: string): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const value = window.localStorage.getItem(storageKeyForUser(userId));
-    if (!value) return null;
-    return value.trim() || null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredOwnerId(userId: string, ownerUserId: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(storageKeyForUser(userId), ownerUserId);
-  } catch {
-    // Ignore storage failures.
-  }
-}
 
 export function useAccountDataScope({
   supabase,
@@ -112,13 +86,8 @@ export function useAccountDataScope({
       );
 
       const validOwnerIds = new Set([signedInUserId, ...deduped.map((row) => row.ownerUserId)]);
-      const storedOwnerId = readStoredOwnerId(signedInUserId);
-      const nextOwnerId =
-        storedOwnerId && validOwnerIds.has(storedOwnerId) ? storedOwnerId : signedInUserId;
-
       setSharedAccounts(deduped);
-      setActiveOwnerUserId(nextOwnerId);
-      writeStoredOwnerId(signedInUserId, nextOwnerId);
+      setActiveOwnerUserId((prev) => (prev && validOwnerIds.has(prev) ? prev : signedInUserId));
       setScopeReady(true);
 
       if (deduped.length > 0 && promptedUserIdRef.current !== signedInUserId) {
@@ -135,7 +104,6 @@ export function useAccountDataScope({
   const selectOwnData = useCallback(() => {
     if (!signedInUserId) return;
     setActiveOwnerUserId(signedInUserId);
-    writeStoredOwnerId(signedInUserId, signedInUserId);
     promptedUserIdRef.current = signedInUserId;
     setShowSelectionModal(false);
   }, [signedInUserId]);
@@ -144,7 +112,6 @@ export function useAccountDataScope({
     (ownerUserId: string) => {
       if (!signedInUserId) return;
       setActiveOwnerUserId(ownerUserId);
-      writeStoredOwnerId(signedInUserId, ownerUserId);
       promptedUserIdRef.current = signedInUserId;
       setShowSelectionModal(false);
     },

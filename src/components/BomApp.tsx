@@ -12,18 +12,10 @@ import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
-  createDemoMaterials,
-  readLocalMaterialRecords,
-  writeLocalMaterialRecords,
   type MaterialRecord,
 } from "@/lib/materials";
 import {
-  createDemoBoms,
-  makeBlankBom,
   makeBlankBomLine,
-  readLocalBoms,
-  sortBomsByUpdatedAtDesc,
-  writeLocalBoms,
   type BomLine,
   type BomRecord,
 } from "@/lib/bom";
@@ -284,6 +276,14 @@ export default function BomApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     const itemTimers = itemSaveTimersRef.current;
     const lineTimers = lineSaveTimersRef.current;
     return () => {
@@ -302,66 +302,57 @@ export default function BomApp() {
       hasHydratedRef.current = false;
       setLoading(true);
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const [itemsRes, linesRes, materialsRes] = await Promise.all([
-          supabase
-            .from("bom_items")
-            .select("*")
-            .eq("user_id", activeOwnerUserId)
-            .order("updated_at", { ascending: false }),
-          supabase
-            .from("bom_item_lines")
-            .select("*")
-            .eq("user_id", activeOwnerUserId)
-            .order("sort_order", { ascending: true }),
-          supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
-        ]);
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-
-        if (materialsRes.error) {
-          toast("error", materialsRes.error.message);
-          setMaterials([]);
-        } else {
-          const nextMaterials = ((materialsRes.data ?? []) as DbMaterialRow[]).map((row) =>
-            toMaterialOption(rowToMaterial(row)),
-          );
-          setMaterials(nextMaterials);
-        }
-
-        if (itemsRes.error || linesRes.error) {
-          toast("error", itemsRes.error?.message || linesRes.error?.message || "Could not load BOM.");
-          setBoms([]);
-          setSelectedId(null);
-        } else {
-          const nextBoms = combineBomRows(
-            (itemsRes.data ?? []) as DbBomItemRow[],
-            (linesRes.data ?? []) as DbBomLineRow[],
-          );
-          setBoms(nextBoms);
-          setSelectedId((prev) =>
-            prev && nextBoms.some((item) => item.id === prev) ? prev : (nextBoms[0]?.id ?? null),
-          );
-        }
-
+        setMaterials([]);
+        setBoms([]);
+        setSelectedId(null);
         hasHydratedRef.current = true;
         setLoading(false);
         return;
       }
 
-      const localMaterials = readLocalMaterialRecords();
-      const baseMaterialRecords = localMaterials.length ? localMaterials : createDemoMaterials();
-      if (!localMaterials.length) writeLocalMaterialRecords(baseMaterialRecords);
-      const baseMaterials = baseMaterialRecords.map(toMaterialOption);
-
-      const localBoms = readLocalBoms();
-      const nextBoms = localBoms.length ? sortBomsByUpdatedAtDesc(localBoms) : createDemoBoms(baseMaterials);
-      if (!localBoms.length) writeLocalBoms(nextBoms);
+      const [itemsRes, linesRes, materialsRes] = await Promise.all([
+        supabase
+          .from("bom_items")
+          .select("*")
+          .eq("user_id", activeOwnerUserId)
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("bom_item_lines")
+          .select("*")
+          .eq("user_id", activeOwnerUserId)
+          .order("sort_order", { ascending: true }),
+        supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
+      ]);
 
       if (cancelled) return;
-      setMaterials(baseMaterials);
-      setBoms(nextBoms);
-      setSelectedId(nextBoms[0]?.id ?? null);
+
+      if (materialsRes.error) {
+        toast("error", materialsRes.error.message);
+        setMaterials([]);
+      } else {
+        const nextMaterials = ((materialsRes.data ?? []) as DbMaterialRow[]).map((row) =>
+          toMaterialOption(rowToMaterial(row)),
+        );
+        setMaterials(nextMaterials);
+      }
+
+      if (itemsRes.error || linesRes.error) {
+        toast("error", itemsRes.error?.message || linesRes.error?.message || "Could not load BOM.");
+        setBoms([]);
+        setSelectedId(null);
+      } else {
+        const nextBoms = combineBomRows(
+          (itemsRes.data ?? []) as DbBomItemRow[],
+          (linesRes.data ?? []) as DbBomLineRow[],
+        );
+        setBoms(nextBoms);
+        setSelectedId((prev) =>
+          prev && nextBoms.some((item) => item.id === prev) ? prev : (nextBoms[0]?.id ?? null),
+        );
+      }
+
       hasHydratedRef.current = true;
       setLoading(false);
     }
@@ -371,11 +362,6 @@ export default function BomApp() {
       cancelled = true;
     };
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
-
-  useEffect(() => {
-    if (!dataAuthReady || isCloudMode || !hasHydratedRef.current) return;
-    writeLocalBoms(boms);
-  }, [boms, dataAuthReady, isCloudMode]);
 
   async function persistBomItem(next: BomRecord): Promise<void> {
     if (!isCloudMode || !supabase) return;
@@ -447,6 +433,10 @@ export default function BomApp() {
   }
 
   async function createBom(): Promise<void> {
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to manage BOM.");
+      return;
+    }
     const defaults = {
       name: "New BOM",
       itemType: "part" as const,
@@ -454,82 +444,65 @@ export default function BomApp() {
       outputUnit: settings.defaultMaterialUnit,
     };
 
-    if (isCloudMode && supabase && activeOwnerUserId) {
-      const insert = makeBlankBomItemInsert(activeOwnerUserId, defaults);
-      const { data, error } = await supabase.from("bom_items").insert(insert).select("*");
-      if (error || !data?.[0]) {
-        toast("error", error?.message || "Could not create BOM.");
-        return;
-      }
-      const itemRow = data[0] as DbBomItemRow;
-      const lineInsert = makeBlankBomLineInsert(activeOwnerUserId, itemRow.id, 0, {
-        unit: settings.defaultMaterialUnit,
-      });
-      const { data: lineData, error: lineError } = await supabase
-        .from("bom_item_lines")
-        .insert(lineInsert)
-        .select("*");
-      if (lineError || !lineData?.[0]) {
-        toast("error", lineError?.message || "Could not create BOM line.");
-        return;
-      }
-      const next = combineBomRows([itemRow], [lineData[0] as DbBomLineRow])[0];
-      if (!next) return;
-      setBoms((prev) => [next, ...prev]);
-      setSelectedId(next.id);
-      toast("success", "BOM created.");
+    const insert = makeBlankBomItemInsert(activeOwnerUserId, defaults);
+    const { data, error } = await supabase.from("bom_items").insert(insert).select("*");
+    if (error || !data?.[0]) {
+      toast("error", error?.message || "Could not create BOM.");
       return;
     }
-
-    const row = makeBlankBom(makeId("bom"), defaults);
-    setBoms((prev) => [row, ...prev]);
-    setSelectedId(row.id);
-    toast("success", "Local BOM created.");
+    const itemRow = data[0] as DbBomItemRow;
+    const lineInsert = makeBlankBomLineInsert(activeOwnerUserId, itemRow.id, 0, {
+      unit: settings.defaultMaterialUnit,
+    });
+    const { data: lineData, error: lineError } = await supabase
+      .from("bom_item_lines")
+      .insert(lineInsert)
+      .select("*");
+    if (lineError || !lineData?.[0]) {
+      toast("error", lineError?.message || "Could not create BOM line.");
+      return;
+    }
+    const next = combineBomRows([itemRow], [lineData[0] as DbBomLineRow])[0];
+    if (!next) return;
+    setBoms((prev) => [next, ...prev]);
+    setSelectedId(next.id);
+    toast("success", "BOM created.");
   }
 
   async function deleteBom(id: string): Promise<void> {
+    if (!isCloudMode || !supabase) {
+      toast("error", "Sign in with Google to manage BOM.");
+      return;
+    }
     const row = bomById.get(id);
     const ok = window.confirm(`Delete "${row?.name || "Untitled BOM"}"?`);
     if (!ok) return;
-    if (isCloudMode && supabase) {
-      const { error } = await supabase.from("bom_items").delete().eq("id", id);
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const { error } = await supabase.from("bom_items").delete().eq("id", id);
+    if (error) {
+      toast("error", error.message);
+      return;
     }
     setBoms((prev) => prev.filter((item) => item.id !== id));
     toast("success", "BOM deleted.");
   }
 
   async function addLine(): Promise<void> {
-    if (!selectedBom) return;
-    const now = new Date().toISOString();
-    if (isCloudMode && supabase && activeOwnerUserId) {
-      const insert = makeBlankBomLineInsert(activeOwnerUserId, selectedBom.id, selectedBom.lines.length, {
-        unit: settings.defaultMaterialUnit,
-      });
-      const { data, error } = await supabase.from("bom_item_lines").insert(insert).select("*");
-      if (error || !data?.[0]) {
-        toast("error", error?.message || "Could not add line.");
-        return;
-      }
-      const line = rowToBomLine(data[0] as DbBomLineRow);
-      setBoms((prev) =>
-        prev.map((item) =>
-          item.id === selectedBom.id
-            ? { ...item, lines: reindexLines([...item.lines, line]), updatedAt: now }
-            : item,
-        ),
-      );
-      toast("success", "BOM line added.");
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to manage BOM.");
       return;
     }
+    if (!selectedBom) return;
+    const now = new Date().toISOString();
 
-    const line = makeBlankBomLine(makeId("bomline"), {
-      sortOrder: selectedBom.lines.length,
+    const insert = makeBlankBomLineInsert(activeOwnerUserId, selectedBom.id, selectedBom.lines.length, {
       unit: settings.defaultMaterialUnit,
     });
+    const { data, error } = await supabase.from("bom_item_lines").insert(insert).select("*");
+    if (error || !data?.[0]) {
+      toast("error", error?.message || "Could not add line.");
+      return;
+    }
+    const line = rowToBomLine(data[0] as DbBomLineRow);
     setBoms((prev) =>
       prev.map((item) =>
         item.id === selectedBom.id
@@ -541,13 +514,15 @@ export default function BomApp() {
   }
 
   async function removeLine(lineId: string): Promise<void> {
+    if (!isCloudMode || !supabase) {
+      toast("error", "Sign in with Google to manage BOM.");
+      return;
+    }
     if (!selectedBom) return;
-    if (isCloudMode && supabase) {
-      const { error } = await supabase.from("bom_item_lines").delete().eq("id", lineId);
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const { error } = await supabase.from("bom_item_lines").delete().eq("id", lineId);
+    if (error) {
+      toast("error", error.message);
+      return;
     }
     const now = new Date().toISOString();
     setBoms((prev) =>
@@ -605,7 +580,7 @@ export default function BomApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search BOM..."
@@ -623,7 +598,7 @@ export default function BomApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. BOM records stay local in this browser."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -653,7 +628,7 @@ export default function BomApp() {
               <p className="font-mono text-xs text-muted">
                 {loading ? "Loading BOM..." : `${filteredBoms.length} BOM record(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">{isCloudMode ? "Cloud mode" : "Local mode"}</p>
+              <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-[980px] w-full text-left text-sm">
@@ -879,7 +854,7 @@ export default function BomApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="BOM sync via Supabase"
-            guestLabel="saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

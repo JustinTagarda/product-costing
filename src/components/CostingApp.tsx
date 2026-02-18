@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
-import { computeTotals, createDemoSheet, makeBlankSheet, makeId } from "@/lib/costing";
+import { computeTotals, makeId } from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
@@ -28,7 +28,6 @@ import {
   type DbCostSheetInsert,
   type DbCostSheetRow,
 } from "@/lib/supabase/costSheets";
-import { createDemoMaterials, readLocalMaterialRecords, sortMaterialsByNameAsc } from "@/lib/materials";
 import { rowToMaterial, type DbMaterialRow } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -46,7 +45,6 @@ const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
 
 const inputMono = "tabular-nums font-mono tracking-tight";
-const LOCAL_STORAGE_KEY = "product-costing:local:v1";
 const PRODUCT_CODE_PREFIX = "PR-";
 
 function hasNewSheetQueryParam(): boolean {
@@ -130,37 +128,6 @@ function toMaterialOptionFromRow(row: DbMaterialRow): MaterialOption {
     unitCostCents: material.unitCostCents,
     isActive: material.isActive,
   };
-}
-
-function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
-  return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-}
-
-function readLocalSheets(): StoredData | null {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return parseStoredDataJson(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalSheets(sheets: CostSheet[], selectedId: string | null): void {
-  try {
-    if (!sheets.length) {
-      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-      return;
-    }
-    const payload: StoredData = {
-      version: 1,
-      sheets,
-      selectedId: selectedId ?? undefined,
-    };
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore storage quota/private mode failures.
-  }
 }
 
 export default function CostingApp() {
@@ -299,7 +266,7 @@ export default function CostingApp() {
   }, []);
 
   const fetchSheetsForUser = useCallback(
-    async (ownerUserId: string, seedDemoIfEmpty: boolean): Promise<CostSheet[]> => {
+    async (ownerUserId: string): Promise<CostSheet[]> => {
       if (!supabase) return [];
 
       const { data: rows, error } = await supabase
@@ -313,42 +280,9 @@ export default function CostingApp() {
         return [];
       }
 
-      const normalized = (rows ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
-      if (normalized.length > 0) return normalized;
-      if (!seedDemoIfEmpty) return [];
-
-      // First run: create a deterministic demo sheet for the user.
-      const demo = createDemoSheet();
-      demo.currency = settingsCurrencyCode;
-      const demoInsert: DbCostSheetInsert = {
-        user_id: ownerUserId,
-        name: demo.name,
-        sku: demo.sku,
-        currency: settingsCurrencyCode,
-        unit_name: demo.unitName,
-        batch_size: demo.batchSize,
-        waste_pct: demo.wastePct,
-        markup_pct: demo.markupPct,
-        tax_pct: demo.taxPct,
-        materials: demo.materials,
-        labor: demo.labor,
-        overhead: demo.overhead,
-        notes: demo.notes,
-      };
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("cost_sheets")
-        .insert(demoInsert)
-        .select("*");
-
-      if (insertError) {
-        toast("error", insertError.message);
-        return [];
-      }
-
-      return (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+      return (rows ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
     },
-    [settingsCurrencyCode, supabase, toast],
+    [supabase, toast],
   );
 
   useEffect(() => {
@@ -359,39 +293,23 @@ export default function CostingApp() {
       hasHydratedSheetsRef.current = false;
       setLoadingSheets(true);
 
-      if (isCloudMode && activeOwnerUserId) {
-        const nextSheets = await fetchSheetsForUser(activeOwnerUserId, !requestNewSheetFromQuery);
+      if (!isCloudMode || !activeOwnerUserId) {
         if (cancelled) return;
-        setSheets(nextSheets);
-        setSelectedId((prev) => {
-          if (prev && nextSheets.some((s) => s.id === prev)) return prev;
-          return nextSheets[0]?.id ?? null;
-        });
+        setSheets([]);
+        setSelectedId(null);
         hasHydratedSheetsRef.current = true;
         setLoadingSheets(false);
         return;
       }
 
-      const localData = readLocalSheets();
-      const nextSheets =
-        localData?.sheets?.length
-          ? sortSheetsByUpdatedAtDesc(localData.sheets)
-          : requestNewSheetFromQuery
-            ? []
-            : (() => {
-                const demoSheet = createDemoSheet();
-                demoSheet.currency = settingsCurrencyCode;
-                return [demoSheet];
-              })();
-      const nextSelectedId =
-        localData?.selectedId && nextSheets.some((s) => s.id === localData.selectedId)
-          ? localData.selectedId
-          : nextSheets[0]?.id ?? null;
+      const nextSheets = await fetchSheetsForUser(activeOwnerUserId);
 
       if (cancelled) return;
       setSheets(nextSheets);
-      setSelectedId(nextSelectedId);
-      if (!localData?.sheets?.length && nextSheets.length > 0) writeLocalSheets(nextSheets, nextSelectedId);
+      setSelectedId((prev) => {
+        if (prev && nextSheets.some((sheet) => sheet.id === prev)) return prev;
+        return nextSheets[0]?.id ?? null;
+      });
       hasHydratedSheetsRef.current = true;
       setLoadingSheets(false);
     }
@@ -400,41 +318,31 @@ export default function CostingApp() {
     return () => {
       cancelled = true;
     };
-  }, [activeOwnerUserId, dataAuthReady, fetchSheetsForUser, isCloudMode, requestNewSheetFromQuery, settingsCurrencyCode]);
+  }, [activeOwnerUserId, dataAuthReady, fetchSheetsForUser, isCloudMode]);
 
   useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadMaterials() {
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const { data, error } = await supabase
-          .from("materials")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("name", { ascending: true });
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-        if (error) {
-          toast("error", error.message);
-          setMaterials([]);
-          return;
-        }
-        setMaterials(((data ?? []) as DbMaterialRow[]).map(toMaterialOptionFromRow));
+        setMaterials([]);
         return;
       }
 
-      const localMaterials = readLocalMaterialRecords();
-      const baseMaterials = localMaterials.length ? sortMaterialsByNameAsc(localMaterials) : createDemoMaterials();
+      const { data, error } = await supabase
+        .from("materials")
+        .select("*")
+        .eq("user_id", activeOwnerUserId)
+        .order("name", { ascending: true });
       if (cancelled) return;
-      setMaterials(
-        baseMaterials.map((item) => ({
-          id: item.id,
-          name: item.name,
-          unit: item.unit,
-          unitCostCents: item.unitCostCents,
-          isActive: item.isActive,
-        })),
-      );
+      if (error) {
+        toast("error", error.message);
+        setMaterials([]);
+        return;
+      }
+      setMaterials(((data ?? []) as DbMaterialRow[]).map(toMaterialOptionFromRow));
     }
 
     void loadMaterials();
@@ -442,11 +350,6 @@ export default function CostingApp() {
       cancelled = true;
     };
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
-
-  useEffect(() => {
-    if (!dataAuthReady || isCloudMode || !hasHydratedSheetsRef.current) return;
-    writeLocalSheets(sheets, selectedId);
-  }, [dataAuthReady, isCloudMode, selectedId, sheets]);
 
   const selectedSheet = useMemo(() => {
     if (!sheets.length) return null;
@@ -515,18 +418,6 @@ export default function CostingApp() {
     }
   }
 
-  async function continueAsGuest() {
-    if (session && supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
-    }
-    setShowWelcomeGate(false);
-    toast("info", "Continuing as guest. Data will be saved in this browser.");
-  }
-
   async function signOut() {
     if (supabase) {
       const { error } = await supabase.auth.signOut();
@@ -545,61 +436,53 @@ export default function CostingApp() {
   }
 
   const newSheet = useCallback(async () => {
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to create products.");
+      return;
+    }
+
     const nextCodeNumber = getNextCodeNumber(
       sheets.map((sheet) => sheet.sku),
       PRODUCT_CODE_PREFIX,
     );
 
-    if (isCloudMode && supabase && activeOwnerUserId) {
-      for (let offset = 0; offset < 1000; offset += 1) {
-        const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
-        const { data: existing, error: lookupError } = await supabase
-          .from("cost_sheets")
-          .select("id")
-          .eq("user_id", activeOwnerUserId)
-          .eq("sku", code)
-          .limit(1);
-        if (lookupError) {
-          toast("error", lookupError.message);
-          return;
-        }
-        if ((existing ?? []).length > 0) continue;
+    for (let offset = 0; offset < 1000; offset += 1) {
+      const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
+      const { data: existing, error: lookupError } = await supabase
+        .from("cost_sheets")
+        .select("id")
+        .eq("user_id", activeOwnerUserId)
+        .eq("sku", code)
+        .limit(1);
+      if (lookupError) {
+        toast("error", lookupError.message);
+        return;
+      }
+      if ((existing ?? []).length > 0) continue;
 
-        const insert = makeBlankSheetInsert(activeOwnerUserId, {
-          currency: settingsCurrencyCode,
-          wastePct: settings.defaultWastePct,
-          markupPct: settings.defaultMarkupPct,
-          taxPct: settings.defaultTaxPct,
-        });
-        insert.sku = code;
+      const insert = makeBlankSheetInsert(activeOwnerUserId, {
+        currency: settingsCurrencyCode,
+        wastePct: settings.defaultWastePct,
+        markupPct: settings.defaultMarkupPct,
+        taxPct: settings.defaultTaxPct,
+      });
+      insert.sku = code;
 
-        const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-        if (!error && inserted?.[0]) {
-          const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
-          setSheets((prev) => [sheet, ...prev]);
-          setSelectedId(sheet.id);
-          toast("success", "New sheet created.");
-          return;
-        }
-
-        if (error && isDuplicateKeyError(error)) continue;
-        toast("error", error?.message || "Could not create sheet.");
+      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+      if (!error && inserted?.[0]) {
+        const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+        setSheets((prev) => [sheet, ...prev]);
+        setSelectedId(sheet.id);
+        toast("success", "New sheet created.");
         return;
       }
 
-      toast("error", "Could not create sheet. Failed to generate a unique code.");
+      if (error && isDuplicateKeyError(error)) continue;
+      toast("error", error?.message || "Could not create sheet.");
       return;
     }
 
-    const sheet = makeBlankSheet(makeId("sheet"));
-    sheet.sku = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber);
-    sheet.currency = settingsCurrencyCode;
-    sheet.wastePct = settings.defaultWastePct;
-    sheet.markupPct = settings.defaultMarkupPct;
-    sheet.taxPct = settings.defaultTaxPct;
-    setSheets((prev) => [sheet, ...prev]);
-    setSelectedId(sheet.id);
-    toast("success", "New local sheet created.");
+    toast("error", "Could not create sheet. Failed to generate a unique code.");
   }, [
     isCloudMode,
     settings.defaultMarkupPct,
@@ -652,89 +535,75 @@ export default function CostingApp() {
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to duplicate products.");
+      return;
+    }
     const nextCodeNumber = getNextCodeNumber(
       sheets.map((sheet) => sheet.sku),
       PRODUCT_CODE_PREFIX,
     );
 
-    if (isCloudMode && supabase && activeOwnerUserId) {
-      for (let offset = 0; offset < 1000; offset += 1) {
-        const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
-        const { data: existing, error: lookupError } = await supabase
-          .from("cost_sheets")
-          .select("id")
-          .eq("user_id", activeOwnerUserId)
-          .eq("sku", code)
-          .limit(1);
-        if (lookupError) {
-          toast("error", lookupError.message);
-          return;
-        }
-        if ((existing ?? []).length > 0) continue;
+    for (let offset = 0; offset < 1000; offset += 1) {
+      const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
+      const { data: existing, error: lookupError } = await supabase
+        .from("cost_sheets")
+        .select("id")
+        .eq("user_id", activeOwnerUserId)
+        .eq("sku", code)
+        .limit(1);
+      if (lookupError) {
+        toast("error", lookupError.message);
+        return;
+      }
+      if ((existing ?? []).length > 0) continue;
 
-        const insert: DbCostSheetInsert = {
-          user_id: activeOwnerUserId,
-          name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
-          sku: code,
-          currency: settingsCurrencyCode,
-          unit_name: selectedSheet.unitName,
-          batch_size: selectedSheet.batchSize,
-          waste_pct: selectedSheet.wastePct,
-          markup_pct: selectedSheet.markupPct,
-          tax_pct: selectedSheet.taxPct,
-          materials: selectedSheet.materials,
-          labor: selectedSheet.labor,
-          overhead: selectedSheet.overhead,
-          notes: selectedSheet.notes,
-        };
+      const insert: DbCostSheetInsert = {
+        user_id: activeOwnerUserId,
+        name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
+        sku: code,
+        currency: settingsCurrencyCode,
+        unit_name: selectedSheet.unitName,
+        batch_size: selectedSheet.batchSize,
+        waste_pct: selectedSheet.wastePct,
+        markup_pct: selectedSheet.markupPct,
+        tax_pct: selectedSheet.taxPct,
+        materials: selectedSheet.materials,
+        labor: selectedSheet.labor,
+        overhead: selectedSheet.overhead,
+        notes: selectedSheet.notes,
+      };
 
-        const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
-        if (!error && inserted?.[0]) {
-          const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
-          setSheets((prev) => [sheet, ...prev]);
-          setSelectedId(sheet.id);
-          toast("success", "Sheet duplicated.");
-          return;
-        }
-
-        if (error && isDuplicateKeyError(error)) continue;
-        toast("error", error?.message || "Could not duplicate sheet.");
+      const { data: inserted, error } = await supabase.from("cost_sheets").insert(insert).select("*");
+      if (!error && inserted?.[0]) {
+        const sheet = rowToSheet(inserted[0] as DbCostSheetRow);
+        setSheets((prev) => [sheet, ...prev]);
+        setSelectedId(sheet.id);
+        toast("success", "Sheet duplicated.");
         return;
       }
 
-      toast("error", "Could not duplicate sheet. Failed to generate a unique code.");
+      if (error && isDuplicateKeyError(error)) continue;
+      toast("error", error?.message || "Could not duplicate sheet.");
       return;
     }
 
-    const now = new Date().toISOString();
-    const localCopy: CostSheet = {
-      ...selectedSheet,
-      id: makeId("sheet"),
-      name: selectedSheet.name ? `${selectedSheet.name} (copy)` : "Untitled (copy)",
-      sku: formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber),
-      currency: settingsCurrencyCode,
-      materials: selectedSheet.materials.map((it) => ({ ...it })),
-      labor: selectedSheet.labor.map((it) => ({ ...it })),
-      overhead: selectedSheet.overhead.map((it) => ({ ...it })),
-      createdAt: now,
-      updatedAt: now,
-    };
-    setSheets((prev) => [localCopy, ...prev]);
-    setSelectedId(localCopy.id);
-    toast("success", "Local sheet duplicated.");
+    toast("error", "Could not duplicate sheet. Failed to generate a unique code.");
   }
 
   async function deleteSelected() {
     if (!selectedSheet) return;
+    if (!isCloudMode || !supabase) {
+      toast("error", "Sign in with Google to delete products.");
+      return;
+    }
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
-    if (isCloudMode && supabase) {
-      const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
+    if (error) {
+      toast("error", error.message);
+      return;
     }
 
     const remaining = sheets.filter((s) => s.id !== selectedSheet.id);
@@ -777,53 +646,37 @@ export default function CostingApp() {
       return;
     }
 
-    if (isCloudMode && supabase && activeOwnerUserId) {
-      const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
-        user_id: activeOwnerUserId,
-        name: s.name || "Untitled",
-        sku: s.sku || "",
-        currency: settingsCurrencyCode,
-        unit_name: s.unitName || "unit",
-        batch_size: s.batchSize || 1,
-        waste_pct: s.wastePct || 0,
-        markup_pct: s.markupPct || 0,
-        tax_pct: s.taxPct || 0,
-        materials: s.materials || [],
-        labor: s.labor || [],
-        overhead: s.overhead || [],
-        notes: s.notes || "",
-      }));
-
-      const { data: inserted, error } = await supabase.from("cost_sheets").insert(rows).select("*");
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
-
-      const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
-      setSheets((prev) => appendImportedRowsAtBottom(prev, insertedSheets));
-      setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
-      toast("success", `Imported ${insertedSheets.length} sheet(s).`);
+    if (!isCloudMode || !supabase || !activeOwnerUserId) {
+      toast("error", "Sign in with Google to import products.");
       return;
     }
 
-    const now = new Date().toISOString();
-    const usedIds = new Set(sheets.map((s) => s.id));
-    const importedLocal = imported.sheets.map((sheet) => {
-      let nextId = sheet.id;
-      if (!nextId || usedIds.has(nextId)) nextId = makeId("sheet");
-      usedIds.add(nextId);
-      return {
-        ...sheet,
-        id: nextId,
-        currency: settingsCurrencyCode,
-        createdAt: sheet.createdAt || now,
-        updatedAt: now,
-      };
-    });
-    setSheets((prev) => appendImportedRowsAtBottom(prev, importedLocal));
-    setSelectedId((prev) => prev ?? importedLocal[0]?.id ?? null);
-    toast("success", `Imported ${importedLocal.length} local sheet(s).`);
+    const rows: DbCostSheetInsert[] = imported.sheets.map((s) => ({
+      user_id: activeOwnerUserId,
+      name: s.name || "Untitled",
+      sku: s.sku || "",
+      currency: settingsCurrencyCode,
+      unit_name: s.unitName || "unit",
+      batch_size: s.batchSize || 1,
+      waste_pct: s.wastePct || 0,
+      markup_pct: s.markupPct || 0,
+      tax_pct: s.taxPct || 0,
+      materials: s.materials || [],
+      labor: s.labor || [],
+      overhead: s.overhead || [],
+      notes: s.notes || "",
+    }));
+
+    const { data: inserted, error } = await supabase.from("cost_sheets").insert(rows).select("*");
+    if (error) {
+      toast("error", error.message);
+      return;
+    }
+
+    const insertedSheets = (inserted ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
+    setSheets((prev) => appendImportedRowsAtBottom(prev, insertedSheets));
+    setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
+    toast("success", `Imported ${insertedSheets.length} sheet(s).`);
   }
 
   const totals = useMemo(() => {
@@ -909,19 +762,10 @@ export default function CostingApp() {
                     Google sign-in is unavailable in this environment.
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  className="w-full rounded-2xl border border-ink bg-paper p-[4px] text-base font-semibold text-ink shadow-sm transition hover:bg-ink/[0.03] active:translate-y-px"
-                  onClick={() => void continueAsGuest()}
-                >
-                  Continue as guest
-                </button>
               </div>
 
               <p className="mx-auto mt-10 max-w-2xl text-base text-muted">
-                Guest data is saved in this browser only. Sign in with Google to sync and keep
-                your sheets persistent across devices.
+                Sign in with Google to access and sync your costing data across devices.
               </p>
 
               <GlobalAppToast notice={notice} />
@@ -993,7 +837,7 @@ export default function CostingApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search sheets..."
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
@@ -1004,13 +848,11 @@ export default function CostingApp() {
               Product Costing
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              {session
-                ? "Materials, labor, overhead, and pricing in one ledger. Your sheets sync across devices in Supabase."
-                : "Materials, labor, overhead, and pricing in one ledger. Local mode stores sheets in this browser until you sign in."}
+              Materials, labor, overhead, and pricing in one ledger. Your sheets sync across devices in Supabase.
             </p>
             {!supabase ? (
               <p className="mt-2 text-xs text-muted">
-                {supabaseError || "Supabase is not configured. Google login is disabled in this environment."}
+                {supabaseError || "Supabase is required for this app."}
               </p>
             ) : null}
           </div>
@@ -1802,7 +1644,7 @@ export default function CostingApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="synced via Supabase"
-            guestLabel="saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

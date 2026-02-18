@@ -15,8 +15,6 @@ export type MaterialRecord = {
   updatedAt: string;
 };
 
-export const MATERIALS_LOCAL_STORAGE_KEY = "product-costing:materials:local:v1";
-
 export function makeBlankMaterial(id: string): MaterialRecord {
   const now = new Date().toISOString();
   return {
@@ -105,28 +103,4 @@ export function parseMaterialRecords(raw: unknown): MaterialRecord[] {
         isActive: row.isActive !== undefined ? Boolean(row.isActive) : true,
       };
     });
-}
-
-export function readLocalMaterialRecords(): MaterialRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(MATERIALS_LOCAL_STORAGE_KEY);
-    if (!raw) return [];
-    return parseMaterialRecords(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
-
-export function writeLocalMaterialRecords(materials: MaterialRecord[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (!materials.length) {
-      window.localStorage.removeItem(MATERIALS_LOCAL_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(MATERIALS_LOCAL_STORAGE_KEY, JSON.stringify(materials));
-  } catch {
-    // Ignore storage failures.
-  }
 }

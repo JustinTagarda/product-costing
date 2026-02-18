@@ -5,9 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   makeDefaultSettings,
   normalizeSettings,
-  readLocalSettings,
   updateSettingsTimestamp,
-  writeLocalSettings,
   type AppSettings,
 } from "@/lib/settings";
 import {
@@ -67,9 +65,8 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
         return;
       }
 
-      const local = readLocalSettings();
       if (cancelled) return;
-      setSettings(local);
+      setSettings(makeDefaultSettings());
       setSettingsReady(true);
     }
 
@@ -95,9 +92,7 @@ export function useAppSettings({ supabase, userId, authReady, onError }: UseAppS
         }
         return { ok: true };
       }
-
-      writeLocalSettings(normalized);
-      return { ok: true };
+      return { ok: false, message: "Sign in with Google to save settings." };
     },
     [isCloudMode, supabase, userId],
   );

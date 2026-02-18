@@ -38,8 +38,6 @@ export type AppSettings = {
   updatedAt: string;
 };
 
-export const LOCAL_SETTINGS_KEY = "product-costing:settings:local:v1";
-
 const COUNTRY_TO_CURRENCY: Record<string, string> = {
   US: "USD",
   CA: "CAD",
@@ -324,24 +322,6 @@ export function normalizeSettings(raw: unknown): AppSettings {
     createdAt,
     updatedAt,
   };
-}
-
-export function readLocalSettings(): AppSettings {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_SETTINGS_KEY);
-    if (!raw) return makeDefaultSettings();
-    return normalizeSettings(JSON.parse(raw));
-  } catch {
-    return makeDefaultSettings();
-  }
-}
-
-export function writeLocalSettings(settings: AppSettings): void {
-  try {
-    window.localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
-  } catch {
-    // Ignore localStorage failures.
-  }
 }
 
 export function updateSettingsTimestamp(settings: AppSettings): AppSettings {

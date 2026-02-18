@@ -32,8 +32,6 @@ export type BomRecord = {
   lines: BomLine[];
 };
 
-export const BOM_LOCAL_STORAGE_KEY = "product-costing:bom:local:v1";
-
 type BlankBomDefaults = {
   name?: string;
   code?: string;
@@ -150,30 +148,6 @@ export function parseBomRecords(raw: unknown): BomRecord[] {
         lines: lines.length ? lines : [makeBlankBomLine(makeId("bomline"), { sortOrder: 0 })],
       } satisfies BomRecord;
     });
-}
-
-export function readLocalBoms(): BomRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(BOM_LOCAL_STORAGE_KEY);
-    if (!raw) return [];
-    return parseBomRecords(JSON.parse(raw));
-  } catch {
-    return [];
-  }
-}
-
-export function writeLocalBoms(items: BomRecord[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (!items.length) {
-      window.localStorage.removeItem(BOM_LOCAL_STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(BOM_LOCAL_STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // Ignore storage failures.
-  }
 }
 
 export function sortBomsByUpdatedAtDesc(items: BomRecord[]): BomRecord[] {

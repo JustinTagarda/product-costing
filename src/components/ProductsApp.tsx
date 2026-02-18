@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { computeTotals, createDemoSheet } from "@/lib/costing";
-import type { CostSheet, StoredData } from "@/lib/costing";
+import { computeTotals } from "@/lib/costing";
+import type { CostSheet } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
-import { parseStoredDataJson } from "@/lib/importExport";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -19,8 +18,6 @@ import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
-const LOCAL_STORAGE_KEY = "product-costing:local:v1";
-
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
@@ -31,33 +28,6 @@ function cardClassName(): string {
 
 function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
   return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-}
-
-function readLocalSheets(): StoredData | null {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return parseStoredDataJson(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalSheets(sheets: CostSheet[], selectedId?: string | null): void {
-  try {
-    if (!sheets.length) {
-      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-      return;
-    }
-    const payload: StoredData = {
-      version: 1,
-      sheets,
-      selectedId: selectedId ?? undefined,
-    };
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore storage failures.
-  }
 }
 
 export default function ProductsApp() {
@@ -159,37 +129,43 @@ export default function ProductsApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadProducts() {
       setLoading(true);
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const { data, error } = await supabase
-          .from("cost_sheets")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("updated_at", { ascending: false });
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-
-        if (error) {
-          toast("error", error.message);
-          setProducts([]);
-          setLoading(false);
-          return;
-        }
-
-        setProducts(sortSheetsByUpdatedAtDesc((data ?? []).map((row) => rowToSheet(row as DbCostSheetRow))));
+        setProducts([]);
         setLoading(false);
         return;
       }
 
-      const local = readLocalSheets();
-      const rows = local?.sheets?.length ? sortSheetsByUpdatedAtDesc(local.sheets) : [createDemoSheet()];
+      const { data, error } = await supabase
+        .from("cost_sheets")
+        .select("*")
+        .eq("user_id", activeOwnerUserId)
+        .order("updated_at", { ascending: false });
+
       if (cancelled) return;
-      setProducts(rows);
+
+      if (error) {
+        toast("error", error.message);
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      setProducts(sortSheetsByUpdatedAtDesc((data ?? []).map((row) => rowToSheet(row as DbCostSheetRow))));
       setLoading(false);
     }
 
@@ -217,27 +193,20 @@ export default function ProductsApp() {
 
   async function deleteProduct(sheet: CostSheet): Promise<void> {
     if (deletingProductId) return;
+    if (!isCloudMode || !supabase) {
+      toast("error", "Sign in with Google to manage products.");
+      return;
+    }
     setDeletingProductId(sheet.id);
 
     try {
-      if (isCloudMode && supabase) {
-        const { error } = await supabase.from("cost_sheets").delete().eq("id", sheet.id);
-        if (error) {
-          toast("error", error.message);
-          return;
-        }
+      const { error } = await supabase.from("cost_sheets").delete().eq("id", sheet.id);
+      if (error) {
+        toast("error", error.message);
+        return;
       }
 
-      setProducts((prev) => {
-        const next = prev.filter((entry) => entry.id !== sheet.id);
-        if (!isCloudMode) {
-          const local = readLocalSheets();
-          const selectedId = local?.selectedId ?? null;
-          const nextSelectedId = selectedId === sheet.id ? (next[0]?.id ?? null) : selectedId;
-          writeLocalSheets(next, nextSelectedId);
-        }
-        return next;
-      });
+      setProducts((prev) => prev.filter((entry) => entry.id !== sheet.id));
       toast("success", "Product deleted.");
     } finally {
       setDeletingProductId(null);
@@ -259,7 +228,7 @@ export default function ProductsApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products by name or code"
@@ -276,7 +245,7 @@ export default function ProductsApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Product data remains local in this browser."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -299,7 +268,7 @@ export default function ProductsApp() {
               <p className="font-mono text-xs text-muted">
                 {loading ? "Loading products..." : `${filteredProducts.length} product(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">{isCloudMode ? "Cloud mode" : "Local mode"}</p>
+              <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -379,7 +348,7 @@ export default function ProductsApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="products sync via Supabase"
-            guestLabel="products saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal

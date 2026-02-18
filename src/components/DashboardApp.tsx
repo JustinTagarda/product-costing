@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { computeTotals, createDemoSheet } from "@/lib/costing";
-import type { CostSheet, StoredData } from "@/lib/costing";
+import { computeTotals } from "@/lib/costing";
+import type { CostSheet } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
-import { parseStoredDataJson } from "@/lib/importExport";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
@@ -20,8 +19,6 @@ import { useAppSettings } from "@/lib/useAppSettings";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
-const LOCAL_STORAGE_KEY = "product-costing:local:v1";
-
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
@@ -32,33 +29,6 @@ function cardClassName(): string {
 
 function sortSheetsByUpdatedAtDesc(items: CostSheet[]): CostSheet[] {
   return [...items].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-}
-
-function readLocalSheets(): StoredData | null {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return null;
-    return parseStoredDataJson(raw);
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalSheets(sheets: CostSheet[], selectedId?: string | null): void {
-  try {
-    if (!sheets.length) {
-      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-      return;
-    }
-    const payload: StoredData = {
-      version: 1,
-      sheets,
-      selectedId: selectedId ?? undefined,
-    };
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Ignore storage failures.
-  }
 }
 
 export default function DashboardApp() {
@@ -168,47 +138,42 @@ export default function DashboardApp() {
   }, [supabase, toast]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (session) return;
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === "/calculator") return;
+    window.location.assign("/calculator");
+  }, [authReady, session]);
+
+  useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
     async function loadSheets() {
       setLoadingSheets(true);
 
-      if (isCloudMode && activeOwnerUserId && supabase) {
-        const { data, error } = await supabase
-          .from("cost_sheets")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("updated_at", { ascending: false });
-
+      if (!isCloudMode || !activeOwnerUserId || !supabase) {
         if (cancelled) return;
-        if (error) {
-          toast("error", error.message);
-          setSheets([]);
-          setLoadingSheets(false);
-          return;
-        }
-
-        const nextSheets = sortSheetsByUpdatedAtDesc((data ?? []).map((row) => rowToSheet(row as DbCostSheetRow)));
-        if (!nextSheets.length) {
-          const demo = createDemoSheet();
-          setSheets([demo]);
-          setLoadingSheets(false);
-          return;
-        }
-
-        setSheets(nextSheets);
+        setSheets([]);
         setLoadingSheets(false);
         return;
       }
 
-      const local = readLocalSheets();
-      const nextSheets = local?.sheets?.length ? sortSheetsByUpdatedAtDesc(local.sheets) : [createDemoSheet()];
-      if (!local?.sheets?.length) {
-        writeLocalSheets(nextSheets, nextSheets[0]?.id ?? null);
-      }
+      const { data, error } = await supabase
+        .from("cost_sheets")
+        .select("*")
+        .eq("user_id", activeOwnerUserId)
+        .order("updated_at", { ascending: false });
 
       if (cancelled) return;
+      if (error) {
+        toast("error", error.message);
+        setSheets([]);
+        setLoadingSheets(false);
+        return;
+      }
+
+      const nextSheets = sortSheetsByUpdatedAtDesc((data ?? []).map((row) => rowToSheet(row as DbCostSheetRow)));
       setSheets(nextSheets);
       setLoadingSheets(false);
     }
@@ -313,7 +278,7 @@ export default function DashboardApp() {
         onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
         onSettings={openSettings}
         onLogout={() => void signOut()}
-        onShare={isCloudMode ? () => setShowShareModal(true) : undefined}
+        onShare={() => setShowShareModal(true)}
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products or SKU"
@@ -333,7 +298,7 @@ export default function DashboardApp() {
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
-                  {supabaseError || "Supabase is not configured. Dashboard data remains local in this browser."}
+                  {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
             </div>
@@ -415,7 +380,7 @@ export default function DashboardApp() {
               <p className="font-mono text-xs text-muted">
                 {loadingSheets ? "Loading products..." : `${recentProducts.length} recent product(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">{isCloudMode ? "Cloud mode" : "Local mode"}</p>
+              <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -478,7 +443,7 @@ export default function DashboardApp() {
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}
             syncLabel="dashboard sync via Supabase"
-            guestLabel="saved in this browser (localStorage)"
+            guestLabel="Google sign-in required"
           />
 
           <ShareSheetModal
