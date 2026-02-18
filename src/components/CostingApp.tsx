@@ -38,6 +38,30 @@ const LOCAL_STORAGE_KEY = "product-costing:local:v1";
 const WELCOME_GATE_DISMISSED_KEY = "product-costing:welcome-gate:dismissed";
 const PRODUCT_CODE_PREFIX = "PR-";
 
+function hasNewSheetQueryParam(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const value = (params.get("new") || "").trim().toLowerCase();
+    return value === "1" || value === "true";
+  } catch {
+    return false;
+  }
+}
+
+function clearNewSheetQueryParam(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("new")) return;
+    url.searchParams.delete("new");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  } catch {
+    // Ignore URL manipulation failures.
+  }
+}
+
 function downloadJson(filename: string, data: unknown): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
@@ -138,6 +162,8 @@ export default function CostingApp() {
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedSheetsRef = useRef(false);
+  const handledNewSheetFromQueryRef = useRef(false);
+  const [requestNewSheetFromQuery] = useState(() => hasNewSheetQueryParam());
 
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -225,7 +251,7 @@ export default function CostingApp() {
   }, []);
 
   const fetchSheetsForUser = useCallback(
-    async (userId: string): Promise<CostSheet[]> => {
+    async (userId: string, seedDemoIfEmpty: boolean): Promise<CostSheet[]> => {
       if (!supabase) return [];
 
       const { data: rows, error } = await supabase
@@ -241,6 +267,7 @@ export default function CostingApp() {
 
       const normalized = (rows ?? []).map((r) => rowToSheet(r as DbCostSheetRow));
       if (normalized.length > 0) return normalized;
+      if (!seedDemoIfEmpty) return [];
 
       // First run: create a deterministic demo sheet for the user.
       const demo = createDemoSheet();
@@ -285,7 +312,7 @@ export default function CostingApp() {
       setLoadingSheets(true);
 
       if (isCloudMode && userId) {
-        const nextSheets = await fetchSheetsForUser(userId);
+        const nextSheets = await fetchSheetsForUser(userId, !requestNewSheetFromQuery);
         if (cancelled) return;
         setSheets(nextSheets);
         setSelectedId((prev) => {
@@ -298,12 +325,16 @@ export default function CostingApp() {
       }
 
       const localData = readLocalSheets();
-      const demoSheet = createDemoSheet();
-      demoSheet.currency = settingsCurrencyCode;
       const nextSheets =
         localData?.sheets?.length
           ? sortSheetsByUpdatedAtDesc(localData.sheets)
-          : [demoSheet];
+          : requestNewSheetFromQuery
+            ? []
+            : (() => {
+                const demoSheet = createDemoSheet();
+                demoSheet.currency = settingsCurrencyCode;
+                return [demoSheet];
+              })();
       const nextSelectedId =
         localData?.selectedId && nextSheets.some((s) => s.id === localData.selectedId)
           ? localData.selectedId
@@ -312,7 +343,7 @@ export default function CostingApp() {
       if (cancelled) return;
       setSheets(nextSheets);
       setSelectedId(nextSelectedId);
-      if (!localData?.sheets?.length) writeLocalSheets(nextSheets, nextSelectedId);
+      if (!localData?.sheets?.length && nextSheets.length > 0) writeLocalSheets(nextSheets, nextSelectedId);
       hasHydratedSheetsRef.current = true;
       setLoadingSheets(false);
     }
@@ -321,7 +352,7 @@ export default function CostingApp() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, fetchSheetsForUser, isCloudMode, settingsCurrencyCode, userId]);
+  }, [authReady, fetchSheetsForUser, isCloudMode, requestNewSheetFromQuery, settingsCurrencyCode, userId]);
 
   useEffect(() => {
     if (!authReady || isCloudMode || !hasHydratedSheetsRef.current) return;
@@ -419,7 +450,7 @@ export default function CostingApp() {
     window.location.assign("/settings");
   }
 
-  async function newSheet() {
+  const newSheet = useCallback(async () => {
     const nextCodeNumber = getNextCodeNumber(
       sheets.map((sheet) => sheet.sku),
       PRODUCT_CODE_PREFIX,
@@ -475,7 +506,29 @@ export default function CostingApp() {
     setSheets((prev) => [sheet, ...prev]);
     setSelectedId(sheet.id);
     toast("success", "New local sheet created.");
-  }
+  }, [
+    isCloudMode,
+    settings.defaultMarkupPct,
+    settings.defaultTaxPct,
+    settings.defaultWastePct,
+    settingsCurrencyCode,
+    sheets,
+    supabase,
+    toast,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (!requestNewSheetFromQuery) return;
+    if (handledNewSheetFromQueryRef.current) return;
+    if (!authReady || loadingSheets) return;
+    if (!hasHydratedSheetsRef.current) return;
+    if (showWelcomeGate && !session) return;
+
+    handledNewSheetFromQueryRef.current = true;
+    clearNewSheetQueryParam();
+    void newSheet();
+  }, [authReady, loadingSheets, newSheet, requestNewSheetFromQuery, session, showWelcomeGate]);
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
