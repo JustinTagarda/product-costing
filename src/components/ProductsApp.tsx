@@ -41,6 +41,23 @@ function readLocalSheets(): StoredData | null {
   }
 }
 
+function writeLocalSheets(sheets: CostSheet[], selectedId?: string | null): void {
+  try {
+    if (!sheets.length) {
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+      return;
+    }
+    const payload: StoredData = {
+      version: 1,
+      sheets,
+      selectedId: selectedId ?? undefined,
+    };
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export default function ProductsApp() {
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -63,6 +80,7 @@ export default function ProductsApp() {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<CostSheet[]>([]);
   const [query, setQuery] = useState("");
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   const user = session?.user ?? null;
   const userId = user?.id ?? null;
@@ -183,6 +201,36 @@ export default function ProductsApp() {
     window.location.assign("/settings");
   }
 
+  async function deleteProduct(productId: string): Promise<void> {
+    if (deletingProductId) return;
+    setDeletingProductId(productId);
+
+    try {
+      if (isCloudMode && supabase) {
+        const { error } = await supabase.from("cost_sheets").delete().eq("id", productId);
+        if (error) {
+          toast("error", error.message);
+          return;
+        }
+      }
+
+      setProducts((prev) => {
+        const next = prev.filter((sheet) => sheet.id !== productId);
+        if (!isCloudMode) {
+          const local = readLocalSheets();
+          const selectedId = local?.selectedId ?? null;
+          const nextSelectedId =
+            selectedId === productId ? (next[0]?.id ?? null) : selectedId;
+          writeLocalSheets(next, nextSelectedId);
+        }
+        return next;
+      });
+      toast("success", "Product deleted.");
+    } finally {
+      setDeletingProductId(null);
+    }
+  }
+
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return products;
@@ -275,6 +323,14 @@ export default function ProductsApp() {
                               onClick={() => window.location.assign("/calculator")}
                             >
                               Calculator
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => void deleteProduct(sheet.id)}
+                              disabled={deletingProductId === sheet.id}
+                            >
+                              {deletingProductId === sheet.id ? "Deleting..." : "Delete"}
                             </button>
                           </div>
                         </td>
