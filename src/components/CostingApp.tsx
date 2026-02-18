@@ -817,7 +817,7 @@ export default function CostingApp() {
                 {supabase ? (
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#4f7de5] px-5 py-4 text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#4f7de5] p-[4px] text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
                     onClick={() => void signInWithGoogle()}
                   >
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white">
@@ -856,7 +856,7 @@ export default function CostingApp() {
 
                 <button
                   type="button"
-                  className="w-full rounded-2xl border border-ink bg-paper px-5 py-4 text-base font-semibold text-ink shadow-sm transition hover:bg-ink/[0.03] active:translate-y-px"
+                  className="w-full rounded-2xl border border-ink bg-paper p-[4px] text-base font-semibold text-ink shadow-sm transition hover:bg-ink/[0.03] active:translate-y-px"
                   onClick={() => void continueAsGuest()}
                 >
                   Continue as guest
