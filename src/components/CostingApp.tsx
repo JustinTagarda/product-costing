@@ -1030,7 +1030,7 @@ export default function CostingApp() {
 
             <main className={cardClassName() + " min-w-0"}>
             <div className="p-4 md:p-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="flex-1">
                   <label className="block font-mono text-xs text-muted">Product name</label>
                   <input
