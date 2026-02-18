@@ -28,8 +28,6 @@ const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Products", href: "/products" },
   { label: "Materials", href: "/materials" },
   { label: "Purchases", href: "/purchases" },
-  { label: "BOM", href: "/bom" },
-  { label: "Reports" },
 ];
 
 export function MainNavMenu({
