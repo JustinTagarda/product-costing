@@ -292,7 +292,6 @@ export default function ProductsApp() {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Product</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
@@ -306,7 +305,6 @@ export default function ProductsApp() {
                     const totals = computeTotals(sheet);
                     return (
                       <tr key={sheet.id}>
-                        <td className="p-2 font-mono text-xs text-muted">{sheet.sku || "-"}</td>
                         <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
                         <td className="p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>
                         <td className="p-2 font-mono text-xs text-ink">
@@ -350,7 +348,7 @@ export default function ProductsApp() {
 
                   {!loading && !filteredProducts.length ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted">
+                      <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
                         No products found. Create one from the top bar quick action.
                       </td>
                     </tr>
