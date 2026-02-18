@@ -150,6 +150,14 @@ export function MainNavMenu({
     setLocalSearch(next);
   }
 
+  function handleShareClick() {
+    if (onShare) {
+      onShare();
+      return;
+    }
+    router.push("/calculator?share=1");
+  }
+
   function profileInitials() {
     const raw = (profileLabel || "Profile").trim();
     if (!raw) return "P";
@@ -192,18 +200,16 @@ export function MainNavMenu({
             <BellIcon />
           </button>
 
-          {onShare ? (
-            <button
-              type="button"
-              aria-label={shareLabel || "Share"}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-paper px-3 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => onShare()}
-              disabled={Boolean(shareDisabled)}
-            >
-              <ShareIcon />
-              <span className="hidden sm:inline">{shareLabel || "Share"}</span>
-            </button>
-          ) : null}
+          <button
+            type="button"
+            aria-label={shareLabel || "Share"}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-paper px-3 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleShareClick}
+            disabled={Boolean(shareDisabled)}
+          >
+            <ShareIcon />
+            <span className="hidden sm:inline">{shareLabel || "Share"}</span>
+          </button>
 
           <button
             type="button"

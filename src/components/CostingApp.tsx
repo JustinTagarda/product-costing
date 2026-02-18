@@ -59,12 +59,36 @@ function hasNewSheetQueryParam(): boolean {
   }
 }
 
+function hasShareQueryParam(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const value = (params.get("share") || "").trim().toLowerCase();
+    return value === "1" || value === "true";
+  } catch {
+    return false;
+  }
+}
+
 function clearNewSheetQueryParam(): void {
   if (typeof window === "undefined") return;
   try {
     const url = new URL(window.location.href);
     if (!url.searchParams.has("new")) return;
     url.searchParams.delete("new");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+  } catch {
+    // Ignore URL manipulation failures.
+  }
+}
+
+function clearShareQueryParam(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("share")) return;
+    url.searchParams.delete("share");
     const nextUrl = `${url.pathname}${url.search}${url.hash}`;
     window.history.replaceState(window.history.state, "", nextUrl);
   } catch {
@@ -184,7 +208,9 @@ export default function CostingApp() {
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedSheetsRef = useRef(false);
   const handledNewSheetFromQueryRef = useRef(false);
+  const handledShareFromQueryRef = useRef(false);
   const [requestNewSheetFromQuery] = useState(() => hasNewSheetQueryParam());
+  const [requestShareFromQuery] = useState(() => hasShareQueryParam());
 
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -594,6 +620,37 @@ export default function CostingApp() {
     clearNewSheetQueryParam();
     void newSheet();
   }, [authReady, loadingSheets, newSheet, requestNewSheetFromQuery, session, showWelcomeGate]);
+
+  useEffect(() => {
+    if (!requestShareFromQuery) return;
+    if (handledShareFromQueryRef.current) return;
+    if (!authReady || loadingSheets) return;
+    if (!hasHydratedSheetsRef.current) return;
+    if (showWelcomeGate && !session) return;
+
+    handledShareFromQueryRef.current = true;
+    clearShareQueryParam();
+
+    if (!isCloudMode) {
+      toast("info", "Sign in with Google to share sheets.");
+      return;
+    }
+    if (!selectedSheet) {
+      toast("info", "Create or select a product first, then share.");
+      return;
+    }
+
+    setShowShareModal(true);
+  }, [
+    authReady,
+    isCloudMode,
+    loadingSheets,
+    requestShareFromQuery,
+    selectedSheet,
+    session,
+    showWelcomeGate,
+    toast,
+  ]);
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
