@@ -1673,13 +1673,10 @@ export default function CostingApp() {
                         />
                       </div>
                     </div>
-                  </section>
 
-                  <section className={panelClassName()}>
-                    <div className="border-b border-border px-4 py-3">
+                    <div className="border-t border-border p-4">
                       <h2 className="font-serif text-lg tracking-tight text-ink">Quick export</h2>
-                    </div>
-                    <div className="space-y-3 p-4">
+                      <div className="mt-3 space-y-3">
                       <button
                         type="button"
                         className="w-full rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
@@ -1727,6 +1724,7 @@ export default function CostingApp() {
                       >
                         Copy summary (tab-delimited)
                       </button>
+                      </div>
                     </div>
                   </section>
                 </div>
