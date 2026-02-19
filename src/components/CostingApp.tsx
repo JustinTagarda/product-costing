@@ -725,7 +725,8 @@ export default function CostingApp() {
                 {supabase ? (
                   <button
                     type="button"
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#4f7de5] p-[4px] text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    className="grid w-[90%] grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center rounded-2xl bg-[#4f7de5] p-[4px] text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    style={{ marginInline: "auto" }}
                     onClick={() => void signInWithGoogle()}
                   >
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white">
@@ -754,7 +755,8 @@ export default function CostingApp() {
                         />
                       </svg>
                     </span>
-                    <span>Sign in with Google</span>
+                    <span className="text-center">Sign in with Google</span>
+                    <span aria-hidden="true" className="h-9 w-9" />
                   </button>
                 ) : (
                   <div className="w-full rounded-2xl border border-border bg-paper px-5 py-4 text-sm text-muted">

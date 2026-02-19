@@ -56,6 +56,8 @@ export function MainNavMenu({
   const pathname = usePathname();
 
   const effectiveSearchValue = searchValue ?? localSearch;
+  const effectiveShareLabel = shareLabel || "Share";
+  const effectiveQuickAddLabel = quickAddLabel || "+ New Product";
 
   const compactModeClasses = useMemo(
     () => ({
@@ -171,7 +173,7 @@ export function MainNavMenu({
         className="fixed left-0 right-0 top-0 z-[55] border-b border-zinc-300 bg-zinc-100/95 backdrop-blur"
         style={{ left: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[72px] items-center gap-2 px-3 sm:px-4 lg:px-6">
+        <div className="flex h-[72px] items-center gap-1.5 px-2.5 sm:gap-2 sm:px-4 lg:px-6">
           <button
             type="button"
             aria-label="Open navigation menu"
@@ -188,33 +190,33 @@ export function MainNavMenu({
               onChange={(event) => handleSearchInput(event.target.value)}
               placeholder={searchPlaceholder || "Search"}
               aria-label="Search"
-              className="w-full rounded-xl border border-border bg-paper px-10 py-2 text-sm text-ink placeholder:text-muted/75 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
+              className="w-full rounded-xl border border-border bg-paper px-10 py-2 text-sm text-ink placeholder:text-muted/75 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:py-2.5"
             />
           </div>
 
           <button
             type="button"
             aria-label="Notifications"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="hidden h-10 w-10 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:inline-flex"
           >
             <BellIcon />
           </button>
 
           <button
             type="button"
-            aria-label={shareLabel || "Share"}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-paper px-3 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={effectiveShareLabel}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:gap-2 sm:px-3"
             onClick={handleShareClick}
             disabled={Boolean(shareDisabled)}
           >
             <ShareIcon />
-            <span className="hidden sm:inline">{shareLabel || "Share"}</span>
+            <span className="hidden sm:inline">{effectiveShareLabel}</span>
           </button>
 
           <button
             type="button"
             aria-label="Open profile"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-paper px-2.5 py-2 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:gap-2"
             onClick={() => (onProfileClick || onSettings)()}
           >
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-ink">
@@ -226,10 +228,12 @@ export function MainNavMenu({
           {onQuickAdd ? (
             <button
               type="button"
-              className="inline-flex items-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+              aria-label={effectiveQuickAddLabel}
+              className="inline-flex h-9 items-center rounded-xl bg-accent px-2.5 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:px-3"
               onClick={() => onQuickAdd()}
             >
-              {quickAddLabel || "+ New Product"}
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">{effectiveQuickAddLabel}</span>
             </button>
           ) : null}
         </div>
@@ -342,33 +346,42 @@ function SidebarSections({
   return (
     <>
       <nav aria-label="Main menu" className="flex-1 overflow-y-auto px-2 py-3">
-        {items.map((item) => {
-          const isActive = isMainItemActive(item);
-          return (
-            <button
-              key={item.label}
-              type="button"
-              title={compact ? item.label : undefined}
-              className={[
-                "mt-1 flex w-full items-center rounded-md py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
-                buttonClasses,
-                isActive ? "bg-zinc-100 text-ink" : "text-ink hover:bg-zinc-100/75",
-              ].join(" ")}
-              onClick={() => onNavigate(item)}
-            >
-              <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>{item.label}</span>
-              {compact ? <span className={compactLabelClasses || "md:hidden"}>{item.label.slice(0, 1).toUpperCase()}</span> : null}
-            </button>
-          );
-        })}
-        <div className="mt-3 border-t border-zinc-300 pt-3">
+        <SidebarSectionLabel compact={compact} label="Workspace" compactLabel="W" />
+        <div className="mt-2 space-y-1">
+          {items.map((item) => {
+            const isActive = isMainItemActive(item);
+            return (
+              <button
+                key={item.label}
+                type="button"
+                title={compact ? item.label : undefined}
+                className={[
+                  "flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+                  buttonClasses,
+                  isActive
+                    ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                    : "border-transparent text-ink hover:bg-zinc-100/75",
+                ].join(" ")}
+                onClick={() => onNavigate(item)}
+              >
+                <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>{item.label}</span>
+                {compact ? <span className={compactLabelClasses || "md:hidden"}>{item.label.slice(0, 1).toUpperCase()}</span> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 border-t border-zinc-300 pt-3">
+          <SidebarSectionLabel compact={compact} label="Account" compactLabel="A" />
           <button
             type="button"
             title={compact ? "Settings" : undefined}
             className={[
-              "flex w-full items-center rounded-md py-2 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              "mt-2 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
-              isSettingsActive ? "bg-zinc-100 text-ink" : "text-ink hover:bg-zinc-100/75",
+              isSettingsActive
+                ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                : "border-transparent text-ink hover:bg-zinc-100/75",
             ].join(" ")}
             onClick={onSettings}
           >
@@ -380,7 +393,7 @@ function SidebarSections({
             type="button"
             title={compact ? "Log out" : undefined}
             className={[
-              "mt-1 flex w-full items-center rounded-md py-2 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              "mt-1 flex w-full items-center rounded-lg border-l-2 border-transparent py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
             ].join(" ")}
             onClick={onLogout}
@@ -422,6 +435,25 @@ function SidebarSections({
       </div>
     </>
   );
+}
+
+type SidebarSectionLabelProps = {
+  compact: boolean;
+  label: string;
+  compactLabel: string;
+};
+
+function SidebarSectionLabel({ compact, label, compactLabel }: SidebarSectionLabelProps) {
+  if (compact) {
+    return (
+      <p className="px-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/80">
+        {compactLabel}
+        <span className="sr-only">{label}</span>
+      </p>
+    );
+  }
+
+  return <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/80">{label}</p>;
 }
 
 type IconProps = { className?: string };
