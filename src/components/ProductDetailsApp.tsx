@@ -17,6 +17,11 @@ import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
+import {
+  rowToAccountChangeLog,
+  type AccountChangeLogEntry,
+  type DbAccountChangeLogRow,
+} from "@/lib/supabase/accountChangeLogs";
 
 type Notice = { kind: "info" | "success" | "error"; message: string };
 type TabKey = "overview" | "cost-breakdown" | "history" | "notes";
@@ -53,6 +58,8 @@ export default function ProductDetailsApp() {
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
   const [sheet, setSheet] = useState<CostSheet | null>(null);
+  const [historyLogs, setHistoryLogs] = useState<AccountChangeLogEntry[]>([]);
+  const [loadingHistoryLogs, setLoadingHistoryLogs] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [query, setQuery] = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
@@ -191,6 +198,45 @@ export default function ProductDetailsApp() {
       cancelled = true;
     };
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, productId, supabase, toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadHistoryLogs() {
+      if (!dataAuthReady || !sheet?.id || !activeOwnerUserId || !supabase) {
+        if (cancelled) return;
+        setHistoryLogs([]);
+        setLoadingHistoryLogs(false);
+        return;
+      }
+
+      setLoadingHistoryLogs(true);
+
+      const { data, error } = await supabase.rpc("list_account_change_logs", {
+        p_owner_user_id: activeOwnerUserId,
+        p_table_name: "cost_sheets",
+        p_row_id: sheet.id,
+        p_limit: 100,
+      });
+
+      if (cancelled) return;
+      if (error) {
+        toast("error", error.message);
+        setHistoryLogs([]);
+        setLoadingHistoryLogs(false);
+        return;
+      }
+
+      setHistoryLogs(
+        ((data ?? []) as DbAccountChangeLogRow[]).map((row) => rowToAccountChangeLog(row)),
+      );
+      setLoadingHistoryLogs(false);
+    }
+
+    void loadHistoryLogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOwnerUserId, dataAuthReady, sheet?.id, supabase, toast]);
 
   async function signOut() {
     if (supabase) {
@@ -422,14 +468,55 @@ export default function ProductDetailsApp() {
                 ) : null}
 
                 {activeTab === "history" ? (
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <InfoCard label="Created" value={formatAppDate(sheet.createdAt)} />
-                    <InfoCard label="Last Updated" value={formatAppDate(sheet.updatedAt)} />
-                    <InfoCard
-                      label="Mode"
-                      value="Cloud sync (Supabase)"
-                    />
-                    <InfoCard label="Items" value={`${sheet.materials.length + sheet.labor.length + sheet.overhead.length} line(s)`} />
+                  <div className="mt-4 space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <InfoCard label="Created" value={formatAppDate(sheet.createdAt)} />
+                      <InfoCard label="Last Updated" value={formatAppDate(sheet.updatedAt)} />
+                      <InfoCard
+                        label="Mode"
+                        value="Cloud sync (Supabase)"
+                      />
+                      <InfoCard label="Items" value={`${sheet.materials.length + sheet.labor.length + sheet.overhead.length} line(s)`} />
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-paper/45">
+                      <div className="border-b border-border px-3 py-2">
+                        <p className="font-mono text-xs text-muted">Data change history</p>
+                      </div>
+                      <div className="max-h-[360px] overflow-y-auto">
+                        {loadingHistoryLogs ? (
+                          <p className="px-3 py-4 text-sm text-muted">Loading changes...</p>
+                        ) : historyLogs.length ? (
+                          <ul className="divide-y divide-border">
+                            {historyLogs.map((log) => (
+                              <li key={log.id} className="px-3 py-2">
+                                <p className="text-sm text-ink">
+                                  <span className="font-semibold">{log.actorEmail}</span>{" "}
+                                  <span className="text-muted">
+                                    {log.action === "insert"
+                                      ? "created"
+                                      : log.action === "update"
+                                        ? "updated"
+                                        : "deleted"}
+                                  </span>{" "}
+                                  this product record
+                                </p>
+                                <p className="mt-0.5 font-mono text-xs text-muted">
+                                  {new Date(log.createdAt).toLocaleString()}
+                                </p>
+                                {log.changedFields.length ? (
+                                  <p className="mt-0.5 text-xs text-muted">
+                                    Fields: {log.changedFields.join(", ")}
+                                  </p>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="px-3 py-4 text-sm text-muted">No data changes logged yet.</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 

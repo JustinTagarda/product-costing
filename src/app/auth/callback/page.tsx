@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { clearSelectedOwnerUserIdForSession } from "@/lib/accountScopeSelection";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -22,20 +23,21 @@ export default function AuthCallbackPage() {
           if (exchangeError) throw exchangeError;
         }
 
-        let hasSession = false;
+        let nextSessionUserId: string | null = null;
         for (let i = 0; i < 20; i += 1) {
           const { data, error: sessionError } = await supabase.auth.getSession();
           if (sessionError) throw sessionError;
           if (data.session) {
-            hasSession = true;
+            nextSessionUserId = data.session.user.id;
             break;
           }
           await new Promise((resolve) => window.setTimeout(resolve, 100));
         }
 
-        if (!hasSession) throw new Error("No active session after sign-in.");
+        if (!nextSessionUserId) throw new Error("No active session after sign-in.");
+        clearSelectedOwnerUserIdForSession(nextSessionUserId);
 
-        if (!cancelled) router.replace("/calculator");
+        if (!cancelled) router.replace("/dataset-select");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Auth callback failed.";
         if (!cancelled) setError(msg);

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import {
+  getSelectedOwnerUserIdForSession,
+  setSelectedOwnerUserIdForSession,
+} from "@/lib/accountScopeSelection";
 
 export type SharedAccountOption = {
   ownerUserId: string;
@@ -32,20 +36,16 @@ export function useAccountDataScope({
   const signedInEmail = (session?.user?.email || "").trim().toLowerCase();
   const isSignedInCloud = Boolean(supabase && signedInUserId);
   const onErrorRef = useRef(onError);
-  const promptedUserIdRef = useRef<string | null>(null);
 
   const [sharedAccounts, setSharedAccounts] = useState<SharedAccountOption[]>([]);
   const [activeOwnerUserId, setActiveOwnerUserId] = useState<string | null>(null);
   const [scopeReady, setScopeReady] = useState(() => !isSignedInCloud);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectionRequired, setSelectionRequired] = useState(false);
 
   useEffect(() => {
     onErrorRef.current = onError;
   }, [onError]);
-
-  useEffect(() => {
-    promptedUserIdRef.current = null;
-  }, [signedInUserId]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -55,6 +55,7 @@ export function useAccountDataScope({
       if (!isSignedInCloud || !signedInUserId || !supabase) {
         setSharedAccounts([]);
         setActiveOwnerUserId(signedInUserId);
+        setSelectionRequired(false);
         setScopeReady(true);
         setShowSelectionModal(false);
         return;
@@ -87,12 +88,29 @@ export function useAccountDataScope({
 
       const validOwnerIds = new Set([signedInUserId, ...deduped.map((row) => row.ownerUserId)]);
       setSharedAccounts(deduped);
-      setActiveOwnerUserId((prev) => (prev && validOwnerIds.has(prev) ? prev : signedInUserId));
-      setScopeReady(true);
+      setShowSelectionModal(false);
 
-      if (deduped.length > 0 && promptedUserIdRef.current !== signedInUserId) {
-        setShowSelectionModal(true);
+      const storedOwnerUserId = getSelectedOwnerUserIdForSession(signedInUserId);
+      const nextOwnerUserId =
+        storedOwnerUserId && validOwnerIds.has(storedOwnerUserId) ? storedOwnerUserId : null;
+
+      if (nextOwnerUserId) {
+        setActiveOwnerUserId(nextOwnerUserId);
+        setSelectionRequired(false);
+        setScopeReady(true);
+        return;
       }
+
+      setActiveOwnerUserId(null);
+      setSelectionRequired(true);
+
+      if (typeof window !== "undefined") {
+        const pathname = window.location.pathname;
+        if (pathname !== "/dataset-select" && pathname !== "/auth/callback") {
+          window.location.replace("/dataset-select");
+        }
+      }
+      setScopeReady(false);
     }
 
     void loadScope();
@@ -104,7 +122,8 @@ export function useAccountDataScope({
   const selectOwnData = useCallback(() => {
     if (!signedInUserId) return;
     setActiveOwnerUserId(signedInUserId);
-    promptedUserIdRef.current = signedInUserId;
+    setSelectedOwnerUserIdForSession(signedInUserId, signedInUserId);
+    setSelectionRequired(false);
     setShowSelectionModal(false);
   }, [signedInUserId]);
 
@@ -112,7 +131,8 @@ export function useAccountDataScope({
     (ownerUserId: string) => {
       if (!signedInUserId) return;
       setActiveOwnerUserId(ownerUserId);
-      promptedUserIdRef.current = signedInUserId;
+      setSelectedOwnerUserIdForSession(signedInUserId, ownerUserId);
+      setSelectionRequired(false);
       setShowSelectionModal(false);
     },
     [signedInUserId],
@@ -135,6 +155,7 @@ export function useAccountDataScope({
     activeOwnerEmail,
     sharedAccounts,
     scopeReady,
+    selectionRequired,
     isUsingSharedData,
     showSelectionModal,
     setShowSelectionModal,

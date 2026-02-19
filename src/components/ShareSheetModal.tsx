@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  rowToAccountChangeLog,
+  type AccountChangeLogEntry,
+  type DbAccountChangeLogRow,
+} from "@/lib/supabase/accountChangeLogs";
 
 type NoticeKind = "info" | "success" | "error";
 
@@ -21,6 +26,18 @@ type ShareRow = {
   created_at: string;
 };
 
+type AccountChangeLogRpcRow = {
+  id: string;
+  owner_user_id: string;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  table_name: string;
+  row_id: string | null;
+  action: "insert" | "update" | "delete";
+  changed_fields: unknown;
+  created_at: string;
+};
+
 const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
 export function ShareSheetModal({
@@ -37,6 +54,8 @@ export function ShareSheetModal({
   const [savingShare, setSavingShare] = useState(false);
   const [shares, setShares] = useState<ShareRow[]>([]);
   const [removingShareId, setRemovingShareId] = useState<string | null>(null);
+  const [recentLogs, setRecentLogs] = useState<AccountChangeLogEntry[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   const canManageShares = useMemo(() => {
     if (!currentUserId || !activeOwnerUserId) return false;
@@ -70,6 +89,32 @@ export function ShareSheetModal({
     setShares((data ?? []) as ShareRow[]);
   }, [activeOwnerUserId, supabase, notify]);
 
+  const loadRecentLogs = useCallback(async () => {
+    if (!supabase || !activeOwnerUserId) {
+      setRecentLogs([]);
+      return;
+    }
+
+    setLoadingLogs(true);
+    const { data, error } = await supabase.rpc("list_account_change_logs", {
+      p_owner_user_id: activeOwnerUserId,
+      p_limit: 30,
+    });
+
+    if (error) {
+      setLoadingLogs(false);
+      notify("error", error.message);
+      return;
+    }
+
+    setRecentLogs(
+      ((data ?? []) as AccountChangeLogRpcRow[]).map((row) =>
+        rowToAccountChangeLog(row as DbAccountChangeLogRow),
+      ),
+    );
+    setLoadingLogs(false);
+  }, [activeOwnerUserId, notify, supabase]);
+
   const requestClose = useCallback(() => {
     setEmail("");
     setSavingShare(false);
@@ -81,11 +126,12 @@ export function ShareSheetModal({
     if (!isOpen) return;
     const timer = window.setTimeout(() => {
       void loadShares();
+      void loadRecentLogs();
     }, 0);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isOpen, loadShares]);
+  }, [isOpen, loadRecentLogs, loadShares]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -155,8 +201,9 @@ export function ShareSheetModal({
       setRemovingShareId(null);
       notify("success", "Access removed.");
       void loadShares();
+      void loadRecentLogs();
     },
-    [canManageShares, loadShares, notify, supabase],
+    [canManageShares, loadRecentLogs, loadShares, notify, supabase],
   );
 
   if (!isOpen) return null;
@@ -246,6 +293,45 @@ export function ShareSheetModal({
               </ul>
             ) : (
               <p className="px-3 py-4 text-sm text-muted">No shared users yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border bg-paper/45">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <p className="font-mono text-xs text-muted">Recent activity</p>
+          </div>
+          <div className="max-h-72 overflow-y-auto">
+            {loadingLogs ? (
+              <p className="px-3 py-4 text-sm text-muted">Loading activity...</p>
+            ) : recentLogs.length ? (
+              <ul className="divide-y divide-border">
+                {recentLogs.map((log) => (
+                  <li key={log.id} className="px-3 py-2">
+                    <p className="text-sm text-ink">
+                      <span className="font-semibold">{log.actorEmail}</span>{" "}
+                      <span className="text-muted">
+                        {log.action === "insert"
+                          ? "created"
+                          : log.action === "update"
+                            ? "updated"
+                            : "deleted"}
+                      </span>{" "}
+                      <span className="font-mono text-xs text-muted">{log.tableName}</span>
+                    </p>
+                    <p className="mt-0.5 font-mono text-xs text-muted">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </p>
+                    {log.changedFields.length ? (
+                      <p className="mt-0.5 text-xs text-muted">
+                        Fields: {log.changedFields.join(", ")}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-3 py-4 text-sm text-muted">No activity logs yet.</p>
             )}
           </div>
         </div>
