@@ -187,12 +187,24 @@ function sumOverheadFlatCents(items: OverheadItem[]): number {
   return roundCents(total);
 }
 
+export function computeOverheadBaseCents(
+  materialsWithWasteCents: number,
+  laborSubtotalCents: number,
+): number {
+  return roundCents(materialsWithWasteCents + laborSubtotalCents);
+}
+
+export function computeOverheadLineTotalCents(item: OverheadItem, baseCents: number): number {
+  if (item.kind === "flat") return roundCents(item.amountCents || 0);
+  const pct = clampNumber(item.percent || 0, 0, 1000);
+  return roundCents(Math.round((baseCents * pct) / 100));
+}
+
 function sumOverheadPercentCents(items: OverheadItem[], baseCents: number): number {
   let total = 0;
   for (const it of items) {
     if (it.kind !== "percent") continue;
-    const pct = clampNumber(it.percent || 0, 0, 1000);
-    total += Math.round((baseCents * pct) / 100);
+    total += computeOverheadLineTotalCents(it, baseCents);
   }
   return roundCents(total);
 }
@@ -205,7 +217,7 @@ export function computeTotals(sheet: CostSheet): SheetTotals {
   );
 
   const laborSubtotalCents = sumLaborCents(sheet.labor || []);
-  const baseCents = roundCents(materialsWithWasteCents + laborSubtotalCents);
+  const baseCents = computeOverheadBaseCents(materialsWithWasteCents, laborSubtotalCents);
 
   const overheadFlatCents = sumOverheadFlatCents(sheet.overhead || []);
   const overheadPercentCents = sumOverheadPercentCents(sheet.overhead || [], baseCents);

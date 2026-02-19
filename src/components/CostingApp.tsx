@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
-import { computeTotals, makeId } from "@/lib/costing";
+import {
+  computeOverheadBaseCents,
+  computeOverheadLineTotalCents,
+  computeTotals,
+  makeId,
+} from "@/lib/costing";
 import type { CostSheet, OverheadItem, StoredData } from "@/lib/costing";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
@@ -769,6 +774,18 @@ export default function CostingApp() {
                 Sign in with Google to access and sync your costing data across devices.
               </p>
 
+              <footer className="mx-auto mt-8 w-full max-w-2xl border-t border-zinc-300/80 pt-4 text-center text-[11px] font-normal leading-5 text-muted">
+                <p>© 2026 Justiniano Tagarda · Full-Stack Developer</p>
+                <address className="not-italic">
+                  <a href="mailto:justintagarda@gmail.com" className="hover:underline">
+                    Email: justintagarda@gmail.com
+                  </a>
+                </address>
+                <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
+                <p>Hosting: Vercel</p>
+                <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
+              </footer>
+
               <GlobalAppToast notice={notice} />
             </section>
           </main>
@@ -1349,11 +1366,11 @@ export default function CostingApp() {
                           </thead>
                           <tbody className="align-top">
                             {selectedSheet.overhead.map((it) => {
-                              const base = totals.materialsWithWasteCents + totals.laborSubtotalCents;
-                              const lineTotal =
-                                it.kind === "flat"
-                                  ? it.amountCents
-                                  : Math.round((base * Math.max(0, it.percent)) / 100);
+                              const base = computeOverheadBaseCents(
+                                totals.materialsWithWasteCents,
+                                totals.laborSubtotalCents,
+                              );
+                              const lineTotal = computeOverheadLineTotalCents(it, base);
 
                               return (
                                 <tr key={it.id} className="animate-[popIn_.14s_ease-out]">

@@ -4,14 +4,14 @@
 Update this block at the end of each session. Keep every field to one line.
 
 - Date: `2026-02-19`
-- Session scope: `UI improvements`
+- Session scope: `Logic refactor`
 - Branch: `main`
-- Working tree: `## main...origin/main [ahead 1]`
+- Working tree: `## main...origin/main [ahead 1] (dirty: M docs/project-context.md; M src/components/CostingApp.tsx; M src/components/MainNavMenu.tsx)`
 - Completed: `None yet`
-- Remaining: `Add automated regression coverage for refresh persistence and explicit logout behavior (BUG-2026-002) and then move it to Closed; review and commit .github/pull_request_template.md if intentional; implement prioritized UI improvements for navigation/layout polish`
-- Blockers/Risks: `No automated regression test currently protects refresh/logout auth behavior; docs/ is excluded via .git/info/exclude so doc updates require force-add to commit`
+- Remaining: `Add automated regression coverage for refresh persistence and explicit logout behavior (BUG-2026-002) and move it to Closed when tests exist; refactor calculator logic in src/components/CostingApp.tsx into smaller pure helpers while preserving behavior; review and commit .github/pull_request_template.md if intentional; resume deferred UI navigation/layout polish after logic refactor`
+- Blockers/Risks: `No automated regression test currently protects refresh/logout auth behavior; docs/ is excluded via .git/info/exclude so doc updates require force-add to commit; pull skipped because working tree is dirty`
 - Validation: `typecheck=not-run; lint=not-run; build=not-run`
-- Next step: `Implement the first UI improvement by polishing main navigation responsive spacing/visual hierarchy in src/components/MainNavMenu.tsx`
+- Next step: `Extract pure costing calculation helpers from src/components/CostingApp.tsx into src/lib/costing and wire the first call site without changing outputs`
 
 ## Stack Detection
 | Area | Detection | Evidence |
