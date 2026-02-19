@@ -17,6 +17,7 @@ import {
   type DateFormatOption,
   type UomConversion,
 } from "@/lib/settings";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -144,12 +145,10 @@ export default function SettingsApp() {
   }
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();

@@ -46,6 +46,7 @@ import {
   rowToPurchase,
   type DbPurchaseRow,
 } from "@/lib/supabase/purchases";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -892,12 +893,10 @@ export default function PurchasesApp() {
   }
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();

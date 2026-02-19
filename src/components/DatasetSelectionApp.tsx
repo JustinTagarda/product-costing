@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { setSelectedOwnerUserIdForSession } from "@/lib/accountScopeSelection";
@@ -124,8 +125,10 @@ export default function DatasetSelectionApp() {
   }
 
   async function cancelAndSignOut() {
-    if (supabase) {
-      await supabase.auth.signOut();
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      setError(errorMessage);
+      return;
     }
     goToWelcomePage();
   }

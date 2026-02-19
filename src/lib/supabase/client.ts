@@ -1,4 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  SUPABASE_AUTH_STORAGE_KEY,
+  createSessionAuthStorage,
+} from "@/lib/supabase/authStorage";
 
 let cached: SupabaseClient | null = null;
 
@@ -17,14 +21,18 @@ export function getSupabaseClient(): SupabaseClient {
     );
   }
 
+  const authStorage = createSessionAuthStorage();
+
   cached = createClient(url, anonKey, {
     auth: {
-      // Use implicit flow so sign-in works without any persistent browser storage.
-      flowType: "implicit",
-      // Force explicit sign-in per app open (no persisted browser session).
-      persistSession: false,
+      // Keep session across refresh, but limit persistence to browser-tab lifetime.
+      storage: authStorage,
+      storageKey: SUPABASE_AUTH_STORAGE_KEY,
+      flowType: "pkce",
+      persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      // The app handles callback URL processing explicitly in /auth/callback.
+      detectSessionInUrl: false,
     },
   });
 

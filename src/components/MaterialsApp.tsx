@@ -22,6 +22,7 @@ import {
   rowToMaterial,
   type DbMaterialRow,
 } from "@/lib/supabase/materials";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { goToWelcomePage } from "@/lib/navigation";
 
@@ -556,12 +557,10 @@ export default function MaterialsApp() {
   }
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();

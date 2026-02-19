@@ -12,6 +12,7 @@ import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
@@ -239,12 +240,10 @@ export default function ProductDetailsApp() {
   }, [activeOwnerUserId, dataAuthReady, sheet?.id, supabase, toast]);
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();

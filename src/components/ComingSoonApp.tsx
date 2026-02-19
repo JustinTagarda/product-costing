@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { goToWelcomePage } from "@/lib/navigation";
 
@@ -46,6 +47,7 @@ export default function ComingSoonApp() {
   });
 
   const [session, setSession] = useState<Session | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -76,8 +78,10 @@ export default function ComingSoonApp() {
   );
 
   async function signOut() {
-    if (supabase) {
-      await supabase.auth.signOut();
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      setError(errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();
@@ -123,6 +127,7 @@ export default function ComingSoonApp() {
                 {supabaseError || "Supabase is not configured in this environment."}
               </p>
             ) : null}
+            {error ? <p className="mx-auto mt-3 max-w-xl text-xs text-danger">{error}</p> : null}
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <button

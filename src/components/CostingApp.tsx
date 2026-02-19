@@ -18,6 +18,7 @@ import {
 } from "@/lib/currency";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { parseStoredDataJson } from "@/lib/importExport";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
@@ -419,12 +420,10 @@ export default function CostingApp() {
   }
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     setShowWelcomeGate(true);

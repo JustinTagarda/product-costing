@@ -30,6 +30,7 @@ import {
   type DbBomItemRow,
   type DbBomLineRow,
 } from "@/lib/supabase/bom";
+import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -546,12 +547,10 @@ export default function BomApp() {
   }
 
   async function signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast("error", error.message);
-        return;
-      }
+    const errorMessage = await signOutAndClearClientAuth(supabase);
+    if (errorMessage) {
+      toast("error", errorMessage);
+      return;
     }
     setSession(null);
     goToWelcomePage();
