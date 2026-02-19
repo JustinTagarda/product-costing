@@ -116,6 +116,7 @@ export default function SettingsApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -130,6 +131,8 @@ export default function SettingsApp() {
   });
 
   const userId = signedInUserId;
+  const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -155,6 +158,7 @@ export default function SettingsApp() {
   }
 
   function updateSettings(updater: (prev: AppSettings) => AppSettings) {
+    if (isReadOnlyData) return;
     setSettings((prev) => ({ ...updater(prev) }));
   }
 
@@ -166,6 +170,7 @@ export default function SettingsApp() {
   }
 
   function addConversion() {
+    if (isReadOnlyData) return;
     updateSettings((prev) => ({
       ...prev,
       uomConversions: [
@@ -176,6 +181,7 @@ export default function SettingsApp() {
   }
 
   function removeConversion(id: string) {
+    if (isReadOnlyData) return;
     updateSettings((prev) => ({
       ...prev,
       uomConversions: prev.uomConversions.filter((row) => row.id !== id),
@@ -183,6 +189,10 @@ export default function SettingsApp() {
   }
 
   async function onSave() {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     setSaving(true);
     const result = await saveSettings(settings);
     setSaving(false);
@@ -194,6 +204,7 @@ export default function SettingsApp() {
   }
 
   function resetDefaults() {
+    if (isReadOnlyData) return;
     const defaults = makeDefaultSettings(settings.createdAt || new Date().toISOString());
     setSettings(defaults);
     toast("info", "Loaded default settings. Click Save to apply.");
@@ -275,6 +286,11 @@ export default function SettingsApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -282,6 +298,7 @@ export default function SettingsApp() {
                 type="button"
                 className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
                 onClick={resetDefaults}
+                disabled={isReadOnlyData}
               >
                 Load defaults
               </button>
@@ -289,7 +306,7 @@ export default function SettingsApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => void onSave()}
-                disabled={saving}
+                disabled={saving || isReadOnlyData}
               >
                 {saving ? "Saving..." : "Save settings"}
               </button>
@@ -298,6 +315,7 @@ export default function SettingsApp() {
 
           <GlobalAppToast notice={notice} />
 
+          <fieldset disabled={isReadOnlyData} className="m-0 border-0 p-0">
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <section className={cardClassName + " p-5"}>
               <h2 className={sectionTitleClass()}>Country and Timezone</h2>
@@ -620,6 +638,7 @@ export default function SettingsApp() {
               </div>
             </section>
           </div>
+          </fieldset>
 
           <MainContentStatusFooter
             userLabel={session ? user?.email || user?.id : null}

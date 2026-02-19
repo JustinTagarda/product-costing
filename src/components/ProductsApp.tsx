@@ -67,6 +67,7 @@ export default function ProductsApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -82,6 +83,7 @@ export default function ProductsApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -192,6 +194,10 @@ export default function ProductsApp() {
 
   async function deleteProduct(sheet: CostSheet): Promise<void> {
     if (deletingProductId) return;
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase) {
       toast("error", "Sign in with Google to manage products.");
       return;
@@ -247,6 +253,11 @@ export default function ProductsApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -254,6 +265,7 @@ export default function ProductsApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={() => window.location.assign("/calculator?new=1")}
+                disabled={isReadOnlyData}
               >
                 New product
               </button>
@@ -322,7 +334,7 @@ export default function ProductsApp() {
                               type="button"
                               className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
                               onClick={() => void deleteProduct(sheet)}
-                              disabled={deletingProductId === sheet.id}
+                              disabled={deletingProductId === sheet.id || isReadOnlyData}
                             >
                               {deletingProductId === sheet.id ? "Deleting..." : "Delete"}
                             </button>

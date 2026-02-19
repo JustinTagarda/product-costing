@@ -182,6 +182,7 @@ export default function BomApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -197,6 +198,7 @@ export default function BomApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -365,13 +367,13 @@ export default function BomApp() {
   }, [activeOwnerUserId, dataAuthReady, isCloudMode, supabase, toast]);
 
   async function persistBomItem(next: BomRecord): Promise<void> {
-    if (!isCloudMode || !supabase) return;
+    if (!isCloudMode || !supabase || isReadOnlyData) return;
     const { error } = await supabase.from("bom_items").update(bomToItemUpdate(next)).eq("id", next.id);
     if (error) toast("error", `Save failed: ${error.message}`);
   }
 
   async function persistBomLine(bomId: string, line: BomLine): Promise<void> {
-    if (!isCloudMode || !supabase) return;
+    if (!isCloudMode || !supabase || isReadOnlyData) return;
     const { error } = await supabase
       .from("bom_item_lines")
       .update(lineToRowUpdate(line))
@@ -396,6 +398,7 @@ export default function BomApp() {
   }
 
   function updateBom(id: string, updater: (row: BomRecord) => BomRecord): void {
+    if (isReadOnlyData) return;
     const now = new Date().toISOString();
     setBoms((prev) => {
       let changed: BomRecord | null = null;
@@ -411,6 +414,7 @@ export default function BomApp() {
   }
 
   function updateLine(bomId: string, lineId: string, updater: (row: BomLine) => BomLine): void {
+    if (isReadOnlyData) return;
     const now = new Date().toISOString();
     setBoms((prev) => {
       let changedItem: BomRecord | null = null;
@@ -434,6 +438,10 @@ export default function BomApp() {
   }
 
   async function createBom(): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase || !activeOwnerUserId) {
       toast("error", "Sign in with Google to manage BOM.");
       return;
@@ -471,6 +479,10 @@ export default function BomApp() {
   }
 
   async function deleteBom(id: string): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase) {
       toast("error", "Sign in with Google to manage BOM.");
       return;
@@ -488,6 +500,10 @@ export default function BomApp() {
   }
 
   async function addLine(): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase || !activeOwnerUserId) {
       toast("error", "Sign in with Google to manage BOM.");
       return;
@@ -515,6 +531,10 @@ export default function BomApp() {
   }
 
   async function removeLine(lineId: string): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase) {
       toast("error", "Sign in with Google to manage BOM.");
       return;
@@ -600,6 +620,11 @@ export default function BomApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex items-center gap-2 rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm text-ink">
@@ -614,6 +639,7 @@ export default function BomApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={() => void createBom()}
+                disabled={isReadOnlyData}
               >
                 New BOM
               </button>
@@ -669,6 +695,7 @@ export default function BomApp() {
                             type="button"
                             className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
                             onClick={() => void deleteBom(item.id)}
+                            disabled={isReadOnlyData}
                           >
                             Delete
                           </button>
@@ -731,7 +758,7 @@ export default function BomApp() {
               <div className="border-t border-border px-4 py-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-serif text-xl tracking-tight text-ink">Components</h3>
-                  <button type="button" className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px" onClick={() => void addLine()}>
+                  <button type="button" className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px" onClick={() => void addLine()} disabled={isReadOnlyData}>
                     Add line
                   </button>
                 </div>
@@ -830,7 +857,7 @@ export default function BomApp() {
                             <input className={inputBase} value={line.notes} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, notes: e.target.value }))} />
                           </td>
                           <td className="p-2">
-                            <button type="button" className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15" onClick={() => void removeLine(line.id)}>
+                            <button type="button" className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15" onClick={() => void removeLine(line.id)} disabled={isReadOnlyData}>
                               Remove
                             </button>
                           </td>

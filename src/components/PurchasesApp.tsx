@@ -402,6 +402,7 @@ export default function PurchasesApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -417,6 +418,7 @@ export default function PurchasesApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -623,6 +625,7 @@ export default function PurchasesApp() {
   const syncMaterialFromPurchase = useCallback(
     async (next: PurchaseRecord): Promise<void> => {
       if (!next.materialId) return;
+      if (isReadOnlyData) return;
       const updatedAt = new Date().toISOString();
 
       if (!isCloudMode || !supabase) return;
@@ -642,11 +645,11 @@ export default function PurchasesApp() {
       }
       return;
     },
-    [isCloudMode, supabase, toast],
+    [isCloudMode, isReadOnlyData, supabase, toast],
   );
 
   async function persistPurchase(next: PurchaseRecord): Promise<void> {
-    if (!isCloudMode || !supabase) return;
+    if (!isCloudMode || !supabase || isReadOnlyData) return;
     const { error } = await supabase
       .from("purchases")
       .update(purchaseToRowUpdate(next))
@@ -692,6 +695,7 @@ export default function PurchasesApp() {
   }
 
   function updatePurchase(id: string, updater: (row: PurchaseRecord) => PurchaseRecord): void {
+    if (isReadOnlyData) return;
     const now = new Date().toISOString();
     const isImportedRow = Boolean(importRowMetaByIdRef.current[id]);
     setPurchases((prev) => {
@@ -800,6 +804,10 @@ export default function PurchasesApp() {
   }
 
   async function commitDraftPurchase(): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (savingDraftPurchaseRef.current) return;
     if (!hasDraftPurchaseValues()) return;
     if (!isDraftPurchaseComplete(draftPurchase)) return;
@@ -869,6 +877,10 @@ export default function PurchasesApp() {
   }
 
   async function deletePurchase(id: string) {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     const isImportedDraft = Boolean(importRowMetaByIdRef.current[id]);
     if (!isImportedDraft) {
       if (!isCloudMode || !supabase) {
@@ -907,6 +919,10 @@ export default function PurchasesApp() {
   }
 
   function onNewPurchaseButtonClick(): void {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (savingDraftPurchaseRef.current) return;
     if (!hasDraftPurchaseValues()) {
       focusDraftMaterialSelect();
@@ -943,6 +959,10 @@ export default function PurchasesApp() {
 
   const commitImportedPurchaseRow = useCallback(
     async (rowId: string): Promise<void> => {
+      if (isReadOnlyData) {
+        toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+        return;
+      }
       const existingMeta = importRowMetaByIdRef.current[rowId];
       if (!existingMeta) return;
       if (existingMeta.status === "saving") return;
@@ -1083,6 +1103,7 @@ export default function PurchasesApp() {
     [
       activeOwnerUserId,
       isCloudMode,
+      isReadOnlyData,
       normalizePurchaseRow,
       settings.baseCurrency,
       supabase,
@@ -1093,6 +1114,10 @@ export default function PurchasesApp() {
 
   const importPurchasesFromValidatedTsv = useCallback(
     (tsv: string): void => {
+      if (isReadOnlyData) {
+        toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+        return;
+      }
       const normalizedDatesResult = normalizeDateColumnsInTsv(tsv, settings.dateFormat);
       if (!normalizedDatesResult.ok) {
         toast("error", normalizedDatesResult.reason);
@@ -1231,6 +1256,7 @@ export default function PurchasesApp() {
       settings.baseCurrency,
       settings.dateFormat,
       settings.defaultMaterialUnit,
+      isReadOnlyData,
       toast,
     ],
   );
@@ -1302,6 +1328,11 @@ export default function PurchasesApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -1309,6 +1340,7 @@ export default function PurchasesApp() {
                 type="button"
                 className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/75 active:translate-y-px"
                 onClick={() => setIsImportModalOpen(true)}
+                disabled={isReadOnlyData}
               >
                 Import
               </button>
@@ -1316,6 +1348,7 @@ export default function PurchasesApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={onNewPurchaseButtonClick}
+                disabled={isReadOnlyData}
               >
                 New purchase
               </button>
@@ -1404,7 +1437,7 @@ export default function PurchasesApp() {
                                 unit: material ? material.unit : x.unit,
                               }));
                             }}
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           >
                             <option value="">
                               {row.materialName ? `Unlinked (${row.materialName})` : "Select material"}
@@ -1425,7 +1458,7 @@ export default function PurchasesApp() {
                               updatePurchase(row.id, (x) => ({ ...x, description: e.target.value }))
                             }
                             placeholder="Description"
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className="p-2 align-middle">
@@ -1436,7 +1469,7 @@ export default function PurchasesApp() {
                               updatePurchase(row.id, (x) => ({ ...x, variation: e.target.value }))
                             }
                             placeholder="Variation"
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className={"w-[80px] p-2 align-middle" + (invalidImportedField("quantity") ? " bg-danger/10" : "")}>
@@ -1451,7 +1484,7 @@ export default function PurchasesApp() {
                                 quantity: Math.max(0, value),
                               }))
                             }
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className={"w-[100px] p-2 align-middle" + (invalidImportedField("unitCostCents") ? " bg-danger/10" : "")}>
@@ -1466,7 +1499,7 @@ export default function PurchasesApp() {
                                 unitCostCents: valueCents,
                               }))
                             }
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className="w-[120px] p-2 align-middle">
@@ -1486,7 +1519,7 @@ export default function PurchasesApp() {
                                 usableQuantity: Math.max(0, value),
                               }))
                             }
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className={"w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle" + (invalidImportedField("purchaseDate") ? " bg-danger/10" : "")}>
@@ -1501,7 +1534,7 @@ export default function PurchasesApp() {
                                 purchaseDate: e.target.value || (isImportedDraftRow ? "" : currentDateInputValue()),
                               }))
                             }
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className="w-[120px] p-2 align-middle">
@@ -1532,7 +1565,7 @@ export default function PurchasesApp() {
                                   : x.marketplace,
                               }));
                             }}
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           >
                             {isImportedDraftRow ? <option value="">Select marketplace</option> : null}
                             {PURCHASE_MARKETPLACES.map((item) => (
@@ -1554,7 +1587,7 @@ export default function PurchasesApp() {
                               }))
                             }
                             placeholder="Store"
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           />
                         </td>
                         <td className="w-[75px] p-2 align-middle">
@@ -1576,7 +1609,7 @@ export default function PurchasesApp() {
                             type="button"
                             className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
                             onClick={() => void deletePurchase(row.id)}
-                            disabled={isImportedRowSaving}
+                            disabled={isImportedRowSaving || isReadOnlyData}
                           >
                             Delete
                           </button>
@@ -1625,7 +1658,7 @@ export default function PurchasesApp() {
                             store: prev.store || material?.supplier || "",
                           }));
                         }}
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       >
                         <option value="">Select material</option>
                         {materials.map((item) => (
@@ -1644,7 +1677,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, description: e.target.value }))
                         }
                         placeholder="Description"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="p-2 align-middle">
@@ -1655,7 +1688,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, variation: e.target.value }))
                         }
                         placeholder="Variation"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[80px] p-2 align-middle">
@@ -1666,7 +1699,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, quantityInput: e.target.value }))
                         }
                         placeholder="0"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[100px] p-2 align-middle">
@@ -1677,7 +1710,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, unitCostInput: e.target.value }))
                         }
                         placeholder="0.00"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[120px] p-2 align-middle">
@@ -1700,7 +1733,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, usableQuantityInput: e.target.value }))
                         }
                         placeholder="0"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[110px] min-w-[110px] max-w-[110px] p-2 align-middle">
@@ -1727,7 +1760,7 @@ export default function PurchasesApp() {
                         }}
                         onBlur={() => setIsDraftPurchaseDateInputActive(false)}
                         placeholder="Purchase Date"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[120px] p-2 align-middle">
@@ -1742,7 +1775,7 @@ export default function PurchasesApp() {
                               : "",
                           }))
                         }
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       >
                         <option value="">Select marketplace</option>
                         {PURCHASE_MARKETPLACES.map((item) => (
@@ -1760,7 +1793,7 @@ export default function PurchasesApp() {
                           setDraftPurchase((prev) => ({ ...prev, store: e.target.value }))
                         }
                         placeholder="Store"
-                        disabled={savingDraftPurchase}
+                        disabled={savingDraftPurchase || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[75px] p-2 align-middle">
@@ -1811,4 +1844,5 @@ export default function PurchasesApp() {
     </div>
   );
 }
+
 

@@ -13,6 +13,7 @@ import type { SharedAccountOption } from "@/lib/useAccountDataScope";
 type SharedAccountRpcRow = {
   owner_user_id: string;
   owner_email: string | null;
+  access_level: string | null;
   shared_at: string | null;
 };
 
@@ -102,6 +103,9 @@ export default function DatasetSelectionApp() {
         .map((row) => ({
           ownerUserId: row.owner_user_id,
           ownerEmail: (row.owner_email || row.owner_user_id).trim().toLowerCase(),
+          accessLevel: (row.access_level === "editor" ? "editor" : "viewer") as
+            | "editor"
+            | "viewer",
           sharedAt: row.shared_at || null,
         }));
 

@@ -252,6 +252,7 @@ export default function MaterialsApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -267,6 +268,7 @@ export default function MaterialsApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -435,7 +437,7 @@ export default function MaterialsApp() {
   }, [materials]);
 
   async function persistMaterial(next: MaterialRecord) {
-    if (!isCloudMode || !supabase) return;
+    if (!isCloudMode || !supabase || isReadOnlyData) return;
     const { error } = await supabase
       .from("materials")
       .update(materialToRowUpdate(next))
@@ -451,6 +453,7 @@ export default function MaterialsApp() {
   }
 
   function updateMaterial(id: string, updater: (row: MaterialRecord) => MaterialRecord): void {
+    if (isReadOnlyData) return;
     const now = new Date().toISOString();
     setMaterials((prev) => {
       let changed: MaterialRecord | null = null;
@@ -466,6 +469,10 @@ export default function MaterialsApp() {
   }
 
   async function commitDraftMaterial(): Promise<void> {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     const trimmedName = draftMaterial.name.trim();
     if (!trimmedName || savingDraftMaterialRef.current || duplicateNameModal) return;
     if (!isCloudMode || !supabase || !activeOwnerUserId) {
@@ -543,6 +550,10 @@ export default function MaterialsApp() {
   }
 
   async function deleteMaterial(id: string) {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase) {
       toast("error", "Sign in with Google to delete materials.");
       return;
@@ -624,6 +635,11 @@ export default function MaterialsApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -639,6 +655,7 @@ export default function MaterialsApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={() => focusDraftNameInput()}
+                disabled={isReadOnlyData}
               >
                 New material
               </button>
@@ -675,6 +692,7 @@ export default function MaterialsApp() {
                           value={row.name}
                           onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, name: e.target.value }))}
                           placeholder="e.g., Canvas fabric"
+                          disabled={isReadOnlyData}
                         />
                       </td>
                       <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
@@ -682,6 +700,7 @@ export default function MaterialsApp() {
                           className={inputBase}
                           value={row.unit}
                           onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, unit: e.target.value }))}
+                          disabled={isReadOnlyData}
                         >
                           {STANDARD_USABLE_UNITS.map((unit) => (
                             <option key={unit} value={unit}>
@@ -704,6 +723,7 @@ export default function MaterialsApp() {
                               onChange={(e) =>
                                 updateMaterial(row.id, (x) => ({ ...x, isActive: e.target.checked }))
                               }
+                              disabled={isReadOnlyData}
                             />
                             {row.isActive ? "Yes" : "No"}
                           </label>
@@ -715,6 +735,7 @@ export default function MaterialsApp() {
                             type="button"
                             className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
                             onClick={() => void deleteMaterial(row.id)}
+                            disabled={isReadOnlyData}
                           >
                             Delete
                           </button>
@@ -758,7 +779,7 @@ export default function MaterialsApp() {
                           setDraftMaterial((prev) => ({ ...prev, name: e.target.value }))
                         }
                         placeholder="New material name"
-                        disabled={savingDraftMaterial}
+                        disabled={savingDraftMaterial || isReadOnlyData}
                       />
                     </td>
                     <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
@@ -768,7 +789,7 @@ export default function MaterialsApp() {
                         onChange={(e) =>
                           setDraftMaterial((prev) => ({ ...prev, unit: e.target.value }))
                         }
-                        disabled={savingDraftMaterial}
+                        disabled={savingDraftMaterial || isReadOnlyData}
                       >
                         <option value="">Select Unit</option>
                         {STANDARD_USABLE_UNITS.map((unit) => (
@@ -790,7 +811,7 @@ export default function MaterialsApp() {
                             onChange={(e) =>
                               setDraftMaterial((prev) => ({ ...prev, isActive: e.target.checked }))
                             }
-                            disabled={savingDraftMaterial}
+                            disabled={savingDraftMaterial || isReadOnlyData}
                           />
                           {draftMaterial.isActive ? "Yes" : "No"}
                         </label>

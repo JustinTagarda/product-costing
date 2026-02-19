@@ -10,6 +10,7 @@ import {
 export type SharedAccountOption = {
   ownerUserId: string;
   ownerEmail: string;
+  accessLevel: "editor" | "viewer";
   sharedAt: string | null;
 };
 
@@ -23,6 +24,7 @@ type UseAccountDataScopeArgs = {
 type SharedAccountRpcRow = {
   owner_user_id: string;
   owner_email: string | null;
+  access_level: string | null;
   shared_at: string | null;
 };
 
@@ -79,6 +81,9 @@ export function useAccountDataScope({
         .map((row) => ({
           ownerUserId: row.owner_user_id,
           ownerEmail: (row.owner_email || row.owner_user_id).trim().toLowerCase(),
+          accessLevel: (row.access_level === "editor" ? "editor" : "viewer") as
+            | "editor"
+            | "viewer",
           sharedAt: row.shared_at || null,
         }));
 
@@ -152,6 +157,14 @@ export function useAccountDataScope({
     return sharedAccounts.find((row) => row.ownerUserId === activeOwnerUserId)?.ownerEmail || "";
   }, [activeOwnerUserId, sharedAccounts, signedInEmail, signedInUserId]);
 
+  const activeAccessLevel = useMemo(() => {
+    if (!signedInUserId || !activeOwnerUserId) return null;
+    if (activeOwnerUserId === signedInUserId) return "owner";
+    return sharedAccounts.find((row) => row.ownerUserId === activeOwnerUserId)?.accessLevel ?? null;
+  }, [activeOwnerUserId, sharedAccounts, signedInUserId]);
+
+  const canEditActiveData = activeAccessLevel === "owner" || activeAccessLevel === "editor";
+
   const isUsingSharedData = Boolean(
     signedInUserId && activeOwnerUserId && activeOwnerUserId !== signedInUserId,
   );
@@ -161,6 +174,8 @@ export function useAccountDataScope({
     signedInEmail,
     activeOwnerUserId,
     activeOwnerEmail,
+    activeAccessLevel,
+    canEditActiveData,
     sharedAccounts,
     scopeReady,
     selectionRequired,

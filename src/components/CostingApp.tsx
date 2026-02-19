@@ -184,6 +184,7 @@ export default function CostingApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -199,6 +200,7 @@ export default function CostingApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -376,7 +378,7 @@ export default function CostingApp() {
   const materialById = useMemo(() => new Map(materials.map((item) => [item.id, item])), [materials]);
 
   async function persistSheet(next: CostSheet): Promise<void> {
-    if (!isCloudMode || !supabase) return;
+    if (!isCloudMode || !supabase || isReadOnlyData) return;
     const payload = sheetToRowUpdate(next);
     const { error } = await supabase.from("cost_sheets").update(payload).eq("id", next.id);
     if (error) toast("error", `Save failed: ${error.message}`);
@@ -390,7 +392,7 @@ export default function CostingApp() {
   }
 
   function updateSelected(updater: (sheet: CostSheet) => CostSheet) {
-    if (!selectedSheet) return;
+    if (!selectedSheet || isReadOnlyData) return;
     const now = new Date().toISOString();
     const next = { ...updater(selectedSheet), updatedAt: now };
     setSheets((prev) => prev.map((s) => (s.id === next.id ? next : s)));
@@ -440,6 +442,10 @@ export default function CostingApp() {
   }
 
   const newSheet = useCallback(async () => {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase || !activeOwnerUserId) {
       toast("error", "Sign in with Google to create products.");
       return;
@@ -488,6 +494,7 @@ export default function CostingApp() {
 
     toast("error", "Could not create sheet. Failed to generate a unique code.");
   }, [
+    isReadOnlyData,
     isCloudMode,
     settings.defaultMarkupPct,
     settings.defaultTaxPct,
@@ -539,6 +546,10 @@ export default function CostingApp() {
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase || !activeOwnerUserId) {
       toast("error", "Sign in with Google to duplicate products.");
       return;
@@ -597,6 +608,10 @@ export default function CostingApp() {
 
   async function deleteSelected() {
     if (!selectedSheet) return;
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
     if (!isCloudMode || !supabase) {
       toast("error", "Sign in with Google to delete products.");
       return;
@@ -632,6 +647,11 @@ export default function CostingApp() {
   }
 
   async function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      e.target.value = "";
+      return;
+    }
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -834,6 +854,7 @@ export default function CostingApp() {
                   type="button"
                   className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                   onClick={() => void newSheet()}
+                  disabled={isReadOnlyData}
                 >
                   New product
                 </button>
@@ -873,6 +894,11 @@ export default function CostingApp() {
                 {supabaseError || "Supabase is required for this app."}
               </p>
             ) : null}
+            {isReadOnlyData ? (
+              <p className="mt-2 text-xs text-muted">
+                Viewer access: this shared dataset is read-only.
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -880,6 +906,7 @@ export default function CostingApp() {
               type="button"
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
               onClick={() => void newSheet()}
+              disabled={isReadOnlyData}
             >
               New product
             </button>
@@ -887,6 +914,7 @@ export default function CostingApp() {
               type="button"
               className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
               onClick={importAll}
+              disabled={isReadOnlyData}
             >
               Import
             </button>

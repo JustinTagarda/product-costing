@@ -90,7 +90,9 @@ export function DataSelectionModal({
                         {account.ownerEmail || account.ownerUserId}
                       </p>
                       <p className="mt-0.5 font-mono text-xs text-muted">
-                        Use this shared account data
+                        {account.accessLevel === "editor"
+                          ? "Editor access: can edit shared data"
+                          : "Viewer access: read-only shared data"}
                       </p>
                     </button>
                   </li>

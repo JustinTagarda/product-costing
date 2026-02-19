@@ -9,6 +9,7 @@ import {
 } from "@/lib/supabase/accountChangeLogs";
 
 type NoticeKind = "info" | "success" | "error";
+type AccessLevel = "editor" | "viewer";
 
 type ShareSheetModalProps = {
   isOpen: boolean;
@@ -20,10 +21,19 @@ type ShareSheetModalProps = {
 };
 
 type ShareRow = {
-  id: string;
   owner_user_id: string;
+  owner_email: string;
   shared_with_email: string;
-  created_at: string;
+  access_level: AccessLevel;
+  shared_at: string | null;
+};
+
+type AccountShareRpcRow = {
+  owner_user_id: string;
+  owner_email: string | null;
+  shared_with_email: string | null;
+  access_level: string | null;
+  shared_at: string | null;
 };
 
 type AccountChangeLogRpcRow = {
@@ -40,6 +50,14 @@ type AccountChangeLogRpcRow = {
 
 const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
+function normalizeAccessLevel(value: string | null | undefined): AccessLevel {
+  return value === "editor" ? "editor" : "viewer";
+}
+
+function accessLevelLabel(value: AccessLevel): string {
+  return value === "editor" ? "Editor" : "Viewer";
+}
+
 export function ShareSheetModal({
   isOpen,
   onClose,
@@ -50,10 +68,14 @@ export function ShareSheetModal({
 }: ShareSheetModalProps) {
   const titleId = useId();
   const descriptionId = useId();
+
   const [email, setEmail] = useState("");
+  const [newShareAccessLevel, setNewShareAccessLevel] = useState<AccessLevel>("viewer");
   const [savingShare, setSavingShare] = useState(false);
   const [shares, setShares] = useState<ShareRow[]>([]);
-  const [removingShareId, setRemovingShareId] = useState<string | null>(null);
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [removingShareEmail, setRemovingShareEmail] = useState<string | null>(null);
+  const [updatingShareEmail, setUpdatingShareEmail] = useState<string | null>(null);
   const [recentLogs, setRecentLogs] = useState<AccountChangeLogEntry[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
@@ -61,6 +83,12 @@ export function ShareSheetModal({
     if (!currentUserId || !activeOwnerUserId) return false;
     return currentUserId === activeOwnerUserId;
   }, [currentUserId, activeOwnerUserId]);
+
+  const ownerLabel = useMemo(() => {
+    if (ownerEmail) return ownerEmail;
+    if (activeOwnerUserId) return activeOwnerUserId;
+    return "Unknown owner";
+  }, [activeOwnerUserId, ownerEmail]);
 
   const notify = useCallback(
     (kind: NoticeKind, message: string) => {
@@ -72,22 +100,32 @@ export function ShareSheetModal({
   const loadShares = useCallback(async () => {
     if (!supabase || !activeOwnerUserId) {
       setShares([]);
+      setOwnerEmail("");
       return;
     }
 
-    const { data, error } = await supabase
-      .from("account_shares")
-      .select("id, owner_user_id, shared_with_email, created_at")
-      .eq("owner_user_id", activeOwnerUserId)
-      .order("created_at", { ascending: true });
+    const { data, error } = await supabase.rpc("list_account_shares_for_owner", {
+      p_owner_user_id: activeOwnerUserId,
+    });
 
     if (error) {
       notify("error", error.message);
       return;
     }
 
-    setShares((data ?? []) as ShareRow[]);
-  }, [activeOwnerUserId, supabase, notify]);
+    const normalized = ((data ?? []) as AccountShareRpcRow[])
+      .filter((row) => (row.shared_with_email || "").trim().length > 0)
+      .map((row) => ({
+        owner_user_id: row.owner_user_id,
+        owner_email: (row.owner_email || row.owner_user_id || "").trim().toLowerCase(),
+        shared_with_email: (row.shared_with_email || "").trim().toLowerCase(),
+        access_level: normalizeAccessLevel(row.access_level),
+        shared_at: row.shared_at || null,
+      }));
+
+    setShares(normalized);
+    setOwnerEmail(normalized[0]?.owner_email || "");
+  }, [activeOwnerUserId, notify, supabase]);
 
   const loadRecentLogs = useCallback(async () => {
     if (!supabase || !activeOwnerUserId) {
@@ -117,8 +155,10 @@ export function ShareSheetModal({
 
   const requestClose = useCallback(() => {
     setEmail("");
+    setNewShareAccessLevel("viewer");
     setSavingShare(false);
-    setRemovingShareId(null);
+    setRemovingShareEmail(null);
+    setUpdatingShareEmail(null);
     onClose();
   }, [onClose]);
 
@@ -166,6 +206,7 @@ export function ShareSheetModal({
     setSavingShare(true);
     const { error } = await supabase.rpc("share_account_with_email", {
       p_email: normalizedEmail,
+      p_access_level: newShareAccessLevel,
     });
 
     if (error) {
@@ -176,9 +217,39 @@ export function ShareSheetModal({
 
     setEmail("");
     setSavingShare(false);
-    notify("success", "Account access updated.");
+    notify("success", "Account sharing updated.");
     void loadShares();
-  }, [canManageShares, email, loadShares, notify, supabase]);
+    void loadRecentLogs();
+  }, [canManageShares, email, loadRecentLogs, loadShares, newShareAccessLevel, notify, supabase]);
+
+  const updateShareAccessLevel = useCallback(
+    async (share: ShareRow, nextAccessLevel: AccessLevel) => {
+      if (!supabase) return;
+      if (!canManageShares) {
+        notify("error", "Only the owner can manage sharing.");
+        return;
+      }
+      if (share.access_level === nextAccessLevel) return;
+
+      setUpdatingShareEmail(share.shared_with_email);
+      const { error } = await supabase.rpc("update_account_share_access_level", {
+        p_email: share.shared_with_email,
+        p_access_level: nextAccessLevel,
+      });
+
+      if (error) {
+        setUpdatingShareEmail(null);
+        notify("error", error.message);
+        return;
+      }
+
+      setUpdatingShareEmail(null);
+      notify("success", "Access level updated.");
+      void loadShares();
+      void loadRecentLogs();
+    },
+    [canManageShares, loadRecentLogs, loadShares, notify, supabase],
+  );
 
   const removeShare = useCallback(
     async (share: ShareRow) => {
@@ -187,18 +258,18 @@ export function ShareSheetModal({
         notify("error", "Only the owner can manage sharing.");
         return;
       }
-      setRemovingShareId(share.id);
+      setRemovingShareEmail(share.shared_with_email);
       const { error } = await supabase.rpc("unshare_account_by_email", {
         p_email: share.shared_with_email,
       });
 
       if (error) {
-        setRemovingShareId(null);
+        setRemovingShareEmail(null);
         notify("error", error.message);
         return;
       }
 
-      setRemovingShareId(null);
+      setRemovingShareEmail(null);
       notify("success", "Access removed.");
       void loadShares();
       void loadRecentLogs();
@@ -229,7 +300,9 @@ export function ShareSheetModal({
               Share
             </h2>
             <p id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
-              Share your full account data with Google emails.
+              {canManageShares
+                ? "Manage who can access your account data and set their role."
+                : "You have read-only access to sharing details for this account."}
             </p>
           </div>
           <button
@@ -242,18 +315,33 @@ export function ShareSheetModal({
           </button>
         </div>
 
+        <div className="mt-4 rounded-xl border border-border bg-paper/45 px-3 py-2 text-sm">
+          <p className="font-mono text-xs text-muted">Data owner</p>
+          <p className="mt-1 text-ink">{ownerLabel}</p>
+        </div>
+
         {!canManageShares ? (
           <div className="mt-4 rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm text-muted">
-            Only the selected account owner can add or remove people.
+            Read-only mode. Only the owner can add people, remove people, or change access levels.
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px_auto]">
             <input
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="name@company.com"
               className="rounded-xl border border-border bg-paper px-3 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
             />
+            <select
+              className="rounded-xl border border-border bg-paper px-3 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
+              value={newShareAccessLevel}
+              onChange={(event) =>
+                setNewShareAccessLevel(event.target.value === "editor" ? "editor" : "viewer")
+              }
+            >
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
             <button
               type="button"
               className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
@@ -272,24 +360,51 @@ export function ShareSheetModal({
           <div className="max-h-64 overflow-y-auto">
             {shares.length ? (
               <ul className="divide-y divide-border">
-                {shares.map((share) => (
-                  <li key={share.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-ink">{share.shared_with_email}</p>
-                      <p className="font-mono text-xs text-muted">Full account access</p>
-                    </div>
-                    {canManageShares ? (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-border bg-paper px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => void removeShare(share)}
-                        disabled={removingShareId === share.id}
-                      >
-                        {removingShareId === share.id ? "Removing..." : "Remove"}
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
+                {shares.map((share) => {
+                  const isUpdating = updatingShareEmail === share.shared_with_email;
+                  const isRemoving = removingShareEmail === share.shared_with_email;
+                  const controlsDisabled = isUpdating || isRemoving;
+                  return (
+                    <li key={share.shared_with_email} className="flex items-center justify-between gap-3 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-ink">{share.shared_with_email}</p>
+                        <p className="font-mono text-xs text-muted">
+                          {accessLevelLabel(share.access_level)} access
+                        </p>
+                      </div>
+                      {canManageShares ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="rounded-lg border border-border bg-paper px-2 py-1 text-xs text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            value={share.access_level}
+                            onChange={(event) =>
+                              void updateShareAccessLevel(
+                                share,
+                                event.target.value === "editor" ? "editor" : "viewer",
+                              )
+                            }
+                            disabled={controlsDisabled}
+                          >
+                            <option value="viewer">Viewer</option>
+                            <option value="editor">Editor</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-border bg-paper px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void removeShare(share)}
+                            disabled={controlsDisabled}
+                          >
+                            {isRemoving ? "Removing..." : "Remove"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs text-muted">
+                          {accessLevelLabel(share.access_level)}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="px-3 py-4 text-sm text-muted">No shared users yet.</p>
