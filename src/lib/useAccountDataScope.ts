@@ -90,6 +90,14 @@ export function useAccountDataScope({
       setSharedAccounts(deduped);
       setShowSelectionModal(false);
 
+      if (!deduped.length) {
+        setActiveOwnerUserId(signedInUserId);
+        setSelectedOwnerUserIdForSession(signedInUserId, signedInUserId);
+        setSelectionRequired(false);
+        setScopeReady(true);
+        return;
+      }
+
       const storedOwnerUserId = getSelectedOwnerUserIdForSession(signedInUserId);
       const nextOwnerUserId =
         storedOwnerUserId && validOwnerIds.has(storedOwnerUserId) ? storedOwnerUserId : null;

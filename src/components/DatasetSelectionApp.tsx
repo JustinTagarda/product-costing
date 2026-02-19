@@ -106,6 +106,14 @@ export default function DatasetSelectionApp() {
         }));
 
       const deduped = Array.from(new Map(rows.map((row) => [row.ownerUserId, row])).values());
+
+      if (!deduped.length) {
+        setSelectedOwnerUserIdForSession(session.user.id, session.user.id);
+        setActiveOwnerUserId(session.user.id);
+        router.replace("/calculator");
+        return;
+      }
+
       setSharedAccounts(deduped);
       setActiveOwnerUserId(session.user.id);
       setLoadingShared(false);
@@ -115,7 +123,7 @@ export default function DatasetSelectionApp() {
     return () => {
       cancelled = true;
     };
-  }, [session, supabase]);
+  }, [router, session, supabase]);
 
   function selectAndContinue(ownerUserId: string) {
     if (!session?.user?.id) return;
