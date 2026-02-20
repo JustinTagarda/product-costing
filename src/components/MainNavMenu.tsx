@@ -20,7 +20,7 @@ type MainNavMenuProps = {
   onProfileClick?: () => void;
 };
 
-const TOP_BAR_HEIGHT = 72;
+const TOP_BAR_HEIGHT = 65;
 const DESKTOP_SIDEBAR_WIDTH = 272;
 const TABLET_EXPANDED_SIDEBAR_WIDTH = 248;
 const TABLET_COLLAPSED_SIDEBAR_WIDTH = 88;
@@ -173,7 +173,7 @@ export function MainNavMenu({
         className="fixed left-0 right-0 top-0 z-[55] border-b border-zinc-300 bg-zinc-100/95 backdrop-blur"
         style={{ left: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[72px] items-center gap-1.5 px-2.5 sm:gap-2 sm:px-4 lg:px-6">
+        <div className="flex h-[65px] items-center gap-1.5 px-2.5 sm:gap-2 sm:px-4 lg:px-6">
           <button
             type="button"
             aria-label="Open navigation menu"
@@ -255,8 +255,8 @@ export function MainNavMenu({
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <div className="relative flex h-[72px] items-center justify-center border-b border-zinc-300 px-3">
-          <div className="min-w-0 text-center">
+        <div className="flex h-[65px] items-center justify-between border-b border-zinc-300 px-3">
+          <div className="min-w-0 text-left">
             <p className="text-[1.14rem] font-bold leading-tight tracking-tight text-black">
               Product Costing
             </p>
@@ -265,7 +265,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label="Close menu"
-            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
             <CloseIcon />
@@ -288,17 +288,17 @@ export function MainNavMenu({
         className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-300 bg-zinc-200/95 backdrop-blur md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="relative flex h-[72px] items-center justify-center border-b border-zinc-300 px-3">
+        <div className="flex h-[65px] items-center border-b border-zinc-300 px-3">
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
           </button>
 
-          <div className={["min-w-0 text-center", compactModeClasses.fullLabel].join(" ")}>
+          <div className={["ml-2 min-w-0 text-left xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
             <p className="truncate text-[1.14rem] font-bold leading-tight tracking-tight text-black">
               Product Costing
             </p>
