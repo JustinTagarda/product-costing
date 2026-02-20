@@ -885,7 +885,7 @@ export default function CostingApp() {
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
-              Product Costing
+              Cost Calculator
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
               Materials, labor, overhead, and pricing in one ledger. Your sheets sync across devices in Supabase.
