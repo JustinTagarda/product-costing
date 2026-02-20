@@ -52,6 +52,57 @@ const inputBase =
 
 const inputMono = "tabular-nums font-mono tracking-tight";
 const PRODUCT_CODE_PREFIX = "PR-";
+const MATERIAL_UNIT_EXPANSIONS: Record<string, string> = {
+  ea: "each",
+  each: "each",
+  pc: "piece",
+  pcs: "piece",
+  piece: "piece",
+  pieces: "piece",
+  kg: "kilogram",
+  kilogram: "kilogram",
+  kilograms: "kilogram",
+  g: "gram",
+  gram: "gram",
+  grams: "gram",
+  lb: "pound",
+  lbs: "pound",
+  pound: "pound",
+  pounds: "pound",
+  oz: "ounce",
+  ounce: "ounce",
+  ounces: "ounce",
+  l: "liter",
+  liter: "liter",
+  liters: "liter",
+  ml: "milliliter",
+  milliliter: "milliliter",
+  milliliters: "milliliter",
+  m: "meter",
+  meter: "meter",
+  meters: "meter",
+  cm: "centimeter",
+  centimeter: "centimeter",
+  centimeters: "centimeter",
+  mm: "millimeter",
+  millimeter: "millimeter",
+  millimeters: "millimeter",
+  yd: "yard",
+  yard: "yard",
+  yards: "yard",
+  ft: "foot",
+  feet: "foot",
+  foot: "foot",
+  in: "inch",
+  inch: "inch",
+  inches: "inch",
+};
+
+function formatMaterialUnitLabel(unit: string): string {
+  const raw = String(unit || "").trim();
+  if (!raw) return "";
+  return MATERIAL_UNIT_EXPANSIONS[raw.toLowerCase()] ?? raw;
+}
 
 function hasNewSheetQueryParam(): boolean {
   if (typeof window === "undefined") return false;
@@ -1086,7 +1137,7 @@ export default function CostingApp() {
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
                                 Material
                               </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 90 }}>
+                              <th className="max-w-[100px] px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                                 Qty
                               </th>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 90 }}>
@@ -1104,7 +1155,7 @@ export default function CostingApp() {
                             {selectedSheet.materials.map((it) => {
                               const linkedMaterial = it.materialId ? materialById.get(it.materialId) : null;
                               const displayName = linkedMaterial?.name || it.name;
-                              const displayUnit = linkedMaterial?.unit || it.unit;
+                              const displayUnit = formatMaterialUnitLabel(linkedMaterial?.unit || it.unit);
                               const displayUnitCostCents = linkedMaterial?.unitCostCents ?? it.unitCostCents;
                               return (
                               <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
@@ -1143,7 +1194,7 @@ export default function CostingApp() {
                                     ))}
                                   </select>
                                 </td>
-                                <td className="p-2">
+                                <td className="max-w-[100px] p-2">
                                   <DeferredNumberInput
                                     className={inputBase + " " + inputMono}
                                     value={it.qty}
@@ -1254,10 +1305,10 @@ export default function CostingApp() {
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
                                 Role
                               </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 90 }}>
+                              <th className="max-w-[100px] px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                                 Hours
                               </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 120 }}>
+                              <th className="max-w-[100px] px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
                                 Rate
                               </th>
                               <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
@@ -1283,7 +1334,7 @@ export default function CostingApp() {
                                     placeholder={idx === 0 ? "e.g., Assembly" : ""}
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="max-w-[100px] p-2">
                                   <DeferredNumberInput
                                     className={inputBase + " " + inputMono}
                                     value={it.hours}
@@ -1299,7 +1350,7 @@ export default function CostingApp() {
                                     }
                                   />
                                 </td>
-                                <td className="p-2">
+                                <td className="max-w-[100px] p-2">
                                   <DeferredMoneyInput
                                     className={inputBase + " " + inputMono}
                                     valueCents={it.rateCents}
