@@ -56,7 +56,7 @@ function tableNameLabel(tableName: string): string {
     .join(" ");
 }
 
-function sortLogsByCreatedAtAsc(
+function sortLogsByCreatedAtDesc(
   a: Pick<AccountChangeLogEntry, "createdAt" | "id">,
   b: Pick<AccountChangeLogEntry, "createdAt" | "id">,
 ): number {
@@ -67,10 +67,10 @@ function sortLogsByCreatedAtAsc(
 
   if (aIsValid && bIsValid) {
     if (aTime === bTime) return a.id.localeCompare(b.id);
-    return aTime - bTime;
+    return bTime - aTime;
   }
-  if (aIsValid) return 1;
-  if (bIsValid) return -1;
+  if (aIsValid) return -1;
+  if (bIsValid) return 1;
   return a.id.localeCompare(b.id);
 }
 
@@ -96,6 +96,7 @@ export default function ActivitiesApp() {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [logs, setLogs] = useState<AccountChangeLogEntry[]>([]);
   const [query, setQuery] = useState("");
+  const [userFilter, setUserFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
   const [tableFilter, setTableFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -218,7 +219,7 @@ export default function ActivitiesApp() {
 
       const nextLogs = ((data ?? []) as DbAccountChangeLogRow[])
         .map((row) => rowToAccountChangeLog(row))
-        .sort(sortLogsByCreatedAtAsc);
+        .sort(sortLogsByCreatedAtDesc);
       setLogs(nextLogs);
       setLoadingLogs(false);
     }
@@ -249,12 +250,19 @@ export default function ActivitiesApp() {
     );
   }, [logs]);
 
+  const userOptions = useMemo(() => {
+    return Array.from(new Set(logs.map((log) => log.actorEmail))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [logs]);
+
   const filteredLogs = useMemo(() => {
     const q = query.trim().toLowerCase();
     const fromTime = dateFrom ? Date.parse(`${dateFrom}T00:00:00`) : null;
     const toTime = dateTo ? Date.parse(`${dateTo}T23:59:59.999`) : null;
 
     return logs.filter((log) => {
+      if (userFilter !== "all" && log.actorEmail !== userFilter) return false;
       if (actionFilter !== "all" && log.action !== actionFilter) return false;
       if (tableFilter !== "all" && log.tableName !== tableFilter) return false;
 
@@ -272,14 +280,13 @@ export default function ActivitiesApp() {
         actionLabel(log.action),
         log.tableName,
         tableNameLabel(log.tableName),
-        log.rowId || "",
         log.changedFields.join(" "),
       ]
         .join(" ")
         .toLowerCase();
       return searchable.includes(q);
     });
-  }, [actionFilter, dateFrom, dateTo, logs, query, tableFilter]);
+  }, [actionFilter, dateFrom, dateTo, logs, query, tableFilter, userFilter]);
 
   const actionCounts = useMemo(
     () =>
@@ -303,7 +310,7 @@ export default function ActivitiesApp() {
         onLogout={() => void signOut()}
         searchValue={query}
         onSearchChange={setQuery}
-        searchPlaceholder="Search actor, action, table, field, or record id"
+        searchPlaceholder="Search user, action, area, or changed field"
         onShare={() => setShowShareModal(true)}
         viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
@@ -317,8 +324,8 @@ export default function ActivitiesApp() {
                 Activities
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-                Full account activity feed across shared and owned data. Rows are sorted oldest
-                to newest and can be narrowed using search and filters.
+                View a complete audit trail of activity across the workspace, including changes to
+                products, materials, purchases, and sharing settings.
               </p>
               {!supabase ? (
                 <p className="mt-2 text-xs text-muted">
@@ -366,11 +373,27 @@ export default function ActivitiesApp() {
               <p className="font-mono text-xs text-muted">
                 {loadingLogs
                   ? "Loading account activity..."
-                  : `${filteredLogs.length} result(s) in ascending date order`}
+                  : `${filteredLogs.length} result(s) in descending date order`}
               </p>
             </div>
 
-            <div className="grid gap-3 border-b border-border px-3 py-3 sm:grid-cols-2 lg:grid-cols-[180px_220px_170px_170px_auto] lg:items-end">
+            <div className="grid gap-3 border-b border-border px-3 py-3 sm:grid-cols-2 lg:grid-cols-[220px_180px_220px_170px_170px_auto] lg:items-end">
+              <label className="space-y-1">
+                <span className="font-mono text-xs text-muted">User</span>
+                <select
+                  className="w-full rounded-lg border border-border bg-paper px-2.5 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
+                  value={userFilter}
+                  onChange={(event) => setUserFilter(event.target.value || "all")}
+                >
+                  <option value="all">All users</option>
+                  {userOptions.map((actorEmail) => (
+                    <option key={actorEmail} value={actorEmail}>
+                      {actorEmail}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="space-y-1">
                 <span className="font-mono text-xs text-muted">Action</span>
                 <select
@@ -429,6 +452,7 @@ export default function ActivitiesApp() {
                   className="rounded-lg border border-border bg-paper px-3 py-2 text-xs font-semibold text-ink transition hover:bg-paper/70"
                   onClick={() => {
                     setQuery("");
+                    setUserFilter("all");
                     setActionFilter("all");
                     setTableFilter("all");
                     setDateFrom("");
@@ -441,25 +465,22 @@ export default function ActivitiesApp() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-[1240px] w-full text-left text-sm">
+              <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Date/Time
                     </th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">
-                      Actor
+                    <th className="min-w-[200px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                      User
                     </th>
-                    <th className="app-col-strict-100 px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Action
                     </th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Area
                     </th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">
-                      Record ID
-                    </th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Changed Fields
                     </th>
                   </tr>
@@ -467,39 +488,45 @@ export default function ActivitiesApp() {
                 <tbody>
                   {loadingLogs ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
                         Loading activity logs...
                       </td>
                     </tr>
                   ) : filteredLogs.length ? (
                     filteredLogs.map((log) => (
                       <tr key={log.id}>
-                        <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">
+                        <td className="w-[180px] min-w-[180px] max-w-[180px] p-2 font-mono text-xs text-muted">
                           {formatDateTime(log.createdAt) || "-"}
                         </td>
-                        <td className="app-col-strict-150 p-2 text-sm text-ink">
+                        <td className="min-w-[200px] p-2 text-sm text-ink">
                           {log.actorEmail}
                         </td>
-                        <td className="app-col-strict-100 p-2 text-sm text-ink">
+                        <td className="w-[150px] min-w-[150px] max-w-[150px] p-2 text-sm text-ink">
                           {actionLabel(log.action)}
                         </td>
-                        <td className="app-col-strict-150 p-2">
-                          <p className="text-sm text-ink">{tableNameLabel(log.tableName)}</p>
-                          <p className="font-mono text-[11px] text-muted">{log.tableName}</p>
+                        <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
+                          <p className="truncate text-sm text-ink" title={tableNameLabel(log.tableName)}>
+                            {tableNameLabel(log.tableName)}
+                          </p>
+                          <p className="truncate font-mono text-[11px] text-muted" title={log.tableName}>
+                            {log.tableName}
+                          </p>
                         </td>
-                        <td className="p-2 font-mono text-[11px] text-muted break-all">
-                          {log.rowId || "-"}
-                        </td>
-                        <td className="p-2 text-xs text-muted">
-                          {log.changedFields.length
-                            ? log.changedFields.join(", ")
-                            : "No tracked field differences"}
+                        <td
+                          className="w-[150px] min-w-[150px] max-w-[150px] p-2 text-xs text-muted"
+                          title={log.changedFields.length ? log.changedFields.join(", ") : "No tracked field differences"}
+                        >
+                          <p className="truncate">
+                            {log.changedFields.length
+                              ? log.changedFields.join(", ")
+                              : "No tracked field differences"}
+                          </p>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
+                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
                         No logs matched your current search and filters.
                       </td>
                     </tr>
