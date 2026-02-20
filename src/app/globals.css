@@ -57,6 +57,10 @@ button:disabled {
   display: none;
 }
 
+:root[data-viewer-mode="true"] tr.app-table-new-entry-row {
+  display: none !important;
+}
+
 :where([class*="rounded"], [style*="border-radius"]) {
   border-radius: 6px !important;
 }
