@@ -283,8 +283,6 @@ export default function DashboardApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products or SKU"
-        onQuickAdd={() => window.location.assign("/calculator")}
-        quickAddLabel="+ New Product"
         viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />

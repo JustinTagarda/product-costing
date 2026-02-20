@@ -33,8 +33,8 @@ const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Products", href: "/products" },
   { label: "Materials", href: "/materials" },
   { label: "Purchases", href: "/purchases" },
-  { label: "Activities", href: "/activities" },
 ];
+const ACTIVITIES_NAV_ITEM = { label: "Activities", href: "/activities" } as const;
 
 export function MainNavMenu({
   activeItem,
@@ -230,14 +230,6 @@ export function MainNavMenu({
 
           <button
             type="button"
-            aria-label="Notifications"
-            className="hidden h-10 w-10 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:inline-flex"
-          >
-            <BellIcon />
-          </button>
-
-          <button
-            type="button"
             aria-label={effectiveShareLabel}
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:gap-2 sm:px-3"
             onClick={handleShareClick}
@@ -312,8 +304,10 @@ export function MainNavMenu({
           compact={false}
           isMainItemActive={isMainItemActive}
           isSettingsActive={activeItem === "Settings" || pathname === "/settings"}
+          isActivitiesActive={activeItem === "Activities" || pathname === "/activities"}
           onNavigate={(item) => runAction(() => navigateTo(item))}
           onSettings={() => runAction(onSettings)}
+          onActivities={() => runAction(() => navigateTo(ACTIVITIES_NAV_ITEM))}
           onLogout={() => runAction(onLogout)}
         />
       </aside>
@@ -351,8 +345,10 @@ export function MainNavMenu({
           compactFullLabelClasses={compactModeClasses.fullLabel}
           isMainItemActive={isMainItemActive}
           isSettingsActive={activeItem === "Settings" || pathname === "/settings"}
+          isActivitiesActive={activeItem === "Activities" || pathname === "/activities"}
           onNavigate={navigateTo}
           onSettings={onSettings}
+          onActivities={() => navigateTo(ACTIVITIES_NAV_ITEM)}
           onLogout={onLogout}
         />
       </aside>
@@ -368,8 +364,10 @@ type SidebarSectionsProps = {
   compactFullLabelClasses?: string;
   isMainItemActive: (item: { label: string; href?: string }) => boolean;
   isSettingsActive: boolean;
+  isActivitiesActive: boolean;
   onNavigate: (item: { label: string; href?: string }) => void;
   onSettings: () => void;
+  onActivities: () => void;
   onLogout: () => void;
 };
 
@@ -381,8 +379,10 @@ function SidebarSections({
   compactFullLabelClasses,
   isMainItemActive,
   isSettingsActive,
+  isActivitiesActive,
   onNavigate,
   onSettings,
+  onActivities,
   onLogout,
 }: SidebarSectionsProps) {
   const buttonClasses = compactButtonClasses || (compact ? "justify-center px-2" : "justify-start px-3");
@@ -431,6 +431,22 @@ function SidebarSections({
           >
             <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Settings</span>
             {compact ? <span className={compactLabelClasses || "md:hidden"}>S</span> : null}
+          </button>
+
+          <button
+            type="button"
+            title={compact ? "Activities" : undefined}
+            className={[
+              "mt-1 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              buttonClasses,
+              isActivitiesActive
+                ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                : "border-transparent text-ink hover:bg-zinc-100/75",
+            ].join(" ")}
+            onClick={onActivities}
+          >
+            <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Activities</span>
+            {compact ? <span className={compactLabelClasses || "md:hidden"}>A</span> : null}
           </button>
 
           <button
@@ -577,25 +593,6 @@ function SearchIcon({ className }: IconProps) {
     >
       <circle cx="11" cy="11" r="6" />
       <path d="M20 20l-4-4" />
-    </svg>
-  );
-}
-
-function BellIcon({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      aria-hidden="true"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      className={className}
-    >
-      <path d="M12 4a5 5 0 0 0-5 5v3.5L5 15v1h14v-1l-2-2.5V9a5 5 0 0 0-5-5Z" />
-      <path d="M10 18a2 2 0 0 0 4 0" />
     </svg>
   );
 }

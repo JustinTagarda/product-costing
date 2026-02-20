@@ -268,9 +268,6 @@ export default function SettingsApp() {
         onLogout={() => void signOut()}
         onShare={() => setShowShareModal(true)}
         searchPlaceholder="Search settings..."
-        onQuickAdd={() => void onSave()}
-        quickAddLabel={saving ? "Saving..." : "Save Settings"}
-        quickAddDisabled={saving || isReadOnlyData}
         viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
