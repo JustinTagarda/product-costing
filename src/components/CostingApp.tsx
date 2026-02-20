@@ -1000,6 +1000,7 @@ export default function CostingApp() {
                     type="button"
                     className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
                     onClick={duplicateSelected}
+                    disabled={isReadOnlyData}
                   >
                     Duplicate
                   </button>
@@ -1007,6 +1008,7 @@ export default function CostingApp() {
                     type="button"
                     className="rounded-xl border border-border bg-danger/10 px-3 py-2 text-sm font-semibold text-danger shadow-sm transition hover:bg-danger/15 active:translate-y-px"
                     onClick={deleteSelected}
+                    disabled={isReadOnlyData}
                   >
                     Delete
                   </button>
@@ -1069,6 +1071,7 @@ export default function CostingApp() {
                           }));
                           toast("success", "Material line added.");
                         }}
+                        disabled={isReadOnlyData}
                       >
                         Add line
                       </button>
@@ -1183,6 +1186,7 @@ export default function CostingApp() {
                                         });
                                         toast("success", "Material line deleted.");
                                       }}
+                                      disabled={isReadOnlyData}
                                       aria-label="Remove material line"
                                     >
                                       Remove
@@ -1235,6 +1239,7 @@ export default function CostingApp() {
                           }));
                           toast("success", "Labor line added.");
                         }}
+                        disabled={isReadOnlyData}
                       >
                         Add line
                       </button>
@@ -1329,6 +1334,7 @@ export default function CostingApp() {
                                         });
                                         toast("success", "Labor line deleted.");
                                       }}
+                                      disabled={isReadOnlyData}
                                       aria-label="Remove labor line"
                                     >
                                       Remove
@@ -1370,6 +1376,7 @@ export default function CostingApp() {
                           }));
                           toast("success", "Overhead line added.");
                         }}
+                        disabled={isReadOnlyData}
                       >
                         Add line
                       </button>
@@ -1492,6 +1499,7 @@ export default function CostingApp() {
                                           }));
                                           toast("success", "Overhead line deleted.");
                                         }}
+                                        disabled={isReadOnlyData}
                                       >
                                         Remove
                                       </button>

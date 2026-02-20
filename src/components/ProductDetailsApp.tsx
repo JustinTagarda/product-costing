@@ -76,6 +76,7 @@ export default function ProductDetailsApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -91,6 +92,7 @@ export default function ProductDetailsApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -320,6 +322,11 @@ export default function ProductDetailsApp() {
                   {supabaseError || "Supabase is required for this app."}
                 </p>
               ) : null}
+              {isReadOnlyData ? (
+                <p className="mt-2 text-xs text-muted">
+                  Viewer access: this shared dataset is read-only.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -327,6 +334,7 @@ export default function ProductDetailsApp() {
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
                 onClick={() => window.location.assign("/calculator?new=1")}
+                disabled={isReadOnlyData}
               >
                 New product
               </button>
