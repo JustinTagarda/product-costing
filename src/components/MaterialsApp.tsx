@@ -678,8 +678,8 @@ export default function MaterialsApp() {
                 <thead className="bg-paper/55">
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost (Computed)</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost (Computed)</th>
                     <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Active</th>
                     <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
@@ -696,7 +696,7 @@ export default function MaterialsApp() {
                           disabled={isReadOnlyData}
                         />
                       </td>
-                      <td className="max-w-[150px] p-2">
+                      <td className="app-col-strict-150 p-2">
                         <select
                           className={inputBase}
                           value={row.unit}
@@ -710,7 +710,7 @@ export default function MaterialsApp() {
                           ))}
                         </select>
                       </td>
-                      <td className="max-w-[150px] p-2">
+                      <td className="app-col-strict-150 p-2">
                         <p className={"px-3 py-2 text-sm text-ink " + inputMono}>
                           {formatSettingsMoney(row.unitCostCents)}
                         </p>
@@ -783,7 +783,7 @@ export default function MaterialsApp() {
                         disabled={savingDraftMaterial || isReadOnlyData}
                       />
                     </td>
-                    <td className="max-w-[150px] p-2">
+                    <td className="app-col-strict-150 p-2">
                       <select
                         className={inputBase}
                         value={draftMaterial.unit}
@@ -800,7 +800,7 @@ export default function MaterialsApp() {
                         ))}
                       </select>
                     </td>
-                    <td className="max-w-[150px] p-2">
+                    <td className="app-col-strict-150 p-2">
                       <p className={"px-3 py-2 text-sm text-muted " + inputMono}>Auto</p>
                     </td>
                     <td className="w-[75px] min-w-[75px] max-w-[75px] p-2 text-center">

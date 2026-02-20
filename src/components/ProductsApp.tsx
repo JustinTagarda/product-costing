@@ -288,10 +288,10 @@ export default function ProductsApp() {
                 <thead className="bg-paper/55">
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Product</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Suggested Price</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Profit Margin</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Suggested Price</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Profit Margin</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
                     <th className="w-[200px] min-w-[200px] max-w-[200px] px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
@@ -301,20 +301,20 @@ export default function ProductsApp() {
                     return (
                       <tr key={sheet.id}>
                         <td className="p-2 font-semibold text-ink">{sheet.name || "Untitled"}</td>
-                        <td className="max-w-[150px] p-2 font-mono text-xs text-ink">
+                        <td className="app-col-strict-150 p-2 font-mono text-xs text-ink">
                           {totals.costPerUnitCents === null
                             ? "--"
                             : formatMoney(totals.costPerUnitCents)}
                         </td>
-                        <td className="max-w-[150px] p-2 font-mono text-xs text-ink">
+                        <td className="app-col-strict-150 p-2 font-mono text-xs text-ink">
                           {totals.pricePerUnitCents === null
                             ? "--"
                             : formatMoney(totals.pricePerUnitCents)}
                         </td>
-                        <td className="max-w-[150px] p-2 font-mono text-xs text-muted">
+                        <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">
                           {totals.marginPct === null ? "--" : `${totals.marginPct.toFixed(1)}%`}
                         </td>
-                        <td className="max-w-[150px] p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>
+                        <td className="app-col-strict-150 p-2 font-mono text-xs text-ink">{formatMoney(totals.batchTotalCents)}</td>
                         <td className="w-[200px] min-w-[200px] max-w-[200px] p-2">
                           <div className="flex items-center gap-1.5">
                             <button

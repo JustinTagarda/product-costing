@@ -391,9 +391,9 @@ export default function DashboardApp() {
                   <tr>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Product</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">SKU</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Margin</th>
-                    <th className="max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Margin</th>
+                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
                     <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
                   </tr>
                 </thead>
@@ -402,13 +402,13 @@ export default function DashboardApp() {
                     <tr key={row.sheet.id}>
                       <td className="p-2 font-semibold text-ink">{row.sheet.name || "Untitled"}</td>
                       <td className="p-2 font-mono text-xs text-muted">{row.sheet.sku || "-"}</td>
-                      <td className="max-w-[150px] p-2 font-mono text-xs text-ink">
+                      <td className="app-col-strict-150 p-2 font-mono text-xs text-ink">
                         {formatMoney(row.totals.batchTotalCents)}
                       </td>
-                      <td className="max-w-[150px] p-2 font-mono text-xs text-muted">
+                      <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">
                         {row.totals.marginPct === null ? "--" : `${row.totals.marginPct.toFixed(1)}%`}
                       </td>
-                      <td className="max-w-[150px] p-2 font-mono text-xs text-muted">{formatAppDate(row.sheet.updatedAt)}</td>
+                      <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">{formatAppDate(row.sheet.updatedAt)}</td>
                       <td className="p-2">
                         <div className="flex items-center gap-2">
                           <button

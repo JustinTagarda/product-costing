@@ -75,6 +75,18 @@ table > :is(thead, tbody, tfoot) > tr > :is(th, td) {
   border-left: 1px solid var(--border);
 }
 
+table > :is(thead, tbody, tfoot) > tr > :is(th, td).app-col-strict-100 {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+}
+
+table > :is(thead, tbody, tfoot) > tr > :is(th, td).app-col-strict-150 {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+}
+
 table > :is(thead, tbody, tfoot) > tr > th {
   padding: 2px 4px !important;
   font-weight: 700 !important;
