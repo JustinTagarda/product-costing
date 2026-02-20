@@ -38,6 +38,13 @@ body {
   text-rendering: geometricPrecision;
 }
 
+button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55;
+  filter: grayscale(0.2);
+  pointer-events: none;
+}
+
 :where([class*="rounded"], [style*="border-radius"]) {
   border-radius: 6px !important;
 }

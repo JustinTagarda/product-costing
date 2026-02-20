@@ -270,6 +270,7 @@ export default function SettingsApp() {
         searchPlaceholder="Search settings..."
         onQuickAdd={() => void onSave()}
         quickAddLabel={saving ? "Saving..." : "Save Settings"}
+        quickAddDisabled={saving || isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 
