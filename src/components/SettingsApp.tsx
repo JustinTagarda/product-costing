@@ -271,6 +271,7 @@ export default function SettingsApp() {
         onQuickAdd={() => void onSave()}
         quickAddLabel={saving ? "Saving..." : "Save Settings"}
         quickAddDisabled={saving || isReadOnlyData}
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

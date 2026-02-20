@@ -841,6 +841,7 @@ export default function CostingApp() {
           searchValue={query}
           onSearchChange={setQuery}
           searchPlaceholder="Search sheets..."
+          viewerMode={isReadOnlyData}
           profileLabel={session?.user?.email || "Profile"}
         />
         <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
@@ -878,6 +879,7 @@ export default function CostingApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Search sheets..."
         onShare={() => setShowShareModal(true)}
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">

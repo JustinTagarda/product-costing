@@ -603,6 +603,7 @@ export default function BomApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search BOM..."
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">

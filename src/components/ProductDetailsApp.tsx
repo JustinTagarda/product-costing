@@ -306,6 +306,7 @@ export default function ProductDetailsApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Filter product lines, categories, notes"
         onShare={() => setShowShareModal(true)}
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

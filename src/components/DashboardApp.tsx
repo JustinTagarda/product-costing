@@ -67,6 +67,7 @@ export default function DashboardApp() {
     signedInUserId,
     signedInEmail,
     activeOwnerUserId,
+    canEditActiveData,
     scopeReady,
     sharedAccounts,
     showSelectionModal,
@@ -82,6 +83,7 @@ export default function DashboardApp() {
 
   const userId = signedInUserId;
   const isCloudMode = Boolean(supabase && signedInUserId && activeOwnerUserId);
+  const isReadOnlyData = isCloudMode && !canEditActiveData;
   const waitingForScope = Boolean(supabase && signedInUserId && !scopeReady);
   const dataAuthReady = authReady && !waitingForScope;
 
@@ -283,6 +285,7 @@ export default function DashboardApp() {
         searchPlaceholder="Search products or SKU"
         onQuickAdd={() => window.location.assign("/calculator")}
         quickAddLabel="+ New Product"
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

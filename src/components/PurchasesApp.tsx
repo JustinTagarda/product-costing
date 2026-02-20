@@ -1311,6 +1311,7 @@ export default function PurchasesApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

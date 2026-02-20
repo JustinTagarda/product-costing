@@ -618,6 +618,7 @@ export default function MaterialsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

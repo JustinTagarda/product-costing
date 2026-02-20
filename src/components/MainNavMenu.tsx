@@ -17,6 +17,7 @@ type MainNavMenuProps = {
   onQuickAdd?: () => void;
   quickAddLabel?: string;
   quickAddDisabled?: boolean;
+  viewerMode?: boolean;
   profileLabel?: string;
   onProfileClick?: () => void;
 };
@@ -47,6 +48,7 @@ export function MainNavMenu({
   onQuickAdd,
   quickAddLabel,
   quickAddDisabled,
+  viewerMode,
   profileLabel,
   onProfileClick,
 }: MainNavMenuProps) {
@@ -69,6 +71,21 @@ export function MainNavMenu({
     }),
     [isTabletExpanded],
   );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (viewerMode) {
+      root.setAttribute("data-viewer-mode", "true");
+      return () => {
+        root.removeAttribute("data-viewer-mode");
+      };
+    }
+
+    root.removeAttribute("data-viewer-mode");
+    return () => {
+      root.removeAttribute("data-viewer-mode");
+    };
+  }, [viewerMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

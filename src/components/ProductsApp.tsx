@@ -237,6 +237,7 @@ export default function ProductsApp() {
         searchValue={query}
         onSearchChange={setQuery}
         searchPlaceholder="Search products by name or code"
+        viewerMode={isReadOnlyData}
         profileLabel={session?.user?.email || "Profile"}
       />
 

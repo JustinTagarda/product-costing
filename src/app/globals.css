@@ -45,6 +45,17 @@ button:disabled {
   pointer-events: none;
 }
 
+:root[data-viewer-mode="true"] select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: none !important;
+}
+
+:root[data-viewer-mode="true"] select::-ms-expand {
+  display: none;
+}
+
 :where([class*="rounded"], [style*="border-radius"]) {
   border-radius: 6px !important;
 }
