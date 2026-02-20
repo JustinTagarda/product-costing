@@ -468,19 +468,19 @@ export default function ActivitiesApp() {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
                       Date/Time
                     </th>
-                    <th className="min-w-[200px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="min-w-[200px] px-1 py-2 font-mono text-xs font-semibold text-muted">
                       User
                     </th>
-                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="min-w-[200px] px-1 py-2 font-mono text-xs font-semibold text-muted">
                       Action
                     </th>
-                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
                       Area
                     </th>
-                    <th className="w-[150px] min-w-[150px] max-w-[150px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
                       Changed Fields
                     </th>
                   </tr>
@@ -495,28 +495,34 @@ export default function ActivitiesApp() {
                   ) : filteredLogs.length ? (
                     filteredLogs.map((log) => (
                       <tr key={log.id}>
-                        <td className="w-[180px] min-w-[180px] max-w-[180px] p-2 font-mono text-xs text-muted">
+                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 font-mono text-xs text-muted">
                           {formatDateTime(log.createdAt) || "-"}
                         </td>
-                        <td className="min-w-[200px] p-2 text-sm text-ink">
+                        <td className="min-w-[200px] px-1 py-2 text-sm text-ink">
                           {log.actorEmail}
                         </td>
-                        <td className="w-[150px] min-w-[150px] max-w-[150px] p-2 text-sm text-ink">
+                        <td className="min-w-[200px] px-1 py-2 text-sm text-ink">
                           {actionLabel(log.action)}
                         </td>
-                        <td className="w-[150px] min-w-[150px] max-w-[150px] p-2">
-                          <p className="truncate text-sm text-ink" title={tableNameLabel(log.tableName)}>
+                        <td className="max-w-[180px] px-1 py-2">
+                          <p
+                            className="max-w-[180px] truncate text-sm text-ink"
+                            title={tableNameLabel(log.tableName)}
+                          >
                             {tableNameLabel(log.tableName)}
                           </p>
-                          <p className="truncate font-mono text-[11px] text-muted" title={log.tableName}>
+                          <p
+                            className="max-w-[180px] truncate font-mono text-[11px] text-muted"
+                            title={log.tableName}
+                          >
                             {log.tableName}
                           </p>
                         </td>
                         <td
-                          className="w-[150px] min-w-[150px] max-w-[150px] p-2 text-xs text-muted"
+                          className="max-w-[180px] px-1 py-2 text-xs text-muted"
                           title={log.changedFields.length ? log.changedFields.join(", ") : "No tracked field differences"}
                         >
-                          <p className="truncate">
+                          <p className="max-w-[180px] truncate">
                             {log.changedFields.length
                               ? log.changedFields.join(", ")
                               : "No tracked field differences"}
