@@ -1,5 +1,11 @@
 # Product Costing
 
+## Live Site
+
+This project is live in production and ready to try:
+
+- https://costing.justintagarda.com
+
 Cloud-based product costing and operations workspace for small businesses.
 
 This app runs on Next.js + Supabase and supports:
@@ -135,7 +141,7 @@ In Supabase Auth providers:
 - Enable Google
 - Add redirect URLs:
   - `http://localhost:3000/auth/callback`
-  - your deployed callback URL, e.g. `https://YOUR_APP.vercel.app/auth/callback`
+  - deployed callback URL: `https://costing.justintagarda.com/auth/callback`
 
 ### 4) Environment Variables
 
