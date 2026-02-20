@@ -2,11 +2,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  rowToAccountChangeLog,
-  type AccountChangeLogEntry,
-  type DbAccountChangeLogRow,
-} from "@/lib/supabase/accountChangeLogs";
 
 type NoticeKind = "info" | "success" | "error";
 type AccessLevel = "editor" | "viewer";
@@ -34,18 +29,6 @@ type AccountShareRpcRow = {
   shared_with_email: string | null;
   access_level: string | null;
   shared_at: string | null;
-};
-
-type AccountChangeLogRpcRow = {
-  id: string;
-  owner_user_id: string;
-  actor_user_id: string | null;
-  actor_email: string | null;
-  table_name: string;
-  row_id: string | null;
-  action: "insert" | "update" | "delete";
-  changed_fields: unknown;
-  created_at: string;
 };
 
 const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
@@ -76,8 +59,6 @@ export function ShareSheetModal({
   const [ownerEmail, setOwnerEmail] = useState("");
   const [removingShareEmail, setRemovingShareEmail] = useState<string | null>(null);
   const [updatingShareEmail, setUpdatingShareEmail] = useState<string | null>(null);
-  const [recentLogs, setRecentLogs] = useState<AccountChangeLogEntry[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
 
   const canManageShares = useMemo(() => {
     if (!currentUserId || !activeOwnerUserId) return false;
@@ -127,32 +108,6 @@ export function ShareSheetModal({
     setOwnerEmail(normalized[0]?.owner_email || "");
   }, [activeOwnerUserId, notify, supabase]);
 
-  const loadRecentLogs = useCallback(async () => {
-    if (!supabase || !activeOwnerUserId) {
-      setRecentLogs([]);
-      return;
-    }
-
-    setLoadingLogs(true);
-    const { data, error } = await supabase.rpc("list_account_change_logs", {
-      p_owner_user_id: activeOwnerUserId,
-      p_limit: 30,
-    });
-
-    if (error) {
-      setLoadingLogs(false);
-      notify("error", error.message);
-      return;
-    }
-
-    setRecentLogs(
-      ((data ?? []) as AccountChangeLogRpcRow[]).map((row) =>
-        rowToAccountChangeLog(row as DbAccountChangeLogRow),
-      ),
-    );
-    setLoadingLogs(false);
-  }, [activeOwnerUserId, notify, supabase]);
-
   const requestClose = useCallback(() => {
     setEmail("");
     setNewShareAccessLevel("viewer");
@@ -166,12 +121,11 @@ export function ShareSheetModal({
     if (!isOpen) return;
     const timer = window.setTimeout(() => {
       void loadShares();
-      void loadRecentLogs();
     }, 0);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isOpen, loadRecentLogs, loadShares]);
+  }, [isOpen, loadShares]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -219,8 +173,7 @@ export function ShareSheetModal({
     setSavingShare(false);
     notify("success", "Account sharing updated.");
     void loadShares();
-    void loadRecentLogs();
-  }, [canManageShares, email, loadRecentLogs, loadShares, newShareAccessLevel, notify, supabase]);
+  }, [canManageShares, email, loadShares, newShareAccessLevel, notify, supabase]);
 
   const updateShareAccessLevel = useCallback(
     async (share: ShareRow, nextAccessLevel: AccessLevel) => {
@@ -246,9 +199,8 @@ export function ShareSheetModal({
       setUpdatingShareEmail(null);
       notify("success", "Access level updated.");
       void loadShares();
-      void loadRecentLogs();
     },
-    [canManageShares, loadRecentLogs, loadShares, notify, supabase],
+    [canManageShares, loadShares, notify, supabase],
   );
 
   const removeShare = useCallback(
@@ -272,9 +224,8 @@ export function ShareSheetModal({
       setRemovingShareEmail(null);
       notify("success", "Access removed.");
       void loadShares();
-      void loadRecentLogs();
     },
-    [canManageShares, loadRecentLogs, loadShares, notify, supabase],
+    [canManageShares, loadShares, notify, supabase],
   );
 
   if (!isOpen) return null;
@@ -412,42 +363,24 @@ export function ShareSheetModal({
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-border bg-paper/45">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <p className="font-mono text-xs text-muted">Recent activity</p>
-          </div>
-          <div className="max-h-72 overflow-y-auto">
-            {loadingLogs ? (
-              <p className="px-3 py-4 text-sm text-muted">Loading activity...</p>
-            ) : recentLogs.length ? (
-              <ul className="divide-y divide-border">
-                {recentLogs.map((log) => (
-                  <li key={log.id} className="px-3 py-2">
-                    <p className="text-sm text-ink">
-                      <span className="font-semibold">{log.actorEmail}</span>{" "}
-                      <span className="text-muted">
-                        {log.action === "insert"
-                          ? "created"
-                          : log.action === "update"
-                            ? "updated"
-                            : "deleted"}
-                      </span>{" "}
-                      <span className="font-mono text-xs text-muted">{log.tableName}</span>
-                    </p>
-                    <p className="mt-0.5 font-mono text-xs text-muted">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </p>
-                    {log.changedFields.length ? (
-                      <p className="mt-0.5 text-xs text-muted">
-                        Fields: {log.changedFields.join(", ")}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-3 py-4 text-sm text-muted">No activity logs yet.</p>
-            )}
+        <div className="mt-4 rounded-xl border border-border bg-paper/45 px-3 py-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-mono text-xs text-muted">Activities</p>
+              <p className="mt-0.5 text-sm text-muted">
+                View full account activity logs on the dedicated Activities page.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-border bg-paper px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/75"
+              onClick={() => {
+                requestClose();
+                window.location.assign("/activities");
+              }}
+            >
+              Open Activities
+            </button>
           </div>
         </div>
       </div>
