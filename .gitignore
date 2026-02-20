@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local agent instructions
 /AGENTS.md
+
+# local documentation (keep local, do not push)
+/docs/
