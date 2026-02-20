@@ -256,7 +256,12 @@ export function MainNavMenu({
         ].join(" ")}
       >
         <div className="flex h-[72px] items-center justify-between border-b border-zinc-300 px-3">
-          <p className="text-base font-semibold tracking-tight text-ink">Small Business Costing</p>
+          <div className="min-w-0">
+            <p className="text-[1.14rem] font-bold leading-tight tracking-tight text-black">
+              Product Costing
+            </p>
+            <p className="text-sm font-semibold leading-tight text-ink">for Small Business</p>
+          </div>
           <button
             type="button"
             aria-label="Close menu"
@@ -293,9 +298,14 @@ export function MainNavMenu({
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
           </button>
 
-          <p className={["ml-2 truncate text-base font-semibold tracking-tight text-ink", compactModeClasses.fullLabel].join(" ")}>
-            Small Business Costing
-          </p>
+          <div className={["ml-2 min-w-0", compactModeClasses.fullLabel].join(" ")}>
+            <p className="truncate text-[1.14rem] font-bold leading-tight tracking-tight text-black">
+              Product Costing
+            </p>
+            <p className="truncate text-sm font-semibold leading-tight text-ink">
+              for Small Business
+            </p>
+          </div>
           <p className={["ml-2 text-sm font-semibold text-ink", compactModeClasses.label].join(" ")}>SBC</p>
         </div>
 
