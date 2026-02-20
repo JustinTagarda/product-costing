@@ -12,6 +12,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -238,6 +239,7 @@ export default function ProductsApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Search products by name or code"
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

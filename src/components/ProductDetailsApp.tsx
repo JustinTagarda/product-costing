@@ -14,6 +14,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -307,6 +308,7 @@ export default function ProductDetailsApp() {
         searchPlaceholder="Filter product lines, categories, notes"
         onShare={() => setShowShareModal(true)}
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

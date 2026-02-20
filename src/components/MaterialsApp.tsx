@@ -14,6 +14,7 @@ import {
   type MaterialRecord,
 } from "@/lib/materials";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
 import {
@@ -619,6 +620,7 @@ export default function MaterialsApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Search materials..."
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

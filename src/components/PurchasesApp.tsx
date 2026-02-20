@@ -47,6 +47,7 @@ import {
   type DbPurchaseRow,
 } from "@/lib/supabase/purchases";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -1312,6 +1313,7 @@ export default function PurchasesApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Search purchases..."
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

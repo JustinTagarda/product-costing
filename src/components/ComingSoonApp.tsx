@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { goToWelcomePage } from "@/lib/navigation";
 
 const KNOWN_MENU_ITEMS = new Set([
@@ -108,6 +109,7 @@ export default function ComingSoonApp() {
         searchPlaceholder="Search..."
         onQuickAdd={() => window.location.assign("/calculator")}
         quickAddLabel="+ New Product"
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

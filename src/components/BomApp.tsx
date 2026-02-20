@@ -31,6 +31,7 @@ import {
   type DbBomLineRow,
 } from "@/lib/supabase/bom";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
@@ -604,6 +605,7 @@ export default function BomApp() {
         onSearchChange={setQuery}
         searchPlaceholder="Search BOM..."
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">

@@ -10,6 +10,7 @@ import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { goToWelcomePage } from "@/lib/navigation";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import {
   rowToAccountChangeLog,
   type AccountChangeLogEntry,
@@ -313,6 +314,7 @@ export default function ActivitiesApp() {
         searchPlaceholder="Search user, action, area, or changed field"
         onShare={() => setShowShareModal(true)}
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
 

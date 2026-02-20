@@ -25,6 +25,7 @@ import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { parseStoredDataJson } from "@/lib/importExport";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
 import {
@@ -893,6 +894,7 @@ export default function CostingApp() {
           onSearchChange={setQuery}
           searchPlaceholder="Search sheets..."
           viewerMode={isReadOnlyData}
+          profileImageUrl={getUserProfileImageUrl(session?.user)}
           profileLabel={session?.user?.email || "Profile"}
         />
         <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
@@ -931,6 +933,7 @@ export default function CostingApp() {
         searchPlaceholder="Search sheets..."
         onShare={() => setShowShareModal(true)}
         viewerMode={isReadOnlyData}
+        profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
       />
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">

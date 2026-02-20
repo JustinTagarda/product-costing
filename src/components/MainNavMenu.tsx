@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -19,6 +20,7 @@ type MainNavMenuProps = {
   quickAddDisabled?: boolean;
   viewerMode?: boolean;
   profileLabel?: string;
+  profileImageUrl?: string | null;
   onProfileClick?: () => void;
 };
 
@@ -51,11 +53,13 @@ export function MainNavMenu({
   quickAddDisabled,
   viewerMode,
   profileLabel,
+  profileImageUrl,
   onProfileClick,
 }: MainNavMenuProps) {
   const [isTabletExpanded, setIsTabletExpanded] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
+  const [failedProfileImageUrl, setFailedProfileImageUrl] = useState<string | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -63,6 +67,9 @@ export function MainNavMenu({
   const effectiveSearchValue = searchValue ?? localSearch;
   const effectiveShareLabel = shareLabel || "Share";
   const effectiveQuickAddLabel = quickAddLabel || "+ New Product";
+  const normalizedProfileImageUrl = (profileImageUrl || "").trim();
+  const showProfileImage =
+    normalizedProfileImageUrl.length > 0 && failedProfileImageUrl !== normalizedProfileImageUrl;
 
   const compactModeClasses = useMemo(
     () => ({
@@ -245,8 +252,20 @@ export function MainNavMenu({
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:gap-2"
             onClick={() => (onProfileClick || onSettings)()}
           >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-[11px] font-semibold text-ink">
-              {profileInitials()}
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-200">
+              {showProfileImage ? (
+                <Image
+                  src={normalizedProfileImageUrl}
+                  alt={profileLabel ? `${profileLabel} profile photo` : "Profile photo"}
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="h-6 w-6 object-cover"
+                  onError={() => setFailedProfileImageUrl(normalizedProfileImageUrl)}
+                />
+              ) : (
+                <span className="text-[11px] font-semibold text-ink">{profileInitials()}</span>
+              )}
             </span>
             <span className="hidden sm:inline">{profileLabel || "Profile"}</span>
           </button>
