@@ -74,15 +74,29 @@ export function MainNavMenu({
 
   useEffect(() => {
     const root = document.documentElement;
+    const blurViewerModeSelect = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const select = target.closest("select");
+      if (!(select instanceof HTMLSelectElement)) return;
+      window.requestAnimationFrame(() => {
+        select.blur();
+      });
+    };
+
     if (viewerMode) {
       root.setAttribute("data-viewer-mode", "true");
+      document.addEventListener("focusin", blurViewerModeSelect, true);
       return () => {
+        document.removeEventListener("focusin", blurViewerModeSelect, true);
         root.removeAttribute("data-viewer-mode");
       };
     }
 
+    document.removeEventListener("focusin", blurViewerModeSelect, true);
     root.removeAttribute("data-viewer-mode");
     return () => {
+      document.removeEventListener("focusin", blurViewerModeSelect, true);
       root.removeAttribute("data-viewer-mode");
     };
   }, [viewerMode]);

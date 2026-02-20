@@ -50,6 +50,7 @@ button:disabled {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   background-image: none !important;
+  pointer-events: none !important;
 }
 
 :root[data-viewer-mode="true"] select::-ms-expand {
