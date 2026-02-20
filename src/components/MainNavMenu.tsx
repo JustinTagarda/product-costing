@@ -255,8 +255,8 @@ export function MainNavMenu({
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <div className="flex h-[72px] items-center justify-between border-b border-zinc-300 px-3">
-          <div className="min-w-0">
+        <div className="relative flex h-[72px] items-center justify-center border-b border-zinc-300 px-3">
+          <div className="min-w-0 text-center">
             <p className="text-[1.14rem] font-bold leading-tight tracking-tight text-black">
               Product Costing
             </p>
@@ -265,7 +265,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label="Close menu"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
             <CloseIcon />
@@ -288,17 +288,17 @@ export function MainNavMenu({
         className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-300 bg-zinc-200/95 backdrop-blur md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[72px] items-center border-b border-zinc-300 px-3">
+        <div className="relative flex h-[72px] items-center justify-center border-b border-zinc-300 px-3">
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
+            className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
           </button>
 
-          <div className={["ml-2 min-w-0", compactModeClasses.fullLabel].join(" ")}>
+          <div className={["min-w-0 text-center", compactModeClasses.fullLabel].join(" ")}>
             <p className="truncate text-[1.14rem] font-bold leading-tight tracking-tight text-black">
               Product Costing
             </p>
@@ -306,7 +306,6 @@ export function MainNavMenu({
               for Small Business
             </p>
           </div>
-          <p className={["ml-2 text-sm font-semibold text-ink", compactModeClasses.label].join(" ")}>SBC</p>
         </div>
 
         <SidebarSections
