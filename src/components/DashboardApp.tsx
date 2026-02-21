@@ -385,7 +385,70 @@ export default function DashboardApp() {
               <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 md:hidden">
+              {loadingSheets ? (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  Loading products...
+                </p>
+              ) : recentProducts.length ? (
+                recentProducts.map((row) => (
+                  <article
+                    key={row.sheet.id}
+                    className="rounded-xl border border-border bg-paper/55 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-ink">
+                          {row.sheet.name || "Untitled"}
+                        </p>
+                        <p className="mt-0.5 truncate font-mono text-xs text-muted">
+                          SKU: {row.sheet.sku || "-"}
+                        </p>
+                      </div>
+                      <p className="shrink-0 font-mono text-[11px] text-muted">
+                        {formatAppDate(row.sheet.updatedAt)}
+                      </p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                        <p className="font-mono text-[11px] text-muted">Batch Total</p>
+                        <p className="mt-1 font-mono text-xs text-ink">
+                          {formatMoney(row.totals.batchTotalCents)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                        <p className="font-mono text-[11px] text-muted">Margin</p>
+                        <p className="mt-1 font-mono text-xs text-muted">
+                          {row.totals.marginPct === null ? "--" : `${row.totals.marginPct.toFixed(1)}%`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                        onClick={() => window.location.assign(`/products/${row.sheet.id}`)}
+                      >
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                        onClick={() => window.location.assign("/calculator")}
+                      >
+                        Calculate
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  No products matched your search. Try a different term or create a new product from the top bar.
+                </p>
+              )}
+            </div>
+
+            <div className="app-table-scroll hidden overflow-x-auto md:block">
               <table className="min-w-[900px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>

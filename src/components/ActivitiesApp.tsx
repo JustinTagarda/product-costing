@@ -466,7 +466,49 @@ export default function ActivitiesApp() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 md:hidden">
+              {loadingLogs ? (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  Loading activity logs...
+                </p>
+              ) : filteredLogs.length ? (
+                filteredLogs.map((log) => (
+                  <article
+                    key={log.id}
+                    className="rounded-xl border border-border bg-paper/55 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-mono text-[11px] text-muted">
+                        {formatDateTime(log.createdAt) || "-"}
+                      </p>
+                      <span className="rounded-full border border-border bg-paper/70 px-2 py-0.5 font-mono text-[11px] text-muted">
+                        {actionLabel(log.action)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-ink">{log.actorEmail}</p>
+                    <div className="mt-2 rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                      <p className="font-mono text-[11px] text-muted">Area</p>
+                      <p className="mt-1 text-sm text-ink">{tableNameLabel(log.tableName)}</p>
+                      <p className="font-mono text-[11px] text-muted">{log.tableName}</p>
+                    </div>
+                    <div className="mt-2 rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                      <p className="font-mono text-[11px] text-muted">Changed Fields</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {log.changedFields.length
+                          ? log.changedFields.join(", ")
+                          : "No tracked field differences"}
+                      </p>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  No logs matched your current search and filters.
+                </p>
+              )}
+            </div>
+
+            <div className="app-table-scroll hidden overflow-x-auto md:block">
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>

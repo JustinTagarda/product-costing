@@ -49,7 +49,7 @@ type MaterialOption = {
 };
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 
 const inputMono = "tabular-nums font-mono tracking-tight";
 const PRODUCT_CODE_PREFIX = "PR-";
@@ -1133,34 +1133,146 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="space-y-3 p-3 md:hidden">
+                      {selectedSheet.materials.map((it) => {
+                        const linkedMaterial = it.materialId ? materialById.get(it.materialId) : null;
+                        const displayName = linkedMaterial?.name || it.name;
+                        const displayUnit = formatMaterialUnitLabel(linkedMaterial?.unit || it.unit);
+                        const displayUnitCostCents = linkedMaterial?.unitCostCents ?? it.unitCostCents;
+                        return (
+                          <article key={it.id} className="rounded-xl border border-border bg-paper/55 p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-ink">{displayName || "Material line"}</p>
+                              <button
+                                type="button"
+                                className="rounded-lg border border-border bg-paper/70 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/85 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => {
+                                  updateSelected((s) => {
+                                    const next = s.materials.filter((m) => m.id !== it.id);
+                                    return {
+                                      ...s,
+                                      materials:
+                                        next.length > 0
+                                          ? next
+                                          : [{ id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 }],
+                                    };
+                                  });
+                                  toast("success", "Material line deleted.");
+                                }}
+                                disabled={isReadOnlyData}
+                                aria-label="Remove material line"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="mt-3 grid gap-3">
+                              <label className="block space-y-1">
+                                <span className="font-mono text-xs text-muted">Material</span>
+                                <select
+                                  className={inputBase}
+                                  value={it.materialId ?? ""}
+                                  onChange={(e) => {
+                                    const materialId = e.target.value || null;
+                                    const material = materialId ? materialById.get(materialId) : null;
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      materials: s.materials.map((m) => {
+                                        if (m.id !== it.id) return m;
+                                        if (!materialId) return { ...m, materialId: null };
+                                        if (!material) return { ...m, materialId };
+                                        return {
+                                          ...m,
+                                          materialId,
+                                          name: material.name,
+                                          unit: material.unit,
+                                          unitCostCents: material.unitCostCents,
+                                        };
+                                      }),
+                                    }));
+                                  }}
+                                >
+                                  <option value="">
+                                    {displayName ? `Unlinked (${displayName})` : "Select material"}
+                                  </option>
+                                  {materials.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {item.name || "Unnamed material"}
+                                      {item.isActive ? "" : " (inactive)"}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              <label className="block space-y-1">
+                                <span className="font-mono text-xs text-muted">Qty</span>
+                                <DeferredNumberInput
+                                  className={inputBase + " " + inputMono}
+                                  value={it.qty}
+                                  onCommit={(value) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      materials: s.materials.map((m) => (m.id === it.id ? { ...m, qty: value } : m)),
+                                    }))
+                                  }
+                                />
+                              </label>
+
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                                  <p className="font-mono text-xs text-muted">Unit</p>
+                                  <p className="mt-1 font-mono text-sm text-ink">{displayUnit || "--"}</p>
+                                </div>
+                                <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                                  <p className="font-mono text-xs text-muted">Weighted avg cost</p>
+                                  <p className="mt-1 font-mono text-sm tabular-nums text-ink">
+                                    {it.materialId || displayUnitCostCents > 0
+                                      ? formatMoney(displayUnitCostCents)
+                                      : "--"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                                <p className="font-mono text-xs text-muted">Total</p>
+                                <p className="mt-1 font-mono text-sm tabular-nums text-ink">
+                                  {formatMoney(Math.round(it.qty * displayUnitCostCents))}
+                                </p>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    <div className="app-table-scroll hidden overflow-x-auto md:block">
                       <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
-                          <thead>
-                            <tr>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
-                                Material
-                              </th>
-                              <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
-                                Qty
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 90 }}>
-                                Unit
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 120 }}>
-                                Weighted avg cost
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 160 }}>
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="align-top">
-                            {selectedSheet.materials.map((it) => {
-                              const linkedMaterial = it.materialId ? materialById.get(it.materialId) : null;
-                              const displayName = linkedMaterial?.name || it.name;
-                              const displayUnit = formatMaterialUnitLabel(linkedMaterial?.unit || it.unit);
-                              const displayUnitCostCents = linkedMaterial?.unitCostCents ?? it.unitCostCents;
-                              return (
+                        <thead>
+                          <tr>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                              Material
+                            </th>
+                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                              Qty
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 90 }}>
+                              Unit
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 120 }}>
+                              Weighted avg cost
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 160 }}>
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="align-top">
+                          {selectedSheet.materials.map((it) => {
+                            const linkedMaterial = it.materialId ? materialById.get(it.materialId) : null;
+                            const displayName = linkedMaterial?.name || it.name;
+                            const displayUnit = formatMaterialUnitLabel(linkedMaterial?.unit || it.unit);
+                            const displayUnitCostCents = linkedMaterial?.unitCostCents ?? it.unitCostCents;
+                            return (
                               <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
                                 <td className="p-2">
                                   <select
@@ -1251,8 +1363,8 @@ export default function CostingApp() {
                                 </td>
                               </tr>
                             );
-                            })}
-                          </tbody>
+                          })}
+                        </tbody>
                       </table>
                     </div>
 
@@ -1301,105 +1413,199 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="space-y-3 p-3 md:hidden">
+                      {selectedSheet.labor.map((it, idx) => (
+                        <article key={it.id} className="rounded-xl border border-border bg-paper/55 p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-ink">{it.role || `Labor line ${idx + 1}`}</p>
+                            <button
+                              type="button"
+                              className="rounded-lg border border-border bg-paper/70 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/85 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => {
+                                updateSelected((s) => {
+                                  const next = s.labor.filter((l) => l.id !== it.id);
+                                  return {
+                                    ...s,
+                                    labor:
+                                      next.length > 0
+                                        ? next
+                                        : [{ id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
+                                  };
+                                });
+                                toast("success", "Labor line deleted.");
+                              }}
+                              disabled={isReadOnlyData}
+                              aria-label="Remove labor line"
+                            >
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="mt-3 grid gap-3">
+                            <label className="block space-y-1">
+                              <span className="font-mono text-xs text-muted">Role</span>
+                              <input
+                                className={inputBase}
+                                value={it.role}
+                                onChange={(e) =>
+                                  updateSelected((s) => ({
+                                    ...s,
+                                    labor: s.labor.map((l) =>
+                                      l.id === it.id ? { ...l, role: e.target.value } : l,
+                                    ),
+                                  }))
+                                }
+                                placeholder={idx === 0 ? "e.g., Assembly" : ""}
+                              />
+                            </label>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="block space-y-1">
+                                <span className="font-mono text-xs text-muted">Hours</span>
+                                <DeferredNumberInput
+                                  className={inputBase + " " + inputMono}
+                                  value={it.hours}
+                                  onCommit={(value) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      labor: s.labor.map((l) =>
+                                        l.id === it.id
+                                          ? { ...l, hours: Math.max(0, value) }
+                                          : l,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="font-mono text-xs text-muted">Rate</span>
+                                <DeferredMoneyInput
+                                  className={inputBase + " " + inputMono}
+                                  valueCents={it.rateCents}
+                                  onCommitCents={(valueCents) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      labor: s.labor.map((l) =>
+                                        l.id === it.id
+                                          ? { ...l, rateCents: valueCents }
+                                          : l,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
+
+                            <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                              <p className="font-mono text-xs text-muted">Total</p>
+                              <p className="mt-1 font-mono text-sm tabular-nums text-ink">
+                                {formatMoney(Math.round(it.hours * it.rateCents))}
+                              </p>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+
+                    <div className="app-table-scroll hidden overflow-x-auto md:block">
                       <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
-                          <thead>
-                            <tr>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
-                                Role
-                              </th>
-                              <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
-                                Hours
-                              </th>
-                              <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
-                                Rate
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
-                                Total
-                              </th>
+                        <thead>
+                          <tr>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                              Role
+                            </th>
+                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                              Hours
+                            </th>
+                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                              Rate
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="align-top">
+                          {selectedSheet.labor.map((it, idx) => (
+                            <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
+                              <td className="p-2">
+                                <input
+                                  className={inputBase}
+                                  value={it.role}
+                                  onChange={(e) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      labor: s.labor.map((l) =>
+                                        l.id === it.id ? { ...l, role: e.target.value } : l,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder={idx === 0 ? "e.g., Assembly" : ""}
+                                />
+                              </td>
+                              <td className="app-col-strict-100 p-2">
+                                <DeferredNumberInput
+                                  className={inputBase + " " + inputMono}
+                                  value={it.hours}
+                                  onCommit={(value) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      labor: s.labor.map((l) =>
+                                        l.id === it.id
+                                          ? { ...l, hours: Math.max(0, value) }
+                                          : l,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </td>
+                              <td className="app-col-strict-100 p-2">
+                                <DeferredMoneyInput
+                                  className={inputBase + " " + inputMono}
+                                  valueCents={it.rateCents}
+                                  onCommitCents={(valueCents) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      labor: s.labor.map((l) =>
+                                        l.id === it.id
+                                          ? { ...l, rateCents: valueCents }
+                                          : l,
+                                      ),
+                                    }))
+                                  }
+                                />
+                              </td>
+                              <td className="p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono text-sm tabular-nums text-ink">
+                                    {formatMoney(Math.round(it.hours * it.rateCents))}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
+                                    onClick={() => {
+                                      updateSelected((s) => {
+                                        const next = s.labor.filter((l) => l.id !== it.id);
+                                        return {
+                                          ...s,
+                                          labor:
+                                            next.length > 0
+                                              ? next
+                                              : [{ id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
+                                        };
+                                      });
+                                      toast("success", "Labor line deleted.");
+                                    }}
+                                    disabled={isReadOnlyData}
+                                    aria-label="Remove labor line"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="align-top">
-                            {selectedSheet.labor.map((it, idx) => (
-                              <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
-                                <td className="p-2">
-                                  <input
-                                    className={inputBase}
-                                    value={it.role}
-                                    onChange={(e) =>
-                                      updateSelected((s) => ({
-                                        ...s,
-                                        labor: s.labor.map((l) =>
-                                          l.id === it.id ? { ...l, role: e.target.value } : l,
-                                        ),
-                                      }))
-                                    }
-                                    placeholder={idx === 0 ? "e.g., Assembly" : ""}
-                                  />
-                                </td>
-                                <td className="app-col-strict-100 p-2">
-                                  <DeferredNumberInput
-                                    className={inputBase + " " + inputMono}
-                                    value={it.hours}
-                                    onCommit={(value) =>
-                                      updateSelected((s) => ({
-                                        ...s,
-                                        labor: s.labor.map((l) =>
-                                          l.id === it.id
-                                            ? { ...l, hours: Math.max(0, value) }
-                                            : l,
-                                        ),
-                                      }))
-                                    }
-                                  />
-                                </td>
-                                <td className="app-col-strict-100 p-2">
-                                  <DeferredMoneyInput
-                                    className={inputBase + " " + inputMono}
-                                    valueCents={it.rateCents}
-                                    onCommitCents={(valueCents) =>
-                                      updateSelected((s) => ({
-                                        ...s,
-                                        labor: s.labor.map((l) =>
-                                          l.id === it.id
-                                            ? { ...l, rateCents: valueCents }
-                                            : l,
-                                        ),
-                                      }))
-                                    }
-                                  />
-                                </td>
-                                <td className="p-2">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono text-sm tabular-nums text-ink">
-                                      {formatMoney(Math.round(it.hours * it.rateCents))}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                                      onClick={() => {
-                                        updateSelected((s) => {
-                                          const next = s.labor.filter((l) => l.id !== it.id);
-                                          return {
-                                            ...s,
-                                            labor:
-                                              next.length > 0
-                                                ? next
-                                                : [{ id: makeId("l"), role: "", hours: 0, rateCents: 0 }],
-                                          };
-                                        });
-                                        toast("success", "Labor line deleted.");
-                                      }}
-                                      disabled={isReadOnlyData}
-                                      aria-label="Remove labor line"
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
+                          ))}
+                        </tbody>
                       </table>
                     </div>
 
@@ -1438,133 +1644,257 @@ export default function CostingApp() {
                       </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                      <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
-                          <thead>
-                            <tr>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
-                                Item
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 120 }}>
-                                Type
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 140 }}>
-                                Value
-                              </th>
-                              <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
-                                Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="align-top">
-                            {selectedSheet.overhead.map((it) => {
-                              const base = computeOverheadBaseCents(
-                                totals.materialsWithWasteCents,
-                                totals.laborSubtotalCents,
-                              );
-                              const lineTotal = computeOverheadLineTotalCents(it, base);
+                    <div className="space-y-3 p-3 md:hidden">
+                      {selectedSheet.overhead.map((it, idx) => {
+                        const base = computeOverheadBaseCents(
+                          totals.materialsWithWasteCents,
+                          totals.laborSubtotalCents,
+                        );
+                        const lineTotal = computeOverheadLineTotalCents(it, base);
 
-                              return (
-                                <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
-                                  <td className="p-2">
-                                    <input
-                                      className={inputBase}
-                                      value={it.name}
-                                      onChange={(e) =>
+                        return (
+                          <article key={it.id} className="rounded-xl border border-border bg-paper/55 p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-ink">{it.name || `Overhead line ${idx + 1}`}</p>
+                              <button
+                                type="button"
+                                className="rounded-lg border border-border bg-paper/70 px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/85 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => {
+                                  updateSelected((s) => ({
+                                    ...s,
+                                    overhead: s.overhead.filter((o) => o.id !== it.id),
+                                  }));
+                                  toast("success", "Overhead line deleted.");
+                                }}
+                                disabled={isReadOnlyData}
+                                aria-label="Remove overhead line"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="mt-3 grid gap-3">
+                              <label className="block space-y-1">
+                                <span className="font-mono text-xs text-muted">Item</span>
+                                <input
+                                  className={inputBase}
+                                  value={it.name}
+                                  onChange={(e) =>
+                                    updateSelected((s) => ({
+                                      ...s,
+                                      overhead: s.overhead.map((o) =>
+                                        o.id === it.id ? { ...o, name: e.target.value } : o,
+                                      ) as OverheadItem[],
+                                    }))
+                                  }
+                                  placeholder="e.g., Packaging"
+                                />
+                              </label>
+
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <label className="block space-y-1">
+                                  <span className="font-mono text-xs text-muted">Type</span>
+                                  <select
+                                    className={inputBase}
+                                    value={it.kind}
+                                    onChange={(e) =>
+                                      updateSelected((s) => ({
+                                        ...s,
+                                        overhead: s.overhead.map((o) => {
+                                          if (o.id !== it.id) return o;
+                                          if (e.target.value === "percent") {
+                                            return { id: o.id, name: o.name, kind: "percent", percent: 0 };
+                                          }
+                                          return { id: o.id, name: o.name, kind: "flat", amountCents: 0 };
+                                        }) as OverheadItem[],
+                                      }))
+                                    }
+                                  >
+                                    <option value="flat">Flat</option>
+                                    <option value="percent">Percent</option>
+                                  </select>
+                                </label>
+
+                                <label className="block space-y-1">
+                                  <span className="font-mono text-xs text-muted">Value</span>
+                                  {it.kind === "flat" ? (
+                                    <DeferredMoneyInput
+                                      className={inputBase + " " + inputMono}
+                                      valueCents={it.amountCents}
+                                      onCommitCents={(valueCents) =>
                                         updateSelected((s) => ({
                                           ...s,
                                           overhead: s.overhead.map((o) =>
-                                            o.id === it.id ? { ...o, name: e.target.value } : o,
+                                            o.id === it.id
+                                              ? { ...o, amountCents: valueCents }
+                                              : o,
                                           ) as OverheadItem[],
                                         }))
                                       }
-                                      placeholder="e.g., Packaging"
                                     />
-                                  </td>
-                                  <td className="p-2">
-                                    <select
-                                      className={inputBase}
-                                      value={it.kind}
-                                      onChange={(e) =>
-                                        updateSelected((s) => ({
-                                          ...s,
-                                          overhead: s.overhead.map((o) => {
-                                            if (o.id !== it.id) return o;
-                                            if (e.target.value === "percent") {
-                                              return { id: o.id, name: o.name, kind: "percent", percent: 0 };
-                                            }
-                                            return { id: o.id, name: o.name, kind: "flat", amountCents: 0 };
-                                          }) as OverheadItem[],
-                                        }))
-                                      }
-                                    >
-                                      <option value="flat">Flat</option>
-                                      <option value="percent">Percent</option>
-                                    </select>
-                                  </td>
-                                  <td className="p-2">
-                                    {it.kind === "flat" ? (
-                                      <DeferredMoneyInput
-                                        className={inputBase + " " + inputMono}
-                                        valueCents={it.amountCents}
-                                        onCommitCents={(valueCents) =>
+                                  ) : (
+                                    <div className="relative">
+                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
+                                        %
+                                      </span>
+                                      <DeferredNumberInput
+                                        className={inputBase + " pr-7 " + inputMono}
+                                        value={it.percent}
+                                        onCommit={(value) =>
                                           updateSelected((s) => ({
                                             ...s,
                                             overhead: s.overhead.map((o) =>
                                               o.id === it.id
-                                                ? { ...o, amountCents: valueCents }
+                                                ? { ...o, percent: Math.max(0, value) }
                                                 : o,
                                             ) as OverheadItem[],
                                           }))
                                         }
                                       />
-                                    ) : (
-                                      <div className="relative">
-                                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
-                                          %
-                                        </span>
-                                        <DeferredNumberInput
-                                          className={inputBase + " pr-7 " + inputMono}
-                                          value={it.percent}
-                                          onCommit={(value) =>
-                                            updateSelected((s) => ({
-                                              ...s,
-                                              overhead: s.overhead.map((o) =>
-                                                o.id === it.id
-                                                  ? { ...o, percent: Math.max(0, value) }
-                                                  : o,
-                                              ) as OverheadItem[],
-                                            }))
+                                    </div>
+                                  )}
+                                </label>
+                              </div>
+
+                              <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                                <p className="font-mono text-xs text-muted">Total</p>
+                                <p className="mt-1 font-mono text-sm tabular-nums text-ink">
+                                  {formatMoney(lineTotal)}
+                                </p>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    <div className="app-table-scroll hidden overflow-x-auto md:block">
+                      <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
+                        <thead>
+                          <tr>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                              Item
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 120 }}>
+                              Type
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 140 }}>
+                              Value
+                            </th>
+                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="align-top">
+                          {selectedSheet.overhead.map((it) => {
+                            const base = computeOverheadBaseCents(
+                              totals.materialsWithWasteCents,
+                              totals.laborSubtotalCents,
+                            );
+                            const lineTotal = computeOverheadLineTotalCents(it, base);
+
+                            return (
+                              <tr key={it.id} className="animate-[popIn_.14s_ease-out]">
+                                <td className="p-2">
+                                  <input
+                                    className={inputBase}
+                                    value={it.name}
+                                    onChange={(e) =>
+                                      updateSelected((s) => ({
+                                        ...s,
+                                        overhead: s.overhead.map((o) =>
+                                          o.id === it.id ? { ...o, name: e.target.value } : o,
+                                        ) as OverheadItem[],
+                                      }))
+                                    }
+                                    placeholder="e.g., Packaging"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <select
+                                    className={inputBase}
+                                    value={it.kind}
+                                    onChange={(e) =>
+                                      updateSelected((s) => ({
+                                        ...s,
+                                        overhead: s.overhead.map((o) => {
+                                          if (o.id !== it.id) return o;
+                                          if (e.target.value === "percent") {
+                                            return { id: o.id, name: o.name, kind: "percent", percent: 0 };
                                           }
-                                        />
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="font-mono text-sm tabular-nums text-ink">
-                                        {formatMoney(lineTotal)}
+                                          return { id: o.id, name: o.name, kind: "flat", amountCents: 0 };
+                                        }) as OverheadItem[],
+                                      }))
+                                    }
+                                  >
+                                    <option value="flat">Flat</option>
+                                    <option value="percent">Percent</option>
+                                  </select>
+                                </td>
+                                <td className="p-2">
+                                  {it.kind === "flat" ? (
+                                    <DeferredMoneyInput
+                                      className={inputBase + " " + inputMono}
+                                      valueCents={it.amountCents}
+                                      onCommitCents={(valueCents) =>
+                                        updateSelected((s) => ({
+                                          ...s,
+                                          overhead: s.overhead.map((o) =>
+                                            o.id === it.id
+                                              ? { ...o, amountCents: valueCents }
+                                              : o,
+                                          ) as OverheadItem[],
+                                        }))
+                                      }
+                                    />
+                                  ) : (
+                                    <div className="relative">
+                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
+                                        %
                                       </span>
-                                      <button
-                                        type="button"
-                                        className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                                        onClick={() => {
+                                      <DeferredNumberInput
+                                        className={inputBase + " pr-7 " + inputMono}
+                                        value={it.percent}
+                                        onCommit={(value) =>
                                           updateSelected((s) => ({
                                             ...s,
-                                            overhead: s.overhead.filter((o) => o.id !== it.id),
-                                          }));
-                                          toast("success", "Overhead line deleted.");
-                                        }}
-                                        disabled={isReadOnlyData}
-                                      >
-                                        Remove
-                                      </button>
+                                            overhead: s.overhead.map((o) =>
+                                              o.id === it.id
+                                                ? { ...o, percent: Math.max(0, value) }
+                                                : o,
+                                            ) as OverheadItem[],
+                                          }))
+                                        }
+                                      />
                                     </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
+                                  )}
+                                </td>
+                                <td className="p-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-mono text-sm tabular-nums text-ink">
+                                      {formatMoney(lineTotal)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-ink transition hover:bg-paper/70"
+                                      onClick={() => {
+                                        updateSelected((s) => ({
+                                          ...s,
+                                          overhead: s.overhead.filter((o) => o.id !== it.id),
+                                        }));
+                                        toast("success", "Overhead line deleted.");
+                                      }}
+                                      disabled={isReadOnlyData}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
                       </table>
                     </div>
 

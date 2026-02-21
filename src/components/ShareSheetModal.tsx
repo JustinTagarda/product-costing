@@ -316,7 +316,10 @@ export function ShareSheetModal({
                   const isRemoving = removingShareEmail === share.shared_with_email;
                   const controlsDisabled = isUpdating || isRemoving;
                   return (
-                    <li key={share.shared_with_email} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <li
+                      key={share.shared_with_email}
+                      className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
                       <div className="min-w-0">
                         <p className="truncate text-sm text-ink">{share.shared_with_email}</p>
                         <p className="font-mono text-xs text-muted">
@@ -324,9 +327,9 @@ export function ShareSheetModal({
                         </p>
                       </div>
                       {canManageShares ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                           <select
-                            className="rounded-lg border border-border bg-paper px-2 py-1 text-xs text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="min-w-[88px] rounded-lg border border-border bg-paper px-2 py-1 text-xs text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
                             value={share.access_level}
                             onChange={(event) =>
                               void updateShareAccessLevel(

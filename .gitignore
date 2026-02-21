@@ -46,3 +46,4 @@ next-env.d.ts
 
 # local documentation (keep local, do not push)
 /docs/
+/task-list.md

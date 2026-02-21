@@ -27,7 +27,7 @@ import { useAppSettings } from "@/lib/useAppSettings";
 type Notice = { kind: "info" | "success" | "error"; message: string };
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 const cardClassName = [
   "rounded-2xl border border-border bg-card/80",
   "shadow-[0_18px_55px_rgba(0,0,0,.08)]",

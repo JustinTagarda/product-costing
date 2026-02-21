@@ -97,7 +97,7 @@ type MaterialOption = Pick<
 >;
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 const inputMono = "tabular-nums font-mono tracking-tight";
 const marketplaceLabels: Record<PurchaseMarketplace, string> = {
   shopee: "Shopee",
@@ -390,6 +390,8 @@ export default function PurchasesApp() {
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
   const draftPurchaseDateInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileDraftCardRef = useRef<HTMLElement | null>(null);
+  const mobileDraftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
   const purchasesRef = useRef<PurchaseRecord[]>([]);
   const importRowMetaByIdRef = useRef<Record<string, ImportedPurchaseRowMeta>>({});
   const importCommitInFlightRef = useRef<Set<string>>(new Set());
@@ -464,16 +466,34 @@ export default function PurchasesApp() {
   );
 
   const focusDraftMaterialSelect = useCallback((scrollBehavior: ScrollBehavior = "smooth") => {
-    const row = draftRowRef.current;
-    if (row) {
-      const rect = row.getBoundingClientRect();
+    if (typeof window === "undefined") return;
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+
+    if (isDesktop) {
+      const row = draftRowRef.current;
+      if (row) {
+        const rect = row.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+        if (!isVisible) {
+          row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+        }
+      }
+      window.requestAnimationFrame(() => {
+        draftMaterialSelectRef.current?.focus();
+      });
+      return;
+    }
+
+    const card = mobileDraftCardRef.current;
+    if (card) {
+      const rect = card.getBoundingClientRect();
       const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
       if (!isVisible) {
-        row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+        card.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
       }
     }
     window.requestAnimationFrame(() => {
-      draftMaterialSelectRef.current?.focus();
+      mobileDraftMaterialSelectRef.current?.focus();
     });
   }, []);
 
@@ -1372,18 +1392,537 @@ export default function PurchasesApp() {
 
           <GlobalAppToast notice={notice} />
 
-          <section className={cardClassName() + " mt-6 overflow-hidden"}>
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="font-mono text-xs text-muted">
-                {loading ? "Loading purchases..." : `${filteredPurchases.length} purchase(s)`}
-              </p>
-              <p className="font-mono text-xs text-muted">Cloud mode</p>
-            </div>
+	          <section className={cardClassName() + " mt-6 overflow-hidden"}>
+	            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+	              <p className="font-mono text-xs text-muted">
+	                {loading ? "Loading purchases..." : `${filteredPurchases.length} purchase(s)`}
+	              </p>
+	              <p className="font-mono text-xs text-muted">Cloud mode</p>
+	            </div>
 
-            <div className="overflow-x-auto">
-              <table data-input-layout className="w-max min-w-full text-left text-sm">
-                <thead className="bg-paper/55">
-                  <tr>
+	            <div className="space-y-3 p-3 md:hidden">
+	              {!isReadOnlyData ? (
+	                <article
+	                  ref={mobileDraftCardRef}
+	                  className="rounded-xl border border-border bg-paper/55 p-3"
+	                >
+	                  <div className="flex items-center justify-between gap-2">
+	                    <p className="font-semibold text-ink">New Purchase</p>
+	                    <span className="font-mono text-[11px] text-muted">
+	                      {savingDraftPurchase ? "Saving..." : "Draft"}
+	                    </span>
+	                  </div>
+
+	                  <div className="mt-3 space-y-3">
+	                    <label className="block space-y-1">
+	                      <span className="font-mono text-xs text-muted">Material</span>
+	                      <select
+	                        ref={mobileDraftMaterialSelectRef}
+	                        className={inputBase}
+	                        value={draftPurchase.materialId ?? ""}
+	                        onChange={(e) => {
+	                          const materialId = e.target.value || null;
+	                          const material = materialId ? materialById.get(materialId) ?? null : null;
+	                          setDraftPurchase((prev) => ({
+	                            ...prev,
+	                            materialId,
+	                            store: prev.store || material?.supplier || "",
+	                          }));
+	                        }}
+	                        disabled={savingDraftPurchase}
+	                      >
+	                        <option value="">Select material</option>
+	                        {materials.map((item) => (
+	                          <option key={item.id} value={item.id}>
+	                            {item.name}
+	                            {item.isActive ? "" : " (inactive)"}
+	                          </option>
+	                        ))}
+	                      </select>
+	                    </label>
+
+	                    <label className="block space-y-1">
+	                      <span className="font-mono text-xs text-muted">Description</span>
+	                      <input
+	                        className={inputBase}
+	                        value={draftPurchase.description}
+	                        onChange={(e) =>
+	                          setDraftPurchase((prev) => ({ ...prev, description: e.target.value }))
+	                        }
+	                        placeholder="Description"
+	                        disabled={savingDraftPurchase}
+	                      />
+	                    </label>
+
+	                    <div className="grid gap-3 sm:grid-cols-2">
+	                      <label className="block space-y-1">
+	                        <span className="font-mono text-xs text-muted">Quantity</span>
+	                        <input
+	                          className={inputBase + " " + inputMono}
+	                          value={draftPurchase.quantityInput}
+	                          onChange={(e) =>
+	                            setDraftPurchase((prev) => ({ ...prev, quantityInput: e.target.value }))
+	                          }
+	                          placeholder="0"
+	                          disabled={savingDraftPurchase}
+	                        />
+	                      </label>
+	                      <label className="block space-y-1">
+	                        <span className="font-mono text-xs text-muted">Cost</span>
+	                        <input
+	                          className={inputBase + " " + inputMono}
+	                          value={draftPurchase.unitCostInput}
+	                          onChange={(e) =>
+	                            setDraftPurchase((prev) => ({ ...prev, unitCostInput: e.target.value }))
+	                          }
+	                          placeholder="0.00"
+	                          disabled={savingDraftPurchase}
+	                        />
+	                      </label>
+	                      <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+	                        <p className="font-mono text-xs text-muted">Total Cost</p>
+	                        <p className="mt-1 font-mono text-sm text-ink">
+	                          {draftPurchase.quantityInput.trim().length > 0 &&
+	                          draftPurchase.unitCostInput.trim().length > 0
+	                            ? formatMoney(
+	                                computePurchaseTotalCents(
+	                                  Math.max(0, parseLooseNumber(draftPurchase.quantityInput)),
+	                                  Math.max(0, parseMoneyToCents(draftPurchase.unitCostInput)),
+	                                ),
+	                              )
+	                            : "--"}
+	                        </p>
+	                      </div>
+	                      <label className="block space-y-1">
+	                        <span className="font-mono text-xs text-muted">Usable Quantity</span>
+	                        <input
+	                          className={inputBase + " " + inputMono}
+	                          value={draftPurchase.usableQuantityInput}
+	                          onChange={(e) =>
+	                            setDraftPurchase((prev) => ({ ...prev, usableQuantityInput: e.target.value }))
+	                          }
+	                          placeholder="0"
+	                          disabled={savingDraftPurchase}
+	                        />
+	                      </label>
+	                    </div>
+
+	                    <label className="block space-y-1">
+	                      <span className="font-mono text-xs text-muted">Marketplace</span>
+	                      <select
+	                        className={inputBase}
+	                        value={draftPurchase.marketplace}
+	                        onChange={(e) =>
+	                          setDraftPurchase((prev) => ({
+	                            ...prev,
+	                            marketplace: e.target.value
+	                              ? normalizePurchaseMarketplace(e.target.value, "other")
+	                              : "",
+	                          }))
+	                        }
+	                        disabled={savingDraftPurchase}
+	                      >
+	                        <option value="">Select marketplace</option>
+	                        {PURCHASE_MARKETPLACES.map((item) => (
+	                          <option key={item} value={item}>
+	                            {marketplaceLabels[item]}
+	                          </option>
+	                        ))}
+	                      </select>
+	                    </label>
+
+	                    <details className="rounded-lg border border-border bg-paper/45 px-3 py-2">
+	                      <summary className="cursor-pointer select-none">
+	                        <div className="flex items-center justify-between gap-2">
+	                          <span className="font-mono text-xs font-semibold text-ink">Advanced fields</span>
+	                          <span className="font-mono text-[11px] text-muted">Optional</span>
+	                        </div>
+	                      </summary>
+	                      <div className="mt-3 space-y-3">
+	                        <label className="block space-y-1">
+	                          <span className="font-mono text-xs text-muted">Variation</span>
+	                          <input
+	                            className={inputBase}
+	                            value={draftPurchase.variation}
+	                            onChange={(e) =>
+	                              setDraftPurchase((prev) => ({ ...prev, variation: e.target.value }))
+	                            }
+	                            placeholder="Variation"
+	                            disabled={savingDraftPurchase}
+	                          />
+	                        </label>
+
+	                        <label className="block space-y-1">
+	                          <span className="font-mono text-xs text-muted">Purchase Date</span>
+	                          <input
+	                            className={inputBase + " " + inputMono}
+	                            type={isDraftPurchaseDateInputActive || draftPurchase.purchaseDate ? "date" : "text"}
+	                            value={draftPurchase.purchaseDate}
+	                            onChange={(e) =>
+	                              setDraftPurchase((prev) => ({
+	                                ...prev,
+	                                purchaseDate: e.target.value,
+	                              }))
+	                            }
+	                            onFocus={(event) => {
+	                              setIsDraftPurchaseDateInputActive(true);
+	                              window.requestAnimationFrame(() => {
+	                                openNativeDatePicker(event.currentTarget);
+	                              });
+	                            }}
+	                            onBlur={() => setIsDraftPurchaseDateInputActive(false)}
+	                            placeholder="Purchase Date"
+	                            disabled={savingDraftPurchase}
+	                          />
+	                        </label>
+
+	                        <label className="block space-y-1">
+	                          <span className="font-mono text-xs text-muted">Store</span>
+	                          <input
+	                            className={inputBase}
+	                            value={draftPurchase.store}
+	                            onChange={(e) =>
+	                              setDraftPurchase((prev) => ({ ...prev, store: e.target.value }))
+	                            }
+	                            placeholder="Store"
+	                            disabled={savingDraftPurchase}
+	                          />
+	                        </label>
+	                      </div>
+	                    </details>
+	                  </div>
+
+	                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+	                    <button
+	                      type="button"
+	                      className="rounded-lg border border-border bg-paper px-3 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+	                      onClick={resetDraftPurchase}
+	                      disabled={savingDraftPurchase || !hasDraftPurchaseValues()}
+	                    >
+	                      Clear
+	                    </button>
+	                    <button
+	                      type="button"
+	                      className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+	                      onClick={onNewPurchaseButtonClick}
+	                      disabled={savingDraftPurchase}
+	                    >
+	                      {savingDraftPurchase ? "Saving..." : "Save Purchase"}
+	                    </button>
+	                  </div>
+	                </article>
+	              ) : null}
+
+	              {filteredPurchases.map((row) => {
+	                const importedMeta = importRowMetaById[row.id];
+	                const isImportedDraftRow = Boolean(importedMeta);
+	                const isImportedRowSaving = importedMeta?.status === "saving";
+	                const invalidImportedField = (field: ImportedPurchaseField): boolean =>
+	                  Boolean(importedMeta && importedMeta.invalidFields.includes(field));
+	                const marketplaceSelectValue = importedMeta?.emptyMarketplace ? "" : row.marketplace;
+	                const advancedHasValidationIssue = invalidImportedField("purchaseDate");
+
+	                return (
+	                  <article
+	                    key={row.id}
+	                    className={[
+	                      "rounded-xl border p-3",
+	                      isImportedDraftRow ? "border-accent/35 bg-[#F8F8FF]" : "border-border bg-paper/55",
+	                    ].join(" ")}
+	                  >
+	                    <div className="flex items-start justify-between gap-2">
+	                      <div className="min-w-0">
+	                        <p className="truncate font-semibold text-ink">
+	                          {row.materialName || row.description || "Purchase"}
+	                        </p>
+	                        <p className="font-mono text-[11px] text-muted">
+	                          {row.purchaseDate || "No purchase date"}
+	                        </p>
+	                      </div>
+	                      {importedMeta ? (
+	                        <span
+	                          className={[
+	                            "rounded px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+	                            importedMeta.status === "error"
+	                              ? "bg-danger/15 text-danger"
+	                              : importedMeta.status === "saving"
+	                                ? "bg-accent/15 text-ink"
+	                                : "bg-paper text-muted",
+	                          ].join(" ")}
+	                        >
+	                          {importedMeta.status}
+	                        </span>
+	                      ) : null}
+	                    </div>
+
+	                    <div className="mt-3 space-y-3">
+	                      <label className="block space-y-1">
+	                        <span className="font-mono text-xs text-muted">Material</span>
+	                        <select
+	                          className={inputBase}
+	                          value={row.materialId ?? ""}
+	                          onChange={(e) => {
+	                            const materialId = e.target.value || null;
+	                            const material = materialId ? materialById.get(materialId) : null;
+	                            updatePurchase(row.id, (x) => ({
+	                              ...x,
+	                              materialId,
+	                              materialName: material ? material.name : x.materialName,
+	                              store: material ? x.store || material.supplier : x.store,
+	                              supplier: material ? x.store || material.supplier : x.supplier,
+	                              unit: material ? material.unit : x.unit,
+	                            }));
+	                          }}
+	                          disabled={isImportedRowSaving || isReadOnlyData}
+	                        >
+	                          <option value="">
+	                            {row.materialName ? `Unlinked (${row.materialName})` : "Select material"}
+	                          </option>
+	                          {materials.map((item) => (
+	                            <option key={item.id} value={item.id}>
+	                              {item.name}
+	                              {item.isActive ? "" : " (inactive)"}
+	                            </option>
+	                          ))}
+	                        </select>
+	                      </label>
+
+	                      <label
+	                        className={[
+	                          "block space-y-1",
+	                          invalidImportedField("description") ? "rounded-lg bg-danger/10 p-2" : "",
+	                        ].join(" ")}
+	                      >
+	                        <span className="font-mono text-xs text-muted">Description</span>
+	                        <input
+	                          className={inputBase + (invalidImportedField("description") ? " !bg-[#ffe9ec]" : "")}
+	                          value={row.description}
+	                          onChange={(e) =>
+	                            updatePurchase(row.id, (x) => ({ ...x, description: e.target.value }))
+	                          }
+	                          placeholder="Description"
+	                          disabled={isImportedRowSaving || isReadOnlyData}
+	                        />
+	                      </label>
+
+	                      <div className="grid gap-3 sm:grid-cols-2">
+	                        <label
+	                          className={[
+	                            "block space-y-1",
+	                            invalidImportedField("quantity") ? "rounded-lg bg-danger/10 p-2" : "",
+	                          ].join(" ")}
+	                        >
+	                          <span className="font-mono text-xs text-muted">Quantity</span>
+	                          <DeferredNumberInput
+	                            className={
+	                              inputBase + " " + inputMono + (invalidImportedField("quantity") ? " !bg-[#ffe9ec]" : "")
+	                            }
+	                            value={row.quantity}
+	                            onCommit={(value) =>
+	                              updatePurchase(row.id, (x) => ({
+	                                ...x,
+	                                quantity: Math.max(0, value),
+	                              }))
+	                            }
+	                            disabled={isImportedRowSaving || isReadOnlyData}
+	                          />
+	                        </label>
+	                        <label
+	                          className={[
+	                            "block space-y-1",
+	                            invalidImportedField("unitCostCents") ? "rounded-lg bg-danger/10 p-2" : "",
+	                          ].join(" ")}
+	                        >
+	                          <span className="font-mono text-xs text-muted">Cost</span>
+	                          <DeferredMoneyInput
+	                            className={
+	                              inputBase +
+	                              " " +
+	                              inputMono +
+	                              (invalidImportedField("unitCostCents") ? " !bg-[#ffe9ec]" : "")
+	                            }
+	                            valueCents={row.unitCostCents}
+	                            onCommitCents={(valueCents) =>
+	                              updatePurchase(row.id, (x) => ({
+	                                ...x,
+	                                unitCostCents: valueCents,
+	                              }))
+	                            }
+	                            disabled={isImportedRowSaving || isReadOnlyData}
+	                          />
+	                        </label>
+	                        <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+	                          <p className="font-mono text-xs text-muted">Total Cost</p>
+	                          <p className="mt-1 font-mono text-sm text-ink">
+	                            {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
+	                          </p>
+	                        </div>
+	                        <label
+	                          className={[
+	                            "block space-y-1",
+	                            invalidImportedField("usableQuantity") ? "rounded-lg bg-danger/10 p-2" : "",
+	                          ].join(" ")}
+	                        >
+	                          <span className="font-mono text-xs text-muted">Usable Quantity</span>
+	                          <DeferredNumberInput
+	                            className={
+	                              inputBase +
+	                              " " +
+	                              inputMono +
+	                              (invalidImportedField("usableQuantity") ? " !bg-[#ffe9ec]" : "")
+	                            }
+	                            value={row.usableQuantity}
+	                            onCommit={(value) =>
+	                              updatePurchase(row.id, (x) => ({
+	                                ...x,
+	                                usableQuantity: Math.max(0, value),
+	                              }))
+	                            }
+	                            disabled={isImportedRowSaving || isReadOnlyData}
+	                          />
+	                        </label>
+	                      </div>
+
+	                      <label className="block space-y-1">
+	                        <span className="font-mono text-xs text-muted">Marketplace</span>
+	                        <select
+	                          className={inputBase}
+	                          value={marketplaceSelectValue}
+	                          onChange={(e) => {
+	                            const nextMarketplaceValue = e.target.value;
+	                            if (isImportedDraftRow) {
+	                              setImportRowMetaById((prev) => {
+	                                const current = prev[row.id];
+	                                if (!current) return prev;
+	                                const nextEmptyMarketplace = nextMarketplaceValue.trim().length === 0;
+	                                if (current.emptyMarketplace === nextEmptyMarketplace) return prev;
+	                                return {
+	                                  ...prev,
+	                                  [row.id]: {
+	                                    ...current,
+	                                    emptyMarketplace: nextEmptyMarketplace,
+	                                  },
+	                                };
+	                              });
+	                            }
+	                            updatePurchase(row.id, (x) => ({
+	                              ...x,
+	                              marketplace: nextMarketplaceValue
+	                                ? normalizePurchaseMarketplace(nextMarketplaceValue, "other")
+	                                : x.marketplace,
+	                            }));
+	                          }}
+	                          disabled={isImportedRowSaving || isReadOnlyData}
+	                        >
+	                          {isImportedDraftRow ? <option value="">Select marketplace</option> : null}
+	                          {PURCHASE_MARKETPLACES.map((item) => (
+	                            <option key={item} value={item}>
+	                              {marketplaceLabels[item]}
+	                            </option>
+	                          ))}
+	                        </select>
+	                      </label>
+
+	                      <details className="rounded-lg border border-border bg-paper/45 px-3 py-2">
+	                        <summary className="cursor-pointer select-none">
+	                          <div className="flex items-center justify-between gap-2">
+	                            <span className="font-mono text-xs font-semibold text-ink">Advanced fields</span>
+	                            <span
+	                              className={
+	                                "font-mono text-[11px] " +
+	                                (advancedHasValidationIssue ? "text-danger" : "text-muted")
+	                              }
+	                            >
+	                              {advancedHasValidationIssue ? "Needs attention" : "Optional"}
+	                            </span>
+	                          </div>
+	                        </summary>
+	                        <div className="mt-3 space-y-3">
+	                          <label className="block space-y-1">
+	                            <span className="font-mono text-xs text-muted">Variation</span>
+	                            <input
+	                              className={inputBase}
+	                              value={row.variation}
+	                              onChange={(e) =>
+	                                updatePurchase(row.id, (x) => ({ ...x, variation: e.target.value }))
+	                              }
+	                              placeholder="Variation"
+	                              disabled={isImportedRowSaving || isReadOnlyData}
+	                            />
+	                          </label>
+
+	                          <label
+	                            className={[
+	                              "block space-y-1",
+	                              invalidImportedField("purchaseDate") ? "rounded-lg bg-danger/10 p-2" : "",
+	                            ].join(" ")}
+	                          >
+	                            <span className="font-mono text-xs text-muted">Purchase Date</span>
+	                            <input
+	                              className={
+	                                inputBase +
+	                                " " +
+	                                inputMono +
+	                                (invalidImportedField("purchaseDate") ? " !bg-[#ffe9ec]" : "")
+	                              }
+	                              type="date"
+	                              value={row.purchaseDate}
+	                              onFocus={(e) => openNativeDatePicker(e.currentTarget)}
+	                              onChange={(e) =>
+	                                updatePurchase(row.id, (x) => ({
+	                                  ...x,
+	                                  purchaseDate: e.target.value || (isImportedDraftRow ? "" : currentDateInputValue()),
+	                                }))
+	                              }
+	                              disabled={isImportedRowSaving || isReadOnlyData}
+	                            />
+	                          </label>
+
+	                          <label className="block space-y-1">
+	                            <span className="font-mono text-xs text-muted">Store</span>
+	                            <input
+	                              className={inputBase}
+	                              value={row.store}
+	                              onChange={(e) =>
+	                                updatePurchase(row.id, (x) => ({
+	                                  ...x,
+	                                  store: e.target.value,
+	                                  supplier: e.target.value,
+	                                }))
+	                              }
+	                              placeholder="Store"
+	                              disabled={isImportedRowSaving || isReadOnlyData}
+	                            />
+	                          </label>
+	                        </div>
+	                      </details>
+	                    </div>
+
+	                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+	                      <button
+	                        type="button"
+	                        className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+	                        onClick={() => void deletePurchase(row.id)}
+	                        disabled={isImportedRowSaving || isReadOnlyData}
+	                      >
+	                        Delete
+	                      </button>
+	                    </div>
+	                  </article>
+	                );
+	              })}
+
+	              {!loading && filteredPurchases.length === 0 ? (
+	                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+	                  No purchases found. Create one using <span className="font-semibold">New purchase</span>.
+	                </p>
+	              ) : null}
+	            </div>
+
+	            <div className="app-table-scroll hidden overflow-x-auto md:block">
+	              <table data-input-layout className="w-max min-w-full text-left text-sm">
+	                <thead className="bg-paper/55">
+	                  <tr>
                     <th className="w-[230px] min-w-[230px] max-w-[230px] px-3 py-2 font-mono text-xs font-semibold text-muted">
                       Material
                     </th>

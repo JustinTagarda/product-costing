@@ -444,7 +444,10 @@ export default function ProductDetailsApp() {
                     <div className="rounded-xl border border-border bg-paper/45 px-3 py-2 text-sm text-muted">
                       Cost lines filtered by top bar search: <span className="font-mono text-ink">{query || "(none)"}</span>
                     </div>
-                    <div className="overflow-x-auto">
+                    <p className="font-mono text-[11px] text-muted md:hidden">
+                      Swipe left/right for more columns.
+                    </p>
+                    <div className="app-table-scroll overflow-x-auto">
                       <table className="min-w-[760px] w-full border border-border text-left text-sm">
                         <thead className="bg-paper/55">
                           <tr>

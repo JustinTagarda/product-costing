@@ -35,7 +35,7 @@ type DraftMaterialRow = {
 };
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 const inputMono = "tabular-nums font-mono tracking-tight";
 const MATERIAL_CODE_PREFIX = "MA-";
 const STANDARD_USABLE_UNITS = [
@@ -243,6 +243,8 @@ export default function MaterialsApp() {
   const savingDraftMaterialRef = useRef(false);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
   const draftNameInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileDraftCardRef = useRef<HTMLElement | null>(null);
+  const mobileDraftNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const toast = useCallback((kind: Notice["kind"], message: string): void => {
     setNotice({ kind, message });
@@ -296,16 +298,38 @@ export default function MaterialsApp() {
   );
 
   const focusDraftNameInput = useCallback((scrollBehavior: ScrollBehavior = "smooth") => {
-    const row = draftRowRef.current;
-    if (row) {
-      const rect = row.getBoundingClientRect();
+    if (typeof window === "undefined") return;
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+
+    if (isDesktop) {
+      const row = draftRowRef.current;
+      if (row) {
+        const rect = row.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+        if (!isVisible) {
+          row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+        }
+      }
+      window.requestAnimationFrame(() => {
+        const input = draftNameInputRef.current;
+        if (!input) return;
+        input.focus();
+        input.select();
+      });
+      return;
+    }
+
+    const card = mobileDraftCardRef.current;
+    if (card) {
+      const rect = card.getBoundingClientRect();
       const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
       if (!isVisible) {
-        row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+        card.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
       }
     }
+
     window.requestAnimationFrame(() => {
-      const input = draftNameInputRef.current;
+      const input = mobileDraftNameInputRef.current;
       if (!input) return;
       input.focus();
       input.select();
@@ -427,7 +451,10 @@ export default function MaterialsApp() {
   useEffect(() => {
     const pendingId = pendingScrollMaterialIdRef.current;
     if (!pendingId) return;
-    const row = document.getElementById(`material-row-${pendingId}`);
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+    const preferredTargetId = isDesktop ? `material-row-${pendingId}` : `material-card-${pendingId}`;
+    const fallbackTargetId = isDesktop ? `material-card-${pendingId}` : `material-row-${pendingId}`;
+    const row = document.getElementById(preferredTargetId) || document.getElementById(fallbackTargetId);
     pendingScrollMaterialIdRef.current = null;
     if (!row) return;
     const rect = row.getBoundingClientRect();
@@ -675,7 +702,181 @@ export default function MaterialsApp() {
               <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 md:hidden">
+              {!isReadOnlyData ? (
+                <article
+                  ref={mobileDraftCardRef}
+                  className="rounded-xl border border-border bg-paper/55 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-ink">New Material</p>
+                    <span className="font-mono text-[11px] text-muted">
+                      {savingDraftMaterial ? "Saving..." : "Draft"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    <label className="block space-y-1">
+                      <span className="font-mono text-xs text-muted">Name</span>
+                      <input
+                        ref={mobileDraftNameInputRef}
+                        className={inputBase}
+                        value={draftMaterial.name}
+                        onChange={(e) =>
+                          setDraftMaterial((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        placeholder="e.g., Canvas fabric"
+                        disabled={savingDraftMaterial}
+                      />
+                    </label>
+
+                    <label className="block space-y-1">
+                      <span className="font-mono text-xs text-muted">Unit</span>
+                      <select
+                        className={inputBase}
+                        value={draftMaterial.unit}
+                        onChange={(e) =>
+                          setDraftMaterial((prev) => ({ ...prev, unit: e.target.value }))
+                        }
+                        disabled={savingDraftMaterial}
+                      >
+                        <option value="">Select Unit</option>
+                        {STANDARD_USABLE_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                        <p className="font-mono text-xs text-muted">Weighted Average Cost</p>
+                        <p className={"mt-1 text-sm text-muted " + inputMono}>Auto</p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/70 px-3 py-2 text-sm text-ink">
+                        <input
+                          type="checkbox"
+                          checked={draftMaterial.isActive}
+                          onChange={(e) =>
+                            setDraftMaterial((prev) => ({ ...prev, isActive: e.target.checked }))
+                          }
+                          disabled={savingDraftMaterial}
+                        />
+                        {draftMaterial.isActive ? "Active" : "Inactive"}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border bg-paper px-3 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={resetDraftMaterial}
+                      disabled={
+                        savingDraftMaterial ||
+                        (draftMaterial.name.trim().length === 0 &&
+                          draftMaterial.unit.trim().length === 0 &&
+                          draftMaterial.isActive)
+                      }
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void commitDraftMaterial()}
+                      disabled={savingDraftMaterial || Boolean(duplicateNameModal)}
+                    >
+                      {savingDraftMaterial ? "Saving..." : "Save Material"}
+                    </button>
+                  </div>
+                </article>
+              ) : null}
+
+              {filteredMaterials.map((row) => (
+                <article
+                  key={row.id}
+                  id={`material-card-${row.id}`}
+                  className="rounded-xl border border-border bg-paper/55 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-ink">
+                        {row.name || "Unnamed material"}
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] text-muted">{row.code || "-"}</p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs text-ink">
+                      <input
+                        type="checkbox"
+                        checked={row.isActive}
+                        onChange={(e) =>
+                          updateMaterial(row.id, (x) => ({ ...x, isActive: e.target.checked }))
+                        }
+                        disabled={isReadOnlyData}
+                      />
+                      {row.isActive ? "Yes" : "No"}
+                    </label>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block space-y-1">
+                      <span className="font-mono text-xs text-muted">Name</span>
+                      <input
+                        className={inputBase}
+                        value={row.name}
+                        onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, name: e.target.value }))}
+                        placeholder="e.g., Canvas fabric"
+                        disabled={isReadOnlyData}
+                      />
+                    </label>
+
+                    <label className="block space-y-1">
+                      <span className="font-mono text-xs text-muted">Unit</span>
+                      <select
+                        className={inputBase}
+                        value={row.unit}
+                        onChange={(e) => updateMaterial(row.id, (x) => ({ ...x, unit: e.target.value }))}
+                        disabled={isReadOnlyData}
+                      >
+                        {STANDARD_USABLE_UNITS.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="rounded-lg border border-border bg-paper/70 px-3 py-2 sm:col-span-2">
+                      <p className="font-mono text-xs text-muted">Weighted Average Cost (Computed)</p>
+                      <p className={"mt-1 text-sm text-ink " + inputMono}>
+                        {formatSettingsMoney(row.unitCostCents)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                      onClick={() => void deleteMaterial(row.id)}
+                      disabled={isReadOnlyData}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {!loading && filteredMaterials.length === 0 ? (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  No materials found. Create one using <span className="font-semibold">New material</span>.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="app-table-scroll hidden overflow-x-auto md:block">
               <table data-input-layout className="min-w-[760px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>

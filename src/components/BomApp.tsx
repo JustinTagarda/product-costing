@@ -47,7 +47,7 @@ type BomCostSummary = {
 };
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-sm text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 const inputMono = "tabular-nums font-mono tracking-tight";
 
 function cardClassName(): string {
@@ -658,7 +658,83 @@ export default function BomApp() {
               </p>
               <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 md:hidden">
+              {loading ? (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  Loading BOM...
+                </p>
+              ) : filteredBoms.length ? (
+                filteredBoms.map((item) => {
+                  const cost = bomCosts.get(item.id);
+                  const isSelected = selectedBom?.id === item.id;
+                  return (
+                    <article
+                      key={item.id}
+                      className={[
+                        "rounded-xl border bg-paper/55 p-3",
+                        isSelected ? "border-accent/70" : "border-border",
+                      ].join(" ")}
+                    >
+                      <button
+                        type="button"
+                        className="text-left font-semibold text-ink hover:underline"
+                        onClick={() => setSelectedId(item.id)}
+                      >
+                        {item.name || "Untitled BOM"}
+                      </button>
+                      <p className="mt-0.5 font-mono text-xs text-muted">
+                        {item.code || "-"} | {item.itemType === "product" ? "Product" : "Part"}
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Output</p>
+                          <p className="mt-1 font-mono text-xs text-ink">
+                            {item.outputQty} {item.outputUnit}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Unit Cost</p>
+                          <p className="mt-1 font-mono text-xs text-ink">
+                            {cost?.unitCostCents === null ? "--" : formatMoney(cost?.unitCostCents ?? 0)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Active</p>
+                          <p className="mt-1 text-xs text-ink">{item.isActive ? "Yes" : "No"}</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Updated</p>
+                          <p className="mt-1 font-mono text-xs text-muted">{formatAppDate(item.updatedAt)}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          onClick={() => setSelectedId(item.id)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                          onClick={() => void deleteBom(item.id)}
+                          disabled={isReadOnlyData}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  No BOM records found.
+                </p>
+              )}
+            </div>
+
+            <div className="app-table-scroll hidden overflow-x-auto md:block">
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
@@ -767,7 +843,210 @@ export default function BomApp() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto p-2">
+              <div className="space-y-3 p-3 md:hidden">
+                {selectedBom.lines.map((line, idx) => {
+                  const lineUnitCost = resolveLineUnitCost(selectedBom.id, line, materialById, bomCosts);
+                  const lineTotal = Math.round(Math.max(0, line.quantity) * lineUnitCost);
+                  const needsUnitCostInput = line.componentType === "material" && !line.materialId;
+                  return (
+                    <article key={line.id} className="rounded-xl border border-border bg-paper/55 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-ink">
+                            {line.componentName || `Component line ${idx + 1}`}
+                          </p>
+                          <p className="mt-0.5 font-mono text-xs text-muted">
+                            {line.componentType === "material" ? "Material" : "Subassembly BOM"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => void removeLine(line.id)}
+                          disabled={isReadOnlyData}
+                          aria-label="Remove BOM line"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="mt-3 grid gap-3">
+                        <label className="block space-y-1">
+                          <span className="font-mono text-xs text-muted">Type</span>
+                          <select
+                            className={inputBase}
+                            value={line.componentType}
+                            onChange={(e) =>
+                              updateLine(selectedBom.id, line.id, (row) => ({
+                                ...row,
+                                componentType: e.target.value === "bom_item" ? "bom_item" : "material",
+                                materialId: null,
+                                componentBomId: null,
+                                componentName: "",
+                                unit: settings.defaultMaterialUnit,
+                                unitCostCents: 0,
+                              }))
+                            }
+                          >
+                            <option value="material">Material</option>
+                            <option value="bom_item">Subassembly BOM</option>
+                          </select>
+                        </label>
+
+                        <label className="block space-y-1">
+                          <span className="font-mono text-xs text-muted">Component</span>
+                          {line.componentType === "material" ? (
+                            <select
+                              className={inputBase}
+                              value={line.materialId ?? ""}
+                              onChange={(e) => {
+                                const materialId = e.target.value || null;
+                                const material = materialId ? materialById.get(materialId) : null;
+                                updateLine(selectedBom.id, line.id, (row) => ({
+                                  ...row,
+                                  materialId,
+                                  componentBomId: null,
+                                  componentName: material?.name ?? "",
+                                  unit: material?.unit ?? row.unit,
+                                  unitCostCents: material?.unitCostCents ?? row.unitCostCents,
+                                }));
+                              }}
+                            >
+                              <option value="">Select material</option>
+                              {materials.map((material) => (
+                                <option key={material.id} value={material.id}>
+                                  {material.name}
+                                  {material.isActive ? "" : " (inactive)"}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <select
+                              className={inputBase}
+                              value={line.componentBomId ?? ""}
+                              onChange={(e) => {
+                                const componentBomId = e.target.value || null;
+                                const nested = componentBomId ? bomById.get(componentBomId) : null;
+                                const nestedCost = componentBomId
+                                  ? (bomCosts.get(componentBomId)?.unitCostCents ?? 0)
+                                  : 0;
+                                updateLine(selectedBom.id, line.id, (row) => ({
+                                  ...row,
+                                  componentBomId,
+                                  materialId: null,
+                                  componentName: nested?.name ?? "",
+                                  unit: nested?.outputUnit ?? row.unit,
+                                  unitCostCents: nestedCost,
+                                }));
+                              }}
+                            >
+                              <option value="">Select subassembly</option>
+                              {boms
+                                .filter((item) => item.id !== selectedBom.id)
+                                .map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                        </label>
+
+                        <label className="block space-y-1">
+                          <span className="font-mono text-xs text-muted">Qty</span>
+                          <DeferredNumberInput
+                            className={inputBase + " " + inputMono}
+                            value={line.quantity}
+                            onCommit={(value) =>
+                              updateLine(selectedBom.id, line.id, (row) => ({
+                                ...row,
+                                quantity: Math.max(0, value),
+                              }))
+                            }
+                          />
+                        </label>
+
+                        <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
+                          <p className="font-mono text-xs text-muted">Line total</p>
+                          <p className="mt-1 font-mono text-sm tabular-nums text-ink">{formatMoney(lineTotal)}</p>
+                        </div>
+
+                        <details className="rounded-lg border border-border bg-paper/45 px-3 py-2">
+                          <summary className="cursor-pointer select-none">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-xs font-semibold text-ink">Advanced fields</span>
+                              <span
+                                className={
+                                  "font-mono text-[11px] " +
+                                  (needsUnitCostInput ? "text-danger" : "text-muted")
+                                }
+                              >
+                                {needsUnitCostInput ? "Needs attention" : "Optional"}
+                              </span>
+                            </div>
+                          </summary>
+                          <div className="mt-3 grid gap-3">
+                            {needsUnitCostInput ? (
+                              <p className="rounded-lg border border-danger/35 bg-danger/10 px-2.5 py-2 text-xs text-danger">
+                                Select a material or enter a unit cost to compute this line accurately.
+                              </p>
+                            ) : null}
+                            <label className="block space-y-1">
+                              <span className="font-mono text-xs text-muted">Unit</span>
+                              <input
+                                className={inputBase}
+                                value={line.unit}
+                                onChange={(e) =>
+                                  updateLine(selectedBom.id, line.id, (row) => ({
+                                    ...row,
+                                    unit: e.target.value || settings.defaultMaterialUnit,
+                                  }))
+                                }
+                              />
+                            </label>
+
+                            <div className="space-y-1">
+                              <p className="font-mono text-xs text-muted">Unit cost</p>
+                              {needsUnitCostInput ? (
+                                <DeferredMoneyInput
+                                  className={inputBase + " " + inputMono}
+                                  valueCents={line.unitCostCents}
+                                  onCommitCents={(valueCents) =>
+                                    updateLine(selectedBom.id, line.id, (row) => ({
+                                      ...row,
+                                      unitCostCents: valueCents,
+                                    }))
+                                  }
+                                />
+                              ) : (
+                                <p className="rounded-xl border border-border bg-paper/50 px-3 py-2 font-mono text-sm text-ink">
+                                  {formatMoney(lineUnitCost)}
+                                </p>
+                              )}
+                            </div>
+
+                            <label className="block space-y-1">
+                              <span className="font-mono text-xs text-muted">Notes</span>
+                              <input
+                                className={inputBase}
+                                value={line.notes}
+                                onChange={(e) =>
+                                  updateLine(selectedBom.id, line.id, (row) => ({
+                                    ...row,
+                                    notes: e.target.value,
+                                  }))
+                                }
+                              />
+                            </label>
+                          </div>
+                        </details>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="app-table-scroll hidden overflow-x-auto p-2 md:block">
                 <table data-input-layout className="min-w-[1200px] w-full text-left text-sm">
                   <thead>
                     <tr>

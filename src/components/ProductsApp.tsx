@@ -285,7 +285,85 @@ export default function ProductsApp() {
               <p className="font-mono text-xs text-muted">Cloud mode</p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 md:hidden">
+              {loading ? (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  Loading products...
+                </p>
+              ) : filteredProducts.length ? (
+                filteredProducts.map((sheet) => {
+                  const totals = computeTotals(sheet);
+                  return (
+                    <article
+                      key={sheet.id}
+                      className="rounded-xl border border-border bg-paper/55 p-3"
+                    >
+                      <p className="font-semibold text-ink">{sheet.name || "Untitled"}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Unit Cost</p>
+                          <p className="mt-1 font-mono text-xs text-ink">
+                            {totals.costPerUnitCents === null
+                              ? "--"
+                              : formatMoney(totals.costPerUnitCents)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Suggested Price</p>
+                          <p className="mt-1 font-mono text-xs text-ink">
+                            {totals.pricePerUnitCents === null
+                              ? "--"
+                              : formatMoney(totals.pricePerUnitCents)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Profit Margin</p>
+                          <p className="mt-1 font-mono text-xs text-muted">
+                            {totals.marginPct === null ? "--" : `${totals.marginPct.toFixed(1)}%`}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
+                          <p className="font-mono text-[11px] text-muted">Batch Total</p>
+                          <p className="mt-1 font-mono text-xs text-ink">
+                            {formatMoney(totals.batchTotalCents)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          onClick={() => window.location.assign(`/products/${sheet.id}`)}
+                        >
+                          Details
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          onClick={() => window.location.assign("/calculator")}
+                        >
+                          Calculator
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => void deleteProduct(sheet)}
+                          disabled={deletingProductId === sheet.id || isReadOnlyData}
+                        >
+                          {deletingProductId === sheet.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
+                  No products found. Create one from the top bar quick action.
+                </p>
+              )}
+            </div>
+
+            <div className="app-table-scroll hidden overflow-x-auto md:block">
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
