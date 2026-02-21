@@ -1,105 +1,83 @@
 # Product Costing
 
-## Live Site
+Cloud-based product costing and operations workspace for small businesses, built with Next.js and Supabase.
 
-This project is live in production and ready to try:
+## Live Demo
 
 - https://costing.justintagarda.com
 
-Cloud-based product costing and operations workspace for small businesses.
+## Why This Project
 
-This app runs on Next.js + Supabase and supports:
-- Cost calculator (materials, labor, overhead, pricing)
-- Product catalog and product detail/history views
-- Materials and purchases management
-- BOM/subassembly management
-- Account-level sharing with role-based access (`owner`, `editor`, `viewer`)
+This project demonstrates full-stack product engineering across:
+- Domain-heavy business logic (cost sheets, BOM rollups, weighted purchase costs)
+- Secure multi-user collaboration (account sharing with role-based access + RLS)
+- Production-focused UX (responsive, touch-friendly workflows across desktop/tablet/mobile)
+- Data quality and operational tooling (import validation, normalization, audit history)
 
-## Current App Behavior
+## Mobile and Tablet UX Highlights
 
-The project is now Supabase-first:
-- Data is stored in Supabase (not localStorage guest mode).
-- Authentication uses Google OAuth.
-- Per-session account scope selection supports:
-  - your own account data
-  - shared account data
-- If no one has shared data with the signed-in user, dataset selection is skipped automatically.
+Recent improvements focused on making dense operational workflows usable on real phones and tablets:
+- Mobile editor cards for table-heavy workflows while preserving desktop tables
+- Progressive disclosure (`Advanced fields`) for high-density forms
+- Touch-friendly horizontal scroll wrappers with swipe affordances where needed
+- Mobile-safe input sizing and viewport-safe modal behavior
 
-## Feature Overview
+Implemented across:
+- Purchases editor
+- Materials editor
+- Cost calculator line editors (materials, labor, overhead)
+- BOM component line editor
+- Product details cost-breakdown horizontal table UX
+
+## Core Features
 
 ### Dashboard (`/`)
-- KPI overview (cost, labor/material mix, margin)
-- Recent products table
+- KPI summary (cost, margin, labor/material mix)
+- Recent products view
 
 ### Cost Calculator (`/calculator`)
-- Cost sheet editing for:
-  - materials (+ waste %)
-  - labor
-  - overhead (flat or percentage)
-  - markup and optional tax
-- Sheet actions:
-  - create
-  - duplicate
-  - delete
-  - export/import JSON
+- Editable cost sheets for materials (with waste), labor, overhead (flat or percentage), markup, and optional tax
+- Sheet actions: create, duplicate, delete, import/export JSON
 
 ### Products (`/products`, `/products/[productId]`)
-- Product list with computed totals/margins
-- Product detail tabs:
-  - overview
-  - cost breakdown
-  - history (account change logs)
-  - notes
+- Product catalog with computed totals and margin
+- Product details tabs: overview, cost breakdown, history (account change logs), notes
 
 ### Materials (`/materials`)
-- Material master list
-- Weighted average cost display derived from purchases
+- Material master data management
+- Weighted average material cost from purchase history
 
 ### Purchases (`/purchases`)
-- Purchase tracking (material, description, variation, qty, cost, usable qty, marketplace, store)
-- TSV import workflow with validation + normalization
+- Purchase tracking (material, variation, quantities, costs, marketplace, store)
+- TSV import flow with validation and normalization
 
 ### BOM (`/bom`)
 - BOM item and line management
-- Material and nested BOM component support
-- Roll-up cost calculations
-- Circular reference detection warnings
+- Material lines + nested BOM/subassembly support
+- Roll-up cost calculations and circular-reference detection
 
 ### Settings (`/settings`)
-- Localization (country, timezone, date format)
-- Currency formatting and rounding
-- Unit conversions
-- Costing defaults (waste, markup, tax, precision)
+- Localization and date/time preferences
+- Currency formatting and precision controls
+- Unit conversions and costing defaults
 
 ### Data Sharing (`Share` modal)
 - Account-level sharing (not per-sheet)
-- Owner can:
-  - add users by email
-  - assign role (`editor` or `viewer`)
-  - update role
-  - remove share
-- Non-owner sees read-only sharing view (owner + shared users + roles)
+- Owner can invite by email, assign roles, update roles, and revoke access
+- Non-owner sees read-only sharing state
 
-## Access Control Model
+## Access Control
 
-### Owner
-- Full data control
-- Can manage sharing and access levels
+Roles:
+- `owner`: full control, including sharing
+- `editor`: CRUD inside shared owner dataset, no sharing controls
+- `viewer`: read-only
 
-### Editor
-- Can create, update, delete within shared owner dataset
-- Cannot manage sharing
+Enforced at:
+- UI layer (mutations guarded/disabled for viewers)
+- Database layer (Supabase RLS and RPC ownership checks)
 
-### Viewer
-- Read-only access to shared owner dataset
-- Cannot create, update, delete
-- Cannot manage sharing
-
-Enforcement is implemented at both:
-- UI level (mutating controls disabled/guarded for viewers)
-- Database level (RLS and RPC ownership checks)
-
-Core tables with role-aware RLS:
+Core role-aware tables:
 - `cost_sheets`
 - `materials`
 - `purchases`
@@ -107,17 +85,25 @@ Core tables with role-aware RLS:
 - `bom_item_lines`
 - `app_settings`
 
+## Architecture Notes
+
+- Next.js App Router with feature-focused `*App.tsx` pages
+- Supabase-first data model and typed mapping modules
+- Client-side auth bootstrap with Google OAuth
+- Account scope selection for own data vs shared datasets
+- Account audit history via `account_change_logs`
+
 ## Tech Stack
 
 - Next.js `16.1.6`
-- React `19`
-- TypeScript
+- React `19.2.3`
+- TypeScript (strict mode)
 - Tailwind CSS v4
-- Supabase (Postgres + Auth + RPC/RLS)
+- Supabase (Postgres, Auth, RLS, RPC)
 
-## Setup
+## Local Setup
 
-### 1) Install
+### 1) Install dependencies
 
 ```bash
 npm install
@@ -125,31 +111,23 @@ npm install
 
 ### 2) Configure Supabase
 
-Create a Supabase project, then initialize schema.
+Create a Supabase project and initialize schema:
+- Recommended: run `supabase/schema.sql`
+- If applying incrementally, include: `supabase/migrations/20260218_account_level_data_sharing.sql`, `supabase/migrations/20260219_account_change_logs.sql`, `supabase/migrations/20260219_account_share_access_levels.sql`
 
-Recommended:
-- Run `supabase/schema.sql` (canonical full schema)
+### 3) Enable Google OAuth in Supabase
 
-If applying incrementally, ensure these migrations are included:
-- `supabase/migrations/20260218_account_level_data_sharing.sql`
-- `supabase/migrations/20260219_account_change_logs.sql`
-- `supabase/migrations/20260219_account_share_access_levels.sql`
+Add redirect URLs:
+- `http://localhost:3000/auth/callback`
+- `https://costing.justintagarda.com/auth/callback`
 
-### 3) Enable Google OAuth
-
-In Supabase Auth providers:
-- Enable Google
-- Add redirect URLs:
-  - `http://localhost:3000/auth/callback`
-  - deployed callback URL: `https://costing.justintagarda.com/auth/callback`
-
-### 4) Environment Variables
+### 4) Set environment variables
 
 From `.env.example`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-### 5) Run
+### 5) Run locally
 
 ```bash
 npm run dev
@@ -159,7 +137,8 @@ Open `http://localhost:3000`.
 
 ## Scripts
 
-- `npm run dev` - start dev server
-- `npm run lint` - run ESLint
-- `npm run build` - production build
-- `npm run start` - run production server
+- `npm run dev`: start development server
+- `npm run lint`: run ESLint
+- `npx tsc --noEmit`: run TypeScript type check
+- `npm run build`: create production build
+- `npm run start`: start production server
