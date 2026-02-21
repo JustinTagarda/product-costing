@@ -6,6 +6,15 @@ Cloud-based product costing and operations workspace for small businesses, built
 
 - https://costing.justintagarda.com
 
+## Showcase Highlights
+
+- Google OAuth sign-in with persistent authenticated sessions
+- Account-level data sharing with access modes: `owner`, `editor`, `viewer`
+- Role-aware enforcement at both UI and database (Supabase RLS + RPC checks)
+- Cross-device productivity UX: mobile/tablet-friendly editors for dense costing workflows
+- Domain-specific costing engine: BOM rollups, weighted purchase cost, waste/markup/tax pricing
+- Operational tooling: import/export flows, TSV normalization/validation, and account audit history
+
 ## Why This Project
 
 This project demonstrates full-stack product engineering across:
@@ -30,6 +39,15 @@ Implemented across:
 - Product details cost-breakdown horizontal table UX
 
 ## Core Features
+
+### Authentication
+- Google OAuth login via Supabase Auth
+- Session persistence across refreshes and explicit sign-out cleanup
+
+### Collaboration and Access Modes
+- Account-level sharing by email (owner-managed)
+- Access modes: `owner` (full data + sharing control), `editor` (create/update/delete in shared owner dataset), `viewer` (read-only access)
+- Per-session dataset scope selection for own data vs shared datasets
 
 ### Dashboard (`/`)
 - KPI summary (cost, margin, labor/material mix)
@@ -65,6 +83,11 @@ Implemented across:
 - Account-level sharing (not per-sheet)
 - Owner can invite by email, assign roles, update roles, and revoke access
 - Non-owner sees read-only sharing state
+
+### Additional Product Strengths
+- Product history and account change logs for traceability
+- Cloud-first persistence model (Supabase-backed, no guest-mode localStorage workflow)
+- Consistent responsive UI patterns across dashboard, calculator, purchases, materials, and BOM
 
 ## Access Control
 
