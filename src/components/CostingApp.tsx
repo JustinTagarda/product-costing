@@ -3,7 +3,11 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
+import {
+  DeferredMoneyInput,
+  DeferredNumberInput,
+  parseLooseNumber,
+} from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
 import {
   computeOverheadBaseCents,
@@ -23,6 +27,10 @@ import {
 } from "@/lib/currency";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { parseStoredDataJson } from "@/lib/importExport";
+import {
+  handleDraftRowBlurCapture,
+  handleDraftRowKeyDownCapture,
+} from "@/lib/tableDraftEntry";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
@@ -46,6 +54,10 @@ type MaterialOption = {
   unit: string;
   unitCostCents: number;
   isActive: boolean;
+};
+type DraftMaterialLine = {
+  materialId: string | null;
+  qtyInput: string;
 };
 
 const inputBase =
@@ -188,6 +200,14 @@ function toMaterialOptionFromRow(row: DbMaterialRow): MaterialOption {
   };
 }
 
+function makeBlankMaterialLine() {
+  return { id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 };
+}
+
+function makeDraftMaterialLine(): DraftMaterialLine {
+  return { materialId: null, qtyInput: "" };
+}
+
 export default function CostingApp() {
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -208,6 +228,9 @@ export default function CostingApp() {
   const [query, setQuery] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const draftMaterialRowRef = useRef<HTMLTableRowElement | null>(null);
+  const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
+  const draftMaterialQtyInputRef = useRef<HTMLInputElement | null>(null);
 
   const saveTimersRef = useRef<Map<string, number>>(new Map());
   const hasHydratedSheetsRef = useRef(false);
@@ -223,6 +246,9 @@ export default function CostingApp() {
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
+  const [draftMaterialLine, setDraftMaterialLine] = useState<DraftMaterialLine>(() =>
+    makeDraftMaterialLine(),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcomeGate, setShowWelcomeGate] = useState(true);
@@ -428,6 +454,91 @@ export default function CostingApp() {
   }, [sheets, query]);
 
   const materialById = useMemo(() => new Map(materials.map((item) => [item.id, item])), [materials]);
+
+  useEffect(() => {
+    setDraftMaterialLine(makeDraftMaterialLine());
+  }, [selectedSheet?.id]);
+
+  function focusDraftMaterialSelect(
+    scrollBehavior: ScrollBehavior = "smooth",
+    options?: { openPicker?: boolean },
+  ): void {
+    if (typeof window === "undefined") return;
+
+    const row = draftMaterialRowRef.current;
+    if (row) {
+      const rect = row.getBoundingClientRect();
+      const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+      if (!isVisible) {
+        row.scrollIntoView({ behavior: scrollBehavior, block: "nearest" });
+      }
+    }
+
+    window.requestAnimationFrame(() => {
+      const select = draftMaterialSelectRef.current;
+      if (!select) return;
+      select.focus();
+      if (!options?.openPicker) return;
+
+      const pickerSelect = select as HTMLSelectElement & { showPicker?: () => void };
+      if (typeof pickerSelect.showPicker === "function") {
+        try {
+          pickerSelect.showPicker();
+          return;
+        } catch {
+          // Fallback to click for browsers without open picker support.
+        }
+      }
+
+      try {
+        select.click();
+      } catch {
+        // Ignore click-open failures and keep focus behavior.
+      }
+    });
+  }
+
+  function focusDraftMaterialQtyInput(): void {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      const input = draftMaterialQtyInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.select();
+    });
+  }
+
+  function resetDraftMaterialLine(): void {
+    setDraftMaterialLine(makeDraftMaterialLine());
+  }
+
+  function commitDraftMaterialLine(): void {
+    if (isReadOnlyData) return;
+    const materialId = draftMaterialLine.materialId;
+    if (!materialId) return;
+
+    const material = materialById.get(materialId) ?? null;
+    const parsedQty =
+      draftMaterialLine.qtyInput.trim().length > 0 ? parseLooseNumber(draftMaterialLine.qtyInput) : 1;
+    const qty = Number.isFinite(parsedQty) ? Math.max(0, parsedQty) : 1;
+
+    updateSelected((s) => ({
+      ...s,
+      materials: [
+        ...(s.materials || []),
+        {
+          ...makeBlankMaterialLine(),
+          materialId,
+          name: material?.name || "",
+          qty,
+          unit: material?.unit || "",
+          unitCostCents: material?.unitCostCents ?? 0,
+        },
+      ],
+    }));
+    resetDraftMaterialLine();
+    toast("success", "Material line added.");
+  }
 
   async function persistSheet(next: CostSheet): Promise<void> {
     if (!isCloudMode || !supabase || isReadOnlyData) return;
@@ -754,6 +865,16 @@ export default function CostingApp() {
     setSelectedId((prev) => prev ?? insertedSheets[0]?.id ?? null);
     toast("success", `Imported ${insertedSheets.length} sheet(s).`);
   }
+
+  const draftLinkedMaterial = useMemo(() => {
+    if (!draftMaterialLine.materialId) return null;
+    return materialById.get(draftMaterialLine.materialId) ?? null;
+  }, [draftMaterialLine.materialId, materialById]);
+
+  const draftMaterialQty = useMemo(() => {
+    if (draftMaterialLine.qtyInput.trim().length === 0) return 0;
+    return Math.max(0, parseLooseNumber(draftMaterialLine.qtyInput));
+  }, [draftMaterialLine.qtyInput]);
 
   const totals = useMemo(() => {
     if (!selectedSheet) return null;
@@ -1118,12 +1239,13 @@ export default function CostingApp() {
                         type="button"
                         className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
                         onClick={() => {
+                          if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+                            focusDraftMaterialSelect("smooth", { openPicker: true });
+                            return;
+                          }
                           updateSelected((s) => ({
                             ...s,
-                            materials: [
-                              ...(s.materials || []),
-                              { id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 },
-                            ],
+                            materials: [...(s.materials || []), makeBlankMaterialLine()],
                           }));
                           toast("success", "Material line added.");
                         }}
@@ -1154,7 +1276,7 @@ export default function CostingApp() {
                                       materials:
                                         next.length > 0
                                           ? next
-                                          : [{ id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 }],
+                                          : [makeBlankMaterialLine()],
                                     };
                                   });
                                   toast("success", "Material line deleted.");
@@ -1349,7 +1471,7 @@ export default function CostingApp() {
                                             materials:
                                               next.length > 0
                                                 ? next
-                                                : [{ id: makeId("m"), materialId: null, name: "", qty: 1, unit: "", unitCostCents: 0 }],
+                                                : [makeBlankMaterialLine()],
                                           };
                                         });
                                         toast("success", "Material line deleted.");
@@ -1364,6 +1486,86 @@ export default function CostingApp() {
                               </tr>
                             );
                           })}
+                          <tr
+                            ref={draftMaterialRowRef}
+                            className="app-table-new-entry-row align-middle"
+                            onBlurCapture={(e) => handleDraftRowBlurCapture(e, commitDraftMaterialLine)}
+                            onKeyDownCapture={(e) =>
+                              handleDraftRowKeyDownCapture(e, {
+                                commit: commitDraftMaterialLine,
+                                reset: resetDraftMaterialLine,
+                                focusAfterReset: () => focusDraftMaterialSelect("auto"),
+                              })
+                            }
+                          >
+                            <td className="p-2 align-middle">
+                              <select
+                                ref={draftMaterialSelectRef}
+                                className={inputBase}
+                                value={draftMaterialLine.materialId ?? ""}
+                                onChange={(e) => {
+                                  const materialId = e.target.value || null;
+                                  setDraftMaterialLine((prev) => ({
+                                    materialId,
+                                    qtyInput: materialId
+                                      ? prev.qtyInput.trim().length > 0
+                                        ? prev.qtyInput
+                                        : "1"
+                                      : "",
+                                  }));
+                                  if (materialId) {
+                                    focusDraftMaterialQtyInput();
+                                  }
+                                }}
+                                disabled={isReadOnlyData}
+                              >
+                                <option value="">Select material</option>
+                                {materials.map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name || "Unnamed material"}
+                                    {item.isActive ? "" : " (inactive)"}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="app-col-strict-100 p-2 align-middle">
+                              <input
+                                ref={draftMaterialQtyInputRef}
+                                className={inputBase + " " + inputMono}
+                                value={draftMaterialLine.qtyInput}
+                                onChange={(e) =>
+                                  setDraftMaterialLine((prev) => ({ ...prev, qtyInput: e.target.value }))
+                                }
+                                placeholder="1"
+                                inputMode="decimal"
+                                disabled={isReadOnlyData}
+                              />
+                            </td>
+                            <td className="p-2 align-middle">
+                              <p className="font-mono text-sm text-ink">
+                                {formatMaterialUnitLabel(draftLinkedMaterial?.unit || "") || "--"}
+                              </p>
+                            </td>
+                            <td className="p-2 align-middle">
+                              <p className="font-mono text-sm tabular-nums text-ink">
+                                {draftLinkedMaterial
+                                  ? formatMoney(draftLinkedMaterial.unitCostCents)
+                                  : "--"}
+                              </p>
+                            </td>
+                            <td className="p-2 align-middle">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-sm tabular-nums text-ink">
+                                  {draftLinkedMaterial
+                                    ? formatMoney(Math.round(draftMaterialQty * draftLinkedMaterial.unitCostCents))
+                                    : "--"}
+                                </span>
+                                <span className="rounded-lg border border-border bg-paper/55 px-2 py-1 text-xs font-semibold text-muted">
+                                  Auto
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>
