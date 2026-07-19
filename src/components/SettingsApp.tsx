@@ -249,10 +249,19 @@ export default function SettingsApp() {
 
   if (!dataAuthReady || !settingsReady) {
     return (
-      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
-        <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <p className="text-xs font-medium tracking-wide text-muted">Loading settings...</p>
-          <div className={cardClassName + " mt-6 h-[380px]"} />
+      <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
+        <MainNavMenu
+          activeItem="Settings"
+          onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
+          onSettings={openSettingsPage}
+          onLogout={() => void signOut()}
+          searchPlaceholder="Search settings..."
+        />
+        <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
+          <div className="w-full animate-[fadeUp_.3s_ease-out]">
+            <div className="app-skeleton h-8 w-40 rounded-lg" />
+            <div className="app-skeleton mt-6 h-[380px] rounded-2xl" />
+          </div>
         </div>
       </div>
     );

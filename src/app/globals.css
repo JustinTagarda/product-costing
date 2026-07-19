@@ -460,6 +460,40 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
   }
 }
 
+/* Skeleton shimmer: a soft light sweep across a muted block, used for the
+   page-transition loading state instead of a flat pulsing rectangle. */
+.app-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--ink) 6%, var(--paper));
+}
+
+.app-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--paper) 70%, transparent),
+    transparent
+  );
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-skeleton::after {
+    animation: none;
+  }
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

@@ -15,6 +15,7 @@ import { useToastNotice } from "@/lib/useToastNotice";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
@@ -1324,11 +1325,15 @@ export default function PurchasesApp() {
 
   if (!dataAuthReady) {
     return (
-      <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
-        <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <div className="h-6 w-40 animate-pulse rounded bg-ink/10" />
-          <div className={cardClassName() + " mt-6 h-[420px] animate-pulse"} />
-        </div>
+      <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
+        <MainNavMenu
+          activeItem="Purchases"
+          onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
+          onSettings={openSettings}
+          onLogout={() => void signOut()}
+          searchPlaceholder="Search purchases..."
+        />
+        <PageLoadingSkeleton />
       </div>
     );
   }

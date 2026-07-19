@@ -12,6 +12,7 @@ import { GlobalAppToast } from "@/components/GlobalAppToast";
 import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
+import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -292,6 +293,21 @@ export default function ProductDetailsApp() {
       return row.label.toLowerCase().includes(q) || row.category.toLowerCase().includes(q);
     });
   }, [query, sheet]);
+
+  if (!dataAuthReady) {
+    return (
+      <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
+        <MainNavMenu
+          activeItem="Products"
+          onUnimplementedNavigate={(section) => toast("info", `${section} section coming soon.`)}
+          onSettings={openSettings}
+          onLogout={() => void signOut()}
+          searchPlaceholder="Filter product lines, categories, notes"
+        />
+        <PageLoadingSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100dvh-var(--app-shell-topbar-height))]">
