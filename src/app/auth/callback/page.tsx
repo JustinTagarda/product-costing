@@ -37,7 +37,12 @@ export default function AuthCallbackPage() {
         if (!nextSessionUserId) throw new Error("No active session after sign-in.");
         clearSelectedOwnerUserIdForSession(nextSessionUserId);
 
-        if (!cancelled) router.replace("/dataset-select");
+        // Go straight to the app; useAccountDataScope (run on every page) checks
+        // whether an account-scope choice is actually required and only then
+        // redirects to /dataset-select. Forcing every login through that page
+        // unconditionally would duplicate that check and add an extra hop for
+        // the common case of a user with no shared accounts.
+        if (!cancelled) router.replace("/calculator");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Auth callback failed.";
         if (!cancelled) setError(msg);

@@ -255,7 +255,6 @@ export default function CostingApp() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showWelcomeGate, setShowWelcomeGate] = useState(true);
 
 
   const {
@@ -601,7 +600,6 @@ export default function CostingApp() {
       return;
     }
     setSession(null);
-    setShowWelcomeGate(true);
     goToWelcomePage();
   }
 
@@ -683,19 +681,19 @@ export default function CostingApp() {
     if (handledNewSheetFromQueryRef.current) return;
     if (!authReady || loadingSheets) return;
     if (!hasHydratedSheetsRef.current) return;
-    if (showWelcomeGate && !session) return;
+    if (!session) return;
 
     handledNewSheetFromQueryRef.current = true;
     clearNewSheetQueryParam();
     void newSheet();
-  }, [authReady, loadingSheets, newSheet, requestNewSheetFromQuery, session, showWelcomeGate]);
+  }, [authReady, loadingSheets, newSheet, requestNewSheetFromQuery, session]);
 
   useEffect(() => {
     if (!requestShareFromQuery) return;
     if (handledShareFromQueryRef.current) return;
     if (!authReady || loadingSheets) return;
     if (!hasHydratedSheetsRef.current) return;
-    if (showWelcomeGate && !session) return;
+    if (!session) return;
 
     handledShareFromQueryRef.current = true;
     clearShareQueryParam();
@@ -706,15 +704,7 @@ export default function CostingApp() {
     }
 
     setShowShareModal(true);
-  }, [
-    authReady,
-    isCloudMode,
-    loadingSheets,
-    requestShareFromQuery,
-    session,
-    showWelcomeGate,
-    toast,
-  ]);
+  }, [authReady, isCloudMode, loadingSheets, requestShareFromQuery, session, toast]);
 
   async function duplicateSelected() {
     if (!selectedSheet) return;
@@ -916,7 +906,7 @@ export default function CostingApp() {
     );
   }
 
-  if (showWelcomeGate && !session) {
+  if (!session) {
     return (
       <div className="min-h-dvh px-6 py-8">
         <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-4xl flex-col">
