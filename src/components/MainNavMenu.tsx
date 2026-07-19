@@ -28,7 +28,7 @@ type MainNavMenuProps = {
 const TOP_BAR_HEIGHT = 65;
 const DESKTOP_SIDEBAR_WIDTH = 272;
 const TABLET_EXPANDED_SIDEBAR_WIDTH = 248;
-const TABLET_COLLAPSED_SIDEBAR_WIDTH = 78;
+const TABLET_COLLAPSED_SIDEBAR_WIDTH = 60;
 
 const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Dashboard", href: "/" },
@@ -447,7 +447,7 @@ function SidebarSections({
   return (
     <>
       <nav aria-label="Main menu" className="flex-1 overflow-y-auto px-2 py-3">
-        <SidebarSectionLabel compact={compact} label="Workspace" compactLabel="W" />
+        <SidebarSectionLabel compact={compact} label="Workspace" />
         <div className="mt-2 space-y-0.5">
           {items.map((item) => {
             const isActive = isMainItemActive(item);
@@ -468,7 +468,7 @@ function SidebarSections({
         </div>
 
         <div className="mt-4 border-t border-zinc-200 pt-3">
-          <SidebarSectionLabel compact={compact} label="Account" compactLabel="A" />
+          <SidebarSectionLabel compact={compact} label="Account" />
           <div className="mt-2 space-y-0.5">
             <Link
               href="/settings"
@@ -538,16 +538,17 @@ function SidebarSections({
 type SidebarSectionLabelProps = {
   compact: boolean;
   label: string;
-  compactLabel: string;
 };
 
-function SidebarSectionLabel({ compact, label, compactLabel }: SidebarSectionLabelProps) {
+function SidebarSectionLabel({ compact, label }: SidebarSectionLabelProps) {
   if (compact) {
+    // A lone letter ("W", "A") read as an unexplained fragment at rail
+    // width; a quiet divider communicates "new group" without needing text,
+    // and the label stays available to screen readers.
     return (
-      <p className="px-2 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/80">
-        {compactLabel}
-        <span className="sr-only">{label}</span>
-      </p>
+      <div className="flex items-center justify-center px-3" role="separator" aria-label={label}>
+        <span className="h-px w-full bg-zinc-200" />
+      </div>
     );
   }
 
