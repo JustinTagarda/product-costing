@@ -370,7 +370,7 @@ export default function ActivitiesApp() {
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="border-b border-border px-4 py-3">
-              <p className="font-mono text-xs text-muted">
+              <p className="text-xs font-medium tracking-wide text-muted">
                 {loadingLogs
                   ? "Loading account activity..."
                   : `${filteredLogs.length} result(s) in descending date order`}
@@ -379,7 +379,7 @@ export default function ActivitiesApp() {
 
             <div className="grid gap-3 border-b border-border px-3 py-3 sm:grid-cols-2 lg:grid-cols-[220px_180px_220px_170px_170px_auto] lg:items-end">
               <label className="space-y-1">
-                <span className="font-mono text-xs text-muted">User</span>
+                <span className="text-xs font-medium tracking-wide text-muted">User</span>
                 <select
                   className="w-full rounded-lg border border-border bg-paper px-2.5 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
                   value={userFilter}
@@ -395,7 +395,7 @@ export default function ActivitiesApp() {
               </label>
 
               <label className="space-y-1">
-                <span className="font-mono text-xs text-muted">Action</span>
+                <span className="text-xs font-medium tracking-wide text-muted">Action</span>
                 <select
                   className="w-full rounded-lg border border-border bg-paper px-2.5 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
                   value={actionFilter}
@@ -411,7 +411,7 @@ export default function ActivitiesApp() {
               </label>
 
               <label className="space-y-1">
-                <span className="font-mono text-xs text-muted">Area</span>
+                <span className="text-xs font-medium tracking-wide text-muted">Area</span>
                 <select
                   className="w-full rounded-lg border border-border bg-paper px-2.5 py-2 text-sm text-ink outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15"
                   value={tableFilter}
@@ -427,7 +427,7 @@ export default function ActivitiesApp() {
               </label>
 
               <label className="space-y-1">
-                <span className="font-mono text-xs text-muted">Date from</span>
+                <span className="text-xs font-medium tracking-wide text-muted">Date from</span>
                 <input
                   type="date"
                   value={dateFrom}
@@ -437,7 +437,7 @@ export default function ActivitiesApp() {
               </label>
 
               <label className="space-y-1">
-                <span className="font-mono text-xs text-muted">Date to</span>
+                <span className="text-xs font-medium tracking-wide text-muted">Date to</span>
                 <input
                   type="date"
                   value={dateTo}
@@ -510,19 +510,19 @@ export default function ActivitiesApp() {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 text-xs font-semibold tracking-wide text-muted">
                       Date/Time
                     </th>
-                    <th className="min-w-[200px] px-1 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="min-w-[200px] px-1 py-2 text-xs font-semibold tracking-wide text-muted">
                       User
                     </th>
-                    <th className="min-w-[200px] px-1 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="min-w-[200px] px-1 py-2 text-xs font-semibold tracking-wide text-muted">
                       Action
                     </th>
-                    <th className="max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="max-w-[180px] px-1 py-2 text-xs font-semibold tracking-wide text-muted">
                       Area
                     </th>
-                    <th className="max-w-[180px] px-1 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="max-w-[180px] px-1 py-2 text-xs font-semibold tracking-wide text-muted">
                       Changed Fields
                     </th>
                   </tr>
@@ -537,7 +537,7 @@ export default function ActivitiesApp() {
                   ) : filteredLogs.length ? (
                     filteredLogs.map((log) => (
                       <tr key={log.id}>
-                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 font-mono text-xs text-muted">
+                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-1 py-2 text-xs font-medium tracking-wide text-muted">
                           {formatDateTime(log.createdAt) || "-"}
                         </td>
                         <td className="min-w-[200px] px-1 py-2 text-sm text-ink">
@@ -618,7 +618,7 @@ export default function ActivitiesApp() {
 function KpiCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <article className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
-      <p className="font-mono text-xs text-muted">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">{value}</p>
       <p className="mt-2 text-xs text-muted">{note}</p>
     </article>

@@ -251,7 +251,7 @@ export default function SettingsApp() {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <p className="font-mono text-xs text-muted">Loading settings...</p>
+          <p className="text-xs font-medium tracking-wide text-muted">Loading settings...</p>
           <div className={cardClassName + " mt-6 h-[380px]"} />
         </div>
       </div>
@@ -320,7 +320,7 @@ export default function SettingsApp() {
               <h2 className={sectionTitleClass()}>Country and Timezone</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block font-mono text-xs text-muted">Country</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Country</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.countryCode}
@@ -334,7 +334,7 @@ export default function SettingsApp() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Timezone</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Timezone</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.timezone}
@@ -348,7 +348,7 @@ export default function SettingsApp() {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-mono text-xs text-muted">Date format</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Date format</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.dateFormat}
@@ -371,7 +371,7 @@ export default function SettingsApp() {
               <h2 className={sectionTitleClass()}>Currency and Rounding</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block font-mono text-xs text-muted">Base currency</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Base currency</label>
                   <input
                     className={inputBase + " mt-1 font-mono uppercase"}
                     value={settings.baseCurrency}
@@ -383,7 +383,7 @@ export default function SettingsApp() {
                   />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Currency format</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Currency format</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.currencyDisplay}
@@ -399,7 +399,7 @@ export default function SettingsApp() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Rounding (cents)</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Rounding (cents)</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.currencyRoundingIncrement}
@@ -412,7 +412,7 @@ export default function SettingsApp() {
                   />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Rounding mode</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Rounding mode</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.currencyRoundingMode}
@@ -436,7 +436,7 @@ export default function SettingsApp() {
               <h2 className={sectionTitleClass()}>Units and Conversions</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block font-mono text-xs text-muted">Unit system</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Unit system</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.unitSystem}
@@ -452,7 +452,7 @@ export default function SettingsApp() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Default material unit</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Default material unit</label>
                   <input
                     className={inputBase + " mt-1"}
                     value={settings.defaultMaterialUnit}
@@ -466,7 +466,7 @@ export default function SettingsApp() {
 
               <div className="mt-4">
                 <div className="flex items-center justify-between">
-                  <label className="block font-mono text-xs text-muted">UOM conversions</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">UOM conversions</label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -537,7 +537,7 @@ export default function SettingsApp() {
               <h2 className={sectionTitleClass()}>Costing and Tax Defaults</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block font-mono text-xs text-muted">Costing method</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Costing method</label>
                   <select
                     className={inputBase + " mt-1"}
                     value={settings.costingMethod}
@@ -558,7 +558,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Price includes tax</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Price includes tax</label>
                   <label className="mt-1 inline-flex w-full items-center gap-2 rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm text-ink">
                     <input
                       type="checkbox"
@@ -572,7 +572,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Default waste %</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Default waste %</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.defaultWastePct}
@@ -583,7 +583,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Default markup %</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Default markup %</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.defaultMarkupPct}
@@ -597,7 +597,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Default tax %</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Default tax %</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.defaultTaxPct}
@@ -608,7 +608,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Quantity precision</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Quantity precision</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.quantityPrecision}
@@ -622,7 +622,7 @@ export default function SettingsApp() {
                 </div>
 
                 <div>
-                  <label className="block font-mono text-xs text-muted">Price precision</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Price precision</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 font-mono"}
                     value={settings.pricePrecision}

@@ -657,10 +657,10 @@ export default function BomApp() {
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="font-mono text-xs text-muted">
+              <p className="text-xs font-medium tracking-wide text-muted">
                 {loading ? "Loading BOM..." : `${filteredBoms.length} BOM record(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">Cloud mode</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Cloud mode</p>
             </div>
             <div className="space-y-3 p-3 md:hidden">
               {loading ? (
@@ -686,7 +686,7 @@ export default function BomApp() {
                       >
                         {item.name || "Untitled BOM"}
                       </button>
-                      <p className="mt-0.5 font-mono text-xs text-muted">
+                      <p className="mt-0.5 text-xs font-medium tracking-wide text-muted">
                         {item.code || "-"} | {item.itemType === "product" ? "Product" : "Part"}
                       </p>
                       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -708,7 +708,7 @@ export default function BomApp() {
                         </div>
                         <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
                           <p className="font-mono text-[11px] text-muted">Updated</p>
-                          <p className="mt-1 font-mono text-xs text-muted">{formatAppDate(item.updatedAt)}</p>
+                          <p className="mt-1 text-xs font-medium tracking-wide text-muted">{formatAppDate(item.updatedAt)}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -742,14 +742,14 @@ export default function BomApp() {
               <table className="min-w-[980px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Code</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Type</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Output</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit Cost</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Active</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Name</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Code</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Type</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Output</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Unit Cost</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Active</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Updated</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -765,14 +765,14 @@ export default function BomApp() {
                             {item.name || "Untitled BOM"}
                           </button>
                         </td>
-                        <td className="p-2 font-mono text-xs text-muted">{item.code || "-"}</td>
+                        <td className="p-2 text-xs font-medium tracking-wide text-muted">{item.code || "-"}</td>
                         <td className="p-2">{item.itemType === "product" ? "Product" : "Part"}</td>
-                        <td className="p-2 font-mono text-xs text-muted">{item.outputQty} {item.outputUnit}</td>
+                        <td className="p-2 text-xs font-medium tracking-wide text-muted">{item.outputQty} {item.outputUnit}</td>
                         <td className="p-2 font-mono text-xs text-ink">
                           {cost?.unitCostCents === null ? "--" : formatMoney(cost?.unitCostCents ?? 0)}
                         </td>
                         <td className="p-2">{item.isActive ? "Yes" : "No"}</td>
-                        <td className="p-2 font-mono text-xs text-muted">{formatAppDate(item.updatedAt)}</td>
+                        <td className="p-2 text-xs font-medium tracking-wide text-muted">{formatAppDate(item.updatedAt)}</td>
                         <td className="p-2">
                           <button
                             type="button"
@@ -798,15 +798,15 @@ export default function BomApp() {
               </div>
               <div className="grid gap-4 p-4 md:grid-cols-4">
                 <div>
-                  <label className="block font-mono text-xs text-muted">Name</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Name</label>
                   <input className={inputBase + " mt-1"} value={selectedBom.name} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, name: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Code</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Code</label>
                   <input className={inputBase + " mt-1 " + inputMono} value={selectedBom.code} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, code: e.target.value.toUpperCase() }))} />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Type</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Type</label>
                   <select className={inputBase + " mt-1"} value={selectedBom.itemType} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, itemType: e.target.value === "product" ? "product" : "part" }))}>
                     <option value="part">Part</option>
                     <option value="product">Product</option>
@@ -819,7 +819,7 @@ export default function BomApp() {
                   </label>
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Output quantity</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Output quantity</label>
                   <DeferredNumberInput
                     className={inputBase + " mt-1 " + inputMono}
                     value={selectedBom.outputQty}
@@ -829,11 +829,11 @@ export default function BomApp() {
                   />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs text-muted">Output unit</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Output unit</label>
                   <input className={inputBase + " mt-1"} value={selectedBom.outputUnit} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, outputUnit: e.target.value || settings.defaultMaterialUnit }))} />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block font-mono text-xs text-muted">Notes</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Notes</label>
                   <input className={inputBase + " mt-1"} value={selectedBom.notes} onChange={(e) => updateBom(selectedBom.id, (row) => ({ ...row, notes: e.target.value }))} />
                 </div>
               </div>
@@ -859,7 +859,7 @@ export default function BomApp() {
                           <p className="truncate font-semibold text-ink">
                             {line.componentName || `Component line ${idx + 1}`}
                           </p>
-                          <p className="mt-0.5 font-mono text-xs text-muted">
+                          <p className="mt-0.5 text-xs font-medium tracking-wide text-muted">
                             {line.componentType === "material" ? "Material" : "Subassembly BOM"}
                           </p>
                         </div>
@@ -876,7 +876,7 @@ export default function BomApp() {
 
                       <div className="mt-3 grid gap-3">
                         <label className="block space-y-1">
-                          <span className="font-mono text-xs text-muted">Type</span>
+                          <span className="text-xs font-medium tracking-wide text-muted">Type</span>
                           <select
                             className={inputBase}
                             value={line.componentType}
@@ -898,7 +898,7 @@ export default function BomApp() {
                         </label>
 
                         <label className="block space-y-1">
-                          <span className="font-mono text-xs text-muted">Component</span>
+                          <span className="text-xs font-medium tracking-wide text-muted">Component</span>
                           {line.componentType === "material" ? (
                             <select
                               className={inputBase}
@@ -957,7 +957,7 @@ export default function BomApp() {
                         </label>
 
                         <label className="block space-y-1">
-                          <span className="font-mono text-xs text-muted">Qty</span>
+                          <span className="text-xs font-medium tracking-wide text-muted">Qty</span>
                           <DeferredNumberInput
                             className={inputBase + " " + inputMono}
                             value={line.quantity}
@@ -971,7 +971,7 @@ export default function BomApp() {
                         </label>
 
                         <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                          <p className="font-mono text-xs text-muted">Line total</p>
+                          <p className="text-xs font-medium tracking-wide text-muted">Line total</p>
                           <p className="mt-1 font-mono text-sm tabular-nums text-ink">{formatMoney(lineTotal)}</p>
                         </div>
 
@@ -996,7 +996,7 @@ export default function BomApp() {
                               </p>
                             ) : null}
                             <label className="block space-y-1">
-                              <span className="font-mono text-xs text-muted">Unit</span>
+                              <span className="text-xs font-medium tracking-wide text-muted">Unit</span>
                               <input
                                 className={inputBase}
                                 value={line.unit}
@@ -1010,7 +1010,7 @@ export default function BomApp() {
                             </label>
 
                             <div className="space-y-1">
-                              <p className="font-mono text-xs text-muted">Unit cost</p>
+                              <p className="text-xs font-medium tracking-wide text-muted">Unit cost</p>
                               {needsUnitCostInput ? (
                                 <DeferredMoneyInput
                                   className={inputBase + " " + inputMono}
@@ -1030,7 +1030,7 @@ export default function BomApp() {
                             </div>
 
                             <label className="block space-y-1">
-                              <span className="font-mono text-xs text-muted">Notes</span>
+                              <span className="text-xs font-medium tracking-wide text-muted">Notes</span>
                               <input
                                 className={inputBase}
                                 value={line.notes}
@@ -1054,14 +1054,14 @@ export default function BomApp() {
                 <table data-input-layout className="min-w-[1200px] w-full text-left text-sm">
                   <thead>
                     <tr>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Type</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Component</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Qty</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Unit cost</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Line total</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Notes</th>
-                      <th className="px-2 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted">Type</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted">Component</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Qty</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted">Unit</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Unit cost</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Line total</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted">Notes</th>
+                      <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted">Actions</th>
                     </tr>
                   </thead>
                   <tbody>

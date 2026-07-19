@@ -694,10 +694,10 @@ export default function MaterialsApp() {
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="font-mono text-xs text-muted">
+              <p className="text-xs font-medium tracking-wide text-muted">
                 {loading ? "Loading materials..." : `${filteredMaterials.length} material(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">Cloud mode</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Cloud mode</p>
             </div>
 
             <div className="space-y-3 p-3 md:hidden">
@@ -715,7 +715,7 @@ export default function MaterialsApp() {
 
                   <div className="mt-3 space-y-3">
                     <label className="block space-y-1">
-                      <span className="font-mono text-xs text-muted">Name</span>
+                      <span className="text-xs font-medium tracking-wide text-muted">Name</span>
                       <input
                         ref={mobileDraftNameInputRef}
                         className={inputBase}
@@ -729,7 +729,7 @@ export default function MaterialsApp() {
                     </label>
 
                     <label className="block space-y-1">
-                      <span className="font-mono text-xs text-muted">Unit</span>
+                      <span className="text-xs font-medium tracking-wide text-muted">Unit</span>
                       <select
                         className={inputBase}
                         value={draftMaterial.unit}
@@ -749,7 +749,7 @@ export default function MaterialsApp() {
 
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                        <p className="font-mono text-xs text-muted">Weighted Average Cost</p>
+                        <p className="text-xs font-medium tracking-wide text-muted">Weighted Average Cost</p>
                         <p className={"mt-1 text-sm text-muted " + inputMono}>Auto</p>
                       </div>
                       <label className="inline-flex items-center gap-2 rounded-lg border border-border bg-paper/70 px-3 py-2 text-sm text-ink">
@@ -820,7 +820,7 @@ export default function MaterialsApp() {
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <label className="block space-y-1">
-                      <span className="font-mono text-xs text-muted">Name</span>
+                      <span className="text-xs font-medium tracking-wide text-muted">Name</span>
                       <input
                         className={inputBase}
                         value={row.name}
@@ -831,7 +831,7 @@ export default function MaterialsApp() {
                     </label>
 
                     <label className="block space-y-1">
-                      <span className="font-mono text-xs text-muted">Unit</span>
+                      <span className="text-xs font-medium tracking-wide text-muted">Unit</span>
                       <select
                         className={inputBase}
                         value={row.unit}
@@ -847,7 +847,7 @@ export default function MaterialsApp() {
                     </label>
 
                     <div className="rounded-lg border border-border bg-paper/70 px-3 py-2 sm:col-span-2">
-                      <p className="font-mono text-xs text-muted">Weighted Average Cost (Computed)</p>
+                      <p className="text-xs font-medium tracking-wide text-muted">Weighted Average Cost (Computed)</p>
                       <p className={"mt-1 text-sm text-ink " + inputMono}>
                         {formatSettingsMoney(row.unitCostCents)}
                       </p>
@@ -878,11 +878,11 @@ export default function MaterialsApp() {
               <table data-input-layout className="min-w-[760px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Name</th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">Unit</th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Weighted Average Cost (Computed)</th>
-                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Active</th>
-                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Name</th>
+                    <th className="app-col-strict-150 px-3 py-2 text-xs font-semibold tracking-wide text-muted">Unit</th>
+                    <th className="app-col-strict-150 px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Weighted Average Cost (Computed)</th>
+                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center text-xs font-semibold tracking-wide text-muted">Active</th>
+                    <th className="w-[75px] min-w-[75px] max-w-[75px] px-3 py-2 text-center text-xs font-semibold tracking-wide text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

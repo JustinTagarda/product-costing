@@ -345,7 +345,7 @@ export default function ProductDetailsApp() {
 
           {loading ? (
             <section className={cardClassName() + " mt-6 p-6"}>
-              <p className="font-mono text-xs text-muted">Loading product details...</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Loading product details...</p>
             </section>
           ) : null}
 
@@ -370,9 +370,9 @@ export default function ProductDetailsApp() {
               <section className={cardClassName() + " mt-6 p-5"}>
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                   <div>
-                    <p className="font-mono text-xs text-muted">Product ID: {sheet.id}</p>
+                    <p className="text-xs font-medium tracking-wide text-muted">Product ID: {sheet.id}</p>
                     <h2 className="mt-2 font-serif text-3xl tracking-tight text-ink">{sheet.name || "Untitled"}</h2>
-                    <p className="mt-1 font-mono text-xs text-muted">SKU: {sheet.sku || "-"}</p>
+                    <p className="mt-1 text-xs font-medium tracking-wide text-muted">SKU: {sheet.sku || "-"}</p>
                   </div>
                   <div className="grid gap-2 text-sm text-muted sm:grid-cols-2">
                     <div className="rounded-xl border border-border bg-paper/55 px-3 py-2">
@@ -448,18 +448,18 @@ export default function ProductDetailsApp() {
                       <table className="min-w-[760px] w-full border border-border text-left text-sm">
                         <thead className="bg-paper/55">
                           <tr>
-                            <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Category</th>
-                            <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Line</th>
-                            <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Qty / Basis</th>
-                            <th className="px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Total</th>
+                            <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Category</th>
+                            <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Line</th>
+                            <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Qty / Basis</th>
+                            <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           {breakdownRows.map((row, index) => (
                             <tr key={`${row.category}-${row.label}-${index}`}>
-                              <td className="p-2 font-mono text-xs text-muted">{row.category}</td>
+                              <td className="p-2 text-xs font-medium tracking-wide text-muted">{row.category}</td>
                               <td className="p-2 text-ink">{row.label}</td>
-                              <td className="p-2 font-mono text-xs text-muted">{row.quantity}</td>
+                              <td className="p-2 text-xs font-medium tracking-wide text-muted">{row.quantity}</td>
                               <td className="p-2 font-mono text-xs text-ink">{formatMoney(row.totalCents)}</td>
                             </tr>
                           ))}
@@ -491,7 +491,7 @@ export default function ProductDetailsApp() {
 
                     <div className="rounded-xl border border-border bg-paper/45">
                       <div className="border-b border-border px-3 py-2">
-                        <p className="font-mono text-xs text-muted">Data change history</p>
+                        <p className="text-xs font-medium tracking-wide text-muted">Data change history</p>
                       </div>
                       <div className="max-h-[360px] overflow-y-auto">
                         {loadingHistoryLogs ? (
@@ -511,7 +511,7 @@ export default function ProductDetailsApp() {
                                   </span>{" "}
                                   this product record
                                 </p>
-                                <p className="mt-0.5 font-mono text-xs text-muted">
+                                <p className="mt-0.5 text-xs font-medium tracking-wide text-muted">
                                   {new Date(log.createdAt).toLocaleString()}
                                 </p>
                                 {log.changedFields.length ? (
@@ -577,7 +577,7 @@ export default function ProductDetailsApp() {
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
     <article className="rounded-2xl border border-border bg-paper/55 p-4">
-      <p className="font-mono text-xs text-muted">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-xl font-semibold tracking-tight text-ink">{value}</p>
     </article>
   );
@@ -586,7 +586,7 @@ function KpiCard({ label, value }: { label: string; value: string }) {
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
     <article className="rounded-xl border border-border bg-paper/55 px-3 py-3">
-      <p className="font-mono text-xs text-muted">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
     </article>
   );

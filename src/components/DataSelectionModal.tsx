@@ -61,7 +61,7 @@ export function DataSelectionModal({
         </p>
 
         <section className="mt-4">
-          <p className="font-mono text-xs text-muted">Your Data</p>
+          <p className="text-xs font-medium tracking-wide text-muted">Your Data</p>
           <button
             type="button"
             className={[
@@ -73,12 +73,12 @@ export function DataSelectionModal({
             onClick={onSelectOwn}
           >
             <p className="text-sm font-semibold text-ink">{ownEmail || "Your account"}</p>
-            <p className="mt-0.5 font-mono text-xs text-muted">Use your own account data</p>
+            <p className="mt-0.5 text-xs font-medium tracking-wide text-muted">Use your own account data</p>
           </button>
         </section>
 
         <section className="mt-4">
-          <p className="font-mono text-xs text-muted">Shared With You</p>
+          <p className="text-xs font-medium tracking-wide text-muted">Shared With You</p>
           {sharedAccounts.length ? (
             <ul className="mt-2 space-y-2">
               {sharedAccounts.map((account) => {
@@ -98,7 +98,7 @@ export function DataSelectionModal({
                       <p className="truncate text-sm font-semibold text-ink">
                         {account.ownerEmail || account.ownerUserId}
                       </p>
-                      <p className="mt-0.5 font-mono text-xs text-muted">
+                      <p className="mt-0.5 text-xs font-medium tracking-wide text-muted">
                         {account.accessLevel === "editor"
                           ? "Editor access: can edit shared data"
                           : "Viewer access: read-only shared data"}

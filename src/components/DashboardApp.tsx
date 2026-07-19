@@ -363,7 +363,7 @@ export default function DashboardApp() {
                       <div key={row.sheet.id}>
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <p className="truncate font-semibold text-ink">{row.sheet.name || "Untitled"}</p>
-                          <p className="font-mono text-xs text-muted">{margin.toFixed(1)}%</p>
+                          <p className="text-xs font-medium tracking-wide text-muted">{margin.toFixed(1)}%</p>
                         </div>
                         <div className="mt-1 h-2 rounded-full bg-zinc-200/70">
                           <div className="h-2 rounded-full bg-accent2" style={{ width: `${width}%` }} />
@@ -382,10 +382,10 @@ export default function DashboardApp() {
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="font-mono text-xs text-muted">
+              <p className="text-xs font-medium tracking-wide text-muted">
                 {loadingSheets ? "Loading products..." : `${recentProducts.length} recent product(s)`}
               </p>
-              <p className="font-mono text-xs text-muted">Cloud mode</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Cloud mode</p>
             </div>
 
             <div className="space-y-3 p-3 md:hidden">
@@ -404,7 +404,7 @@ export default function DashboardApp() {
                         <p className="truncate font-semibold text-ink">
                           {row.sheet.name || "Untitled"}
                         </p>
-                        <p className="mt-0.5 truncate font-mono text-xs text-muted">
+                        <p className="mt-0.5 truncate text-xs font-medium tracking-wide text-muted">
                           SKU: {row.sheet.sku || "-"}
                         </p>
                       </div>
@@ -421,7 +421,7 @@ export default function DashboardApp() {
                       </div>
                       <div className="rounded-lg border border-border bg-paper/70 px-2.5 py-2">
                         <p className="font-mono text-[11px] text-muted">Margin</p>
-                        <p className="mt-1 font-mono text-xs text-muted">
+                        <p className="mt-1 text-xs font-medium tracking-wide text-muted">
                           {row.totals.marginPct === null ? "--" : `${row.totals.marginPct.toFixed(1)}%`}
                         </p>
                       </div>
@@ -455,26 +455,26 @@ export default function DashboardApp() {
               <table className="min-w-[900px] w-full text-left text-sm">
                 <thead className="bg-paper/55">
                   <tr>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Product</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">SKU</th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Batch Total</th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">Margin</th>
-                    <th className="app-col-strict-150 px-3 py-2 font-mono text-xs font-semibold text-muted">Updated</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Product</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">SKU</th>
+                    <th className="app-col-strict-150 px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Batch Total</th>
+                    <th className="app-col-strict-150 px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">Margin</th>
+                    <th className="app-col-strict-150 px-3 py-2 text-xs font-semibold tracking-wide text-muted">Updated</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentProducts.map((row) => (
                     <tr key={row.sheet.id}>
                       <td className="p-2 font-semibold text-ink">{row.sheet.name || "Untitled"}</td>
-                      <td className="p-2 font-mono text-xs text-muted">{row.sheet.sku || "-"}</td>
+                      <td className="p-2 text-xs font-medium tracking-wide text-muted">{row.sheet.sku || "-"}</td>
                       <td className="app-col-strict-150 p-2 font-mono text-xs text-ink">
                         {formatMoney(row.totals.batchTotalCents)}
                       </td>
-                      <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">
+                      <td className="app-col-strict-150 p-2 text-xs font-medium tracking-wide text-muted">
                         {row.totals.marginPct === null ? "--" : `${row.totals.marginPct.toFixed(1)}%`}
                       </td>
-                      <td className="app-col-strict-150 p-2 font-mono text-xs text-muted">{formatAppDate(row.sheet.updatedAt)}</td>
+                      <td className="app-col-strict-150 p-2 text-xs font-medium tracking-wide text-muted">{formatAppDate(row.sheet.updatedAt)}</td>
                       <td className="p-2">
                         <div className="flex items-center gap-2">
                           <button
@@ -542,7 +542,7 @@ export default function DashboardApp() {
 function KpiCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <article className="rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
-      <p className="font-mono text-xs text-muted">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight text-ink">{value}</p>
       <p className="mt-2 text-xs text-muted">{note}</p>
     </article>
@@ -561,7 +561,7 @@ function LegendRow({
   return (
     <div className="flex items-center gap-2">
       <span className={["h-2.5 w-2.5 rounded-full", colorClass].join(" ")} />
-      <p className="font-mono text-xs text-muted">{label}:</p>
+      <p className="text-xs font-medium tracking-wide text-muted">{label}:</p>
       <p className="font-mono text-xs text-ink">{value}</p>
     </div>
   );

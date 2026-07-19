@@ -269,7 +269,7 @@ export function ShareSheetModal({
         </div>
 
         <div className="mt-4 rounded-xl border border-border bg-paper/45 px-3 py-2 text-sm">
-          <p className="font-mono text-xs text-muted">Data owner</p>
+          <p className="text-xs font-medium tracking-wide text-muted">Data owner</p>
           <p className="mt-1 text-ink">{ownerLabel}</p>
         </div>
 
@@ -308,7 +308,7 @@ export function ShareSheetModal({
 
         <div className="mt-4 rounded-xl border border-border bg-paper/45">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <p className="font-mono text-xs text-muted">People with access</p>
+            <p className="text-xs font-medium tracking-wide text-muted">People with access</p>
           </div>
           <div className="max-h-64 overflow-y-auto">
             {shares.length ? (
@@ -324,7 +324,7 @@ export function ShareSheetModal({
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm text-ink">{share.shared_with_email}</p>
-                        <p className="font-mono text-xs text-muted">
+                        <p className="text-xs font-medium tracking-wide text-muted">
                           {accessLevelLabel(share.access_level)} access
                         </p>
                       </div>
@@ -371,7 +371,7 @@ export function ShareSheetModal({
         <div className="mt-4 rounded-xl border border-border bg-paper/45 px-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="font-mono text-xs text-muted">Activities</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Activities</p>
               <p className="mt-0.5 text-sm text-muted">
                 View full account activity logs on the dedicated Activities page.
               </p>

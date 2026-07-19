@@ -1406,10 +1406,10 @@ export default function PurchasesApp() {
 
 	          <section className={cardClassName() + " mt-6 overflow-hidden"}>
 	            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-	              <p className="font-mono text-xs text-muted">
+	              <p className="text-xs font-medium tracking-wide text-muted">
 	                {loading ? "Loading purchases..." : `${filteredPurchases.length} purchase(s)`}
 	              </p>
-	              <p className="font-mono text-xs text-muted">Cloud mode</p>
+	              <p className="text-xs font-medium tracking-wide text-muted">Cloud mode</p>
 	            </div>
 
 	            <div className="space-y-3 p-3 md:hidden">
@@ -1427,7 +1427,7 @@ export default function PurchasesApp() {
 
 	                  <div className="mt-3 space-y-3">
 	                    <label className="block space-y-1">
-	                      <span className="font-mono text-xs text-muted">Material</span>
+	                      <span className="text-xs font-medium tracking-wide text-muted">Material</span>
 	                      <select
 	                        ref={mobileDraftMaterialSelectRef}
 	                        className={inputBase}
@@ -1454,7 +1454,7 @@ export default function PurchasesApp() {
 	                    </label>
 
 	                    <label className="block space-y-1">
-	                      <span className="font-mono text-xs text-muted">Description</span>
+	                      <span className="text-xs font-medium tracking-wide text-muted">Description</span>
 	                      <input
 	                        className={inputBase}
 	                        value={draftPurchase.description}
@@ -1468,7 +1468,7 @@ export default function PurchasesApp() {
 
 	                    <div className="grid gap-3 sm:grid-cols-2">
 	                      <label className="block space-y-1">
-	                        <span className="font-mono text-xs text-muted">Quantity</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Quantity</span>
 	                        <input
 	                          className={inputBase + " " + inputMono}
 	                          value={draftPurchase.quantityInput}
@@ -1480,7 +1480,7 @@ export default function PurchasesApp() {
 	                        />
 	                      </label>
 	                      <label className="block space-y-1">
-	                        <span className="font-mono text-xs text-muted">Cost</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Cost</span>
 	                        <input
 	                          className={inputBase + " " + inputMono}
 	                          value={draftPurchase.unitCostInput}
@@ -1492,7 +1492,7 @@ export default function PurchasesApp() {
 	                        />
 	                      </label>
 	                      <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-	                        <p className="font-mono text-xs text-muted">Total Cost</p>
+	                        <p className="text-xs font-medium tracking-wide text-muted">Total Cost</p>
 	                        <p className="mt-1 font-mono text-sm text-ink">
 	                          {draftPurchase.quantityInput.trim().length > 0 &&
 	                          draftPurchase.unitCostInput.trim().length > 0
@@ -1506,7 +1506,7 @@ export default function PurchasesApp() {
 	                        </p>
 	                      </div>
 	                      <label className="block space-y-1">
-	                        <span className="font-mono text-xs text-muted">Usable Quantity</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Usable Quantity</span>
 	                        <input
 	                          className={inputBase + " " + inputMono}
 	                          value={draftPurchase.usableQuantityInput}
@@ -1520,7 +1520,7 @@ export default function PurchasesApp() {
 	                    </div>
 
 	                    <label className="block space-y-1">
-	                      <span className="font-mono text-xs text-muted">Marketplace</span>
+	                      <span className="text-xs font-medium tracking-wide text-muted">Marketplace</span>
 	                      <select
 	                        className={inputBase}
 	                        value={draftPurchase.marketplace}
@@ -1552,7 +1552,7 @@ export default function PurchasesApp() {
 	                      </summary>
 	                      <div className="mt-3 space-y-3">
 	                        <label className="block space-y-1">
-	                          <span className="font-mono text-xs text-muted">Variation</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Variation</span>
 	                          <input
 	                            className={inputBase}
 	                            value={draftPurchase.variation}
@@ -1565,7 +1565,7 @@ export default function PurchasesApp() {
 	                        </label>
 
 	                        <label className="block space-y-1">
-	                          <span className="font-mono text-xs text-muted">Purchase Date</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Purchase Date</span>
 	                          <input
 	                            className={inputBase + " " + inputMono}
 	                            type={isDraftPurchaseDateInputActive || draftPurchase.purchaseDate ? "date" : "text"}
@@ -1589,7 +1589,7 @@ export default function PurchasesApp() {
 	                        </label>
 
 	                        <label className="block space-y-1">
-	                          <span className="font-mono text-xs text-muted">Store</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Store</span>
 	                          <input
 	                            className={inputBase}
 	                            value={draftPurchase.store}
@@ -1669,7 +1669,7 @@ export default function PurchasesApp() {
 
 	                    <div className="mt-3 space-y-3">
 	                      <label className="block space-y-1">
-	                        <span className="font-mono text-xs text-muted">Material</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Material</span>
 	                        <select
 	                          className={inputBase}
 	                          value={row.materialId ?? ""}
@@ -1705,7 +1705,7 @@ export default function PurchasesApp() {
 	                          invalidImportedField("description") ? "rounded-lg bg-danger/10 p-2" : "",
 	                        ].join(" ")}
 	                      >
-	                        <span className="font-mono text-xs text-muted">Description</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Description</span>
 	                        <input
 	                          className={inputBase + (invalidImportedField("description") ? " !bg-[#ffe9ec]" : "")}
 	                          value={row.description}
@@ -1724,7 +1724,7 @@ export default function PurchasesApp() {
 	                            invalidImportedField("quantity") ? "rounded-lg bg-danger/10 p-2" : "",
 	                          ].join(" ")}
 	                        >
-	                          <span className="font-mono text-xs text-muted">Quantity</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Quantity</span>
 	                          <DeferredNumberInput
 	                            className={
 	                              inputBase + " " + inputMono + (invalidImportedField("quantity") ? " !bg-[#ffe9ec]" : "")
@@ -1745,7 +1745,7 @@ export default function PurchasesApp() {
 	                            invalidImportedField("unitCostCents") ? "rounded-lg bg-danger/10 p-2" : "",
 	                          ].join(" ")}
 	                        >
-	                          <span className="font-mono text-xs text-muted">Cost</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Cost</span>
 	                          <DeferredMoneyInput
 	                            className={
 	                              inputBase +
@@ -1764,7 +1764,7 @@ export default function PurchasesApp() {
 	                          />
 	                        </label>
 	                        <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-	                          <p className="font-mono text-xs text-muted">Total Cost</p>
+	                          <p className="text-xs font-medium tracking-wide text-muted">Total Cost</p>
 	                          <p className="mt-1 font-mono text-sm text-ink">
 	                            {formatMoney(computePurchaseTotalCents(row.quantity, row.unitCostCents))}
 	                          </p>
@@ -1775,7 +1775,7 @@ export default function PurchasesApp() {
 	                            invalidImportedField("usableQuantity") ? "rounded-lg bg-danger/10 p-2" : "",
 	                          ].join(" ")}
 	                        >
-	                          <span className="font-mono text-xs text-muted">Usable Quantity</span>
+	                          <span className="text-xs font-medium tracking-wide text-muted">Usable Quantity</span>
 	                          <DeferredNumberInput
 	                            className={
 	                              inputBase +
@@ -1796,7 +1796,7 @@ export default function PurchasesApp() {
 	                      </div>
 
 	                      <label className="block space-y-1">
-	                        <span className="font-mono text-xs text-muted">Marketplace</span>
+	                        <span className="text-xs font-medium tracking-wide text-muted">Marketplace</span>
 	                        <select
 	                          className={inputBase}
 	                          value={marketplaceSelectValue}
@@ -1851,7 +1851,7 @@ export default function PurchasesApp() {
 	                        </summary>
 	                        <div className="mt-3 space-y-3">
 	                          <label className="block space-y-1">
-	                            <span className="font-mono text-xs text-muted">Variation</span>
+	                            <span className="text-xs font-medium tracking-wide text-muted">Variation</span>
 	                            <input
 	                              className={inputBase}
 	                              value={row.variation}
@@ -1869,7 +1869,7 @@ export default function PurchasesApp() {
 	                              invalidImportedField("purchaseDate") ? "rounded-lg bg-danger/10 p-2" : "",
 	                            ].join(" ")}
 	                          >
-	                            <span className="font-mono text-xs text-muted">Purchase Date</span>
+	                            <span className="text-xs font-medium tracking-wide text-muted">Purchase Date</span>
 	                            <input
 	                              className={
 	                                inputBase +
@@ -1891,7 +1891,7 @@ export default function PurchasesApp() {
 	                          </label>
 
 	                          <label className="block space-y-1">
-	                            <span className="font-mono text-xs text-muted">Store</span>
+	                            <span className="text-xs font-medium tracking-wide text-muted">Store</span>
 	                            <input
 	                              className={inputBase}
 	                              value={row.store}
@@ -1935,29 +1935,29 @@ export default function PurchasesApp() {
 	              <table data-input-layout className="w-max min-w-full text-left text-sm">
 	                <thead className="bg-paper/55">
 	                  <tr>
-                    <th className="w-[230px] min-w-[230px] max-w-[230px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[230px] min-w-[230px] max-w-[230px] px-3 py-2 text-xs font-semibold tracking-wide text-muted">
                       Material
                     </th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Description</th>
-                    <th className="px-3 py-2 font-mono text-xs font-semibold text-muted">Variation</th>
-                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Description</th>
+                    <th className="px-3 py-2 text-xs font-semibold tracking-wide text-muted">Variation</th>
+                    <th className="w-[80px] px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                       Quantity
                     </th>
-                    <th className="w-[100px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="w-[100px] px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                       Cost
                     </th>
-                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="w-[120px] px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                       Total Cost
                     </th>
-                    <th className="w-[80px] px-3 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                    <th className="w-[80px] px-3 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                       Usable Quantity
                     </th>
-                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-3 py-2 font-mono text-xs font-semibold text-muted">
+                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-3 py-2 text-xs font-semibold tracking-wide text-muted">
                       Purchase Date
                     </th>
-                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Marketplace</th>
-                    <th className="w-[120px] px-3 py-2 font-mono text-xs font-semibold text-muted">Store</th>
-                    <th className="w-[75px] px-3 py-2 font-mono text-xs font-semibold text-muted">Actions</th>
+                    <th className="w-[120px] px-3 py-2 text-xs font-semibold tracking-wide text-muted">Marketplace</th>
+                    <th className="w-[120px] px-3 py-2 text-xs font-semibold tracking-wide text-muted">Store</th>
+                    <th className="w-[75px] px-3 py-2 text-xs font-semibold tracking-wide text-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

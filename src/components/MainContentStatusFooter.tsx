@@ -22,7 +22,7 @@ export function MainContentStatusFooter({
         .filter(Boolean)
         .join(" ")}
     >
-      <p className="font-mono text-xs text-muted">
+      <p className="text-xs font-medium tracking-wide text-muted">
         {userLabel ? (
           <>
             Signed in as <span className="select-all">{userLabel}</span>{" "}

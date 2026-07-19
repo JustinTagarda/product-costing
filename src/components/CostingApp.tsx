@@ -1013,7 +1013,7 @@ export default function CostingApp() {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <p className="font-mono text-xs text-muted">Loading sheets...</p>
+          <p className="text-xs font-medium tracking-wide text-muted">Loading sheets...</p>
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className={cardClassName() + " h-[520px] animate-pulse"} />
             <div className={cardClassName() + " h-[520px] animate-pulse"} />
@@ -1085,7 +1085,7 @@ export default function CostingApp() {
               Cost Calculator
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Materials, labor, overhead, and pricing in one ledger. Your sheets sync across devices in Supabase.
+              Materials, labor, overhead, and pricing in one ledger. Your sheets sync across your devices automatically.
             </p>
             {!supabase ? (
               <p className="mt-2 text-xs text-muted">
@@ -1184,7 +1184,7 @@ export default function CostingApp() {
             <div className="p-4 md:p-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="flex-1">
-                  <label className="block font-mono text-xs text-muted">Product name</label>
+                  <label className="block text-xs font-medium tracking-wide text-muted">Product name</label>
                   <input
                     className={inputBase + " mt-1 text-base font-semibold"}
                     value={selectedSheet.name}
@@ -1225,7 +1225,7 @@ export default function CostingApp() {
                     </div>
                     <div className="grid gap-4 p-4 sm:grid-cols-2">
                       <div>
-                        <label className="block font-mono text-xs text-muted">SKU (optional)</label>
+                        <label className="block text-xs font-medium tracking-wide text-muted">SKU (optional)</label>
                         <input
                           className={inputBase + " mt-1"}
                           value={selectedSheet.sku}
@@ -1234,7 +1234,7 @@ export default function CostingApp() {
                         />
                       </div>
                       <div>
-                        <label className="block font-mono text-xs text-muted">Batch size</label>
+                        <label className="block text-xs font-medium tracking-wide text-muted">Batch size</label>
                         <DeferredNumberInput
                           className={inputBase + " mt-1 " + inputMono}
                           value={selectedSheet.batchSize}
@@ -1312,7 +1312,7 @@ export default function CostingApp() {
 
                             <div className="mt-3 grid gap-3">
                               <label className="block space-y-1">
-                                <span className="font-mono text-xs text-muted">Material</span>
+                                <span className="text-xs font-medium tracking-wide text-muted">Material</span>
                                 <select
                                   className={inputBase}
                                   value={it.materialId ?? ""}
@@ -1349,7 +1349,7 @@ export default function CostingApp() {
                               </label>
 
                               <label className="block space-y-1">
-                                <span className="font-mono text-xs text-muted">Qty</span>
+                                <span className="text-xs font-medium tracking-wide text-muted">Qty</span>
                                 <DeferredNumberInput
                                   className={inputBase + " " + inputMono}
                                   value={it.qty}
@@ -1364,11 +1364,11 @@ export default function CostingApp() {
 
                               <div className="grid gap-3 sm:grid-cols-2">
                                 <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                                  <p className="font-mono text-xs text-muted">Unit</p>
+                                  <p className="text-xs font-medium tracking-wide text-muted">Unit</p>
                                   <p className="mt-1 font-mono text-sm text-ink">{displayUnit || "--"}</p>
                                 </div>
                                 <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                                  <p className="font-mono text-xs text-muted">Weighted avg cost</p>
+                                  <p className="text-xs font-medium tracking-wide text-muted">Weighted avg cost</p>
                                   <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                                     {it.materialId || displayUnitCostCents > 0
                                       ? formatMoney(displayUnitCostCents)
@@ -1378,7 +1378,7 @@ export default function CostingApp() {
                               </div>
 
                               <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                                <p className="font-mono text-xs text-muted">Total</p>
+                                <p className="text-xs font-medium tracking-wide text-muted">Total</p>
                                 <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                                   {formatMoney(Math.round(it.qty * displayUnitCostCents))}
                                 </p>
@@ -1393,19 +1393,19 @@ export default function CostingApp() {
                       <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                         <thead>
                           <tr>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted" style={{ minWidth: 220 }}>
                               Material
                             </th>
-                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                            <th className="app-col-strict-100 px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                               Qty
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 90 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted" style={{ minWidth: 90 }}>
                               Unit
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 120 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums" style={{ minWidth: 120 }}>
                               Weighted avg cost
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 160 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums" style={{ minWidth: 160 }}>
                               Total
                             </th>
                           </tr>
@@ -1594,7 +1594,7 @@ export default function CostingApp() {
 
                     <div className="flex flex-wrap items-end gap-3 border-t border-border px-4 py-3">
                         <div className="flex-1">
-                          <label className="block font-mono text-xs text-muted">Waste %</label>
+                          <label className="block text-xs font-medium tracking-wide text-muted">Waste %</label>
                           <DeferredNumberInput
                             className={inputBase + " mt-1 " + inputMono}
                             value={selectedSheet.wastePct}
@@ -1604,11 +1604,11 @@ export default function CostingApp() {
                           />
                         </div>
                         <div className="min-w-[240px]">
-                          <p className="font-mono text-xs text-muted">Materials subtotal</p>
+                          <p className="text-xs font-medium tracking-wide text-muted">Materials subtotal</p>
                           <p className="mt-1 flex min-h-[38px] items-center font-mono text-sm tabular-nums text-ink">
                             {formatMoney(totals.materialsSubtotalCents)}{" "}
                             <span className="text-muted">
-                              -&gt; {formatMoney(totals.materialsWithWasteCents)} with waste
+                              &nbsp;→ {formatMoney(totals.materialsWithWasteCents)} with waste
                             </span>
                           </p>
                         </div>
@@ -1667,7 +1667,7 @@ export default function CostingApp() {
 
                           <div className="mt-3 grid gap-3">
                             <label className="block space-y-1">
-                              <span className="font-mono text-xs text-muted">Role</span>
+                              <span className="text-xs font-medium tracking-wide text-muted">Role</span>
                               <input
                                 className={inputBase}
                                 value={it.role}
@@ -1685,7 +1685,7 @@ export default function CostingApp() {
 
                             <div className="grid gap-3 sm:grid-cols-2">
                               <label className="block space-y-1">
-                                <span className="font-mono text-xs text-muted">Hours</span>
+                                <span className="text-xs font-medium tracking-wide text-muted">Hours</span>
                                 <DeferredNumberInput
                                   className={inputBase + " " + inputMono}
                                   value={it.hours}
@@ -1702,7 +1702,7 @@ export default function CostingApp() {
                                 />
                               </label>
                               <label className="block space-y-1">
-                                <span className="font-mono text-xs text-muted">Rate</span>
+                                <span className="text-xs font-medium tracking-wide text-muted">Rate</span>
                                 <DeferredMoneyInput
                                   className={inputBase + " " + inputMono}
                                   valueCents={it.rateCents}
@@ -1721,7 +1721,7 @@ export default function CostingApp() {
                             </div>
 
                             <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                              <p className="font-mono text-xs text-muted">Total</p>
+                              <p className="text-xs font-medium tracking-wide text-muted">Total</p>
                               <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                                 {formatMoney(Math.round(it.hours * it.rateCents))}
                               </p>
@@ -1735,16 +1735,16 @@ export default function CostingApp() {
                       <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                         <thead>
                           <tr>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted" style={{ minWidth: 220 }}>
                               Role
                             </th>
-                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                            <th className="app-col-strict-100 px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                               Hours
                             </th>
-                            <th className="app-col-strict-100 px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums">
+                            <th className="app-col-strict-100 px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums">
                               Rate
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums" style={{ minWidth: 180 }}>
                               Total
                             </th>
                           </tr>
@@ -1834,7 +1834,7 @@ export default function CostingApp() {
                     </div>
 
                     <div className="border-t border-border px-4 py-3">
-                        <p className="font-mono text-xs text-muted">Labor subtotal</p>
+                        <p className="text-xs font-medium tracking-wide text-muted">Labor subtotal</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                           {formatMoney(totals.laborSubtotalCents)}
                         </p>
@@ -1899,7 +1899,7 @@ export default function CostingApp() {
 
                             <div className="mt-3 grid gap-3">
                               <label className="block space-y-1">
-                                <span className="font-mono text-xs text-muted">Item</span>
+                                <span className="text-xs font-medium tracking-wide text-muted">Item</span>
                                 <input
                                   className={inputBase}
                                   value={it.name}
@@ -1917,7 +1917,7 @@ export default function CostingApp() {
 
                               <div className="grid gap-3 sm:grid-cols-2">
                                 <label className="block space-y-1">
-                                  <span className="font-mono text-xs text-muted">Type</span>
+                                  <span className="text-xs font-medium tracking-wide text-muted">Type</span>
                                   <select
                                     className={inputBase}
                                     value={it.kind}
@@ -1940,7 +1940,7 @@ export default function CostingApp() {
                                 </label>
 
                                 <label className="block space-y-1">
-                                  <span className="font-mono text-xs text-muted">Value</span>
+                                  <span className="text-xs font-medium tracking-wide text-muted">Value</span>
                                   {it.kind === "flat" ? (
                                     <DeferredMoneyInput
                                       className={inputBase + " " + inputMono}
@@ -1958,7 +1958,7 @@ export default function CostingApp() {
                                     />
                                   ) : (
                                     <div className="relative">
-                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
+                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium tracking-wide text-muted">
                                         %
                                       </span>
                                       <DeferredNumberInput
@@ -1981,7 +1981,7 @@ export default function CostingApp() {
                               </div>
 
                               <div className="rounded-lg border border-border bg-paper/70 px-3 py-2">
-                                <p className="font-mono text-xs text-muted">Total</p>
+                                <p className="text-xs font-medium tracking-wide text-muted">Total</p>
                                 <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                                   {formatMoney(lineTotal)}
                                 </p>
@@ -1996,16 +1996,16 @@ export default function CostingApp() {
                       <table data-input-layout className="min-w-[740px] w-full text-left text-sm">
                         <thead>
                           <tr>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 220 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted" style={{ minWidth: 220 }}>
                               Item
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted" style={{ minWidth: 120 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted" style={{ minWidth: 120 }}>
                               Type
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 140 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums" style={{ minWidth: 140 }}>
                               Value
                             </th>
-                            <th className="px-2 py-2 font-mono text-xs font-semibold text-muted tabular-nums" style={{ minWidth: 180 }}>
+                            <th className="px-2 py-2 text-xs font-semibold tracking-wide text-muted tabular-nums" style={{ minWidth: 180 }}>
                               Total
                             </th>
                           </tr>
@@ -2074,7 +2074,7 @@ export default function CostingApp() {
                                     />
                                   ) : (
                                     <div className="relative">
-                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center font-mono text-xs text-muted">
+                                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium tracking-wide text-muted">
                                         %
                                       </span>
                                       <DeferredNumberInput
@@ -2123,7 +2123,7 @@ export default function CostingApp() {
                     </div>
 
                     <div className="border-t border-border px-4 py-3">
-                        <p className="font-mono text-xs text-muted">Overhead total</p>
+                        <p className="text-xs font-medium tracking-wide text-muted">Overhead total</p>
                         <p className="mt-1 font-mono text-sm tabular-nums text-ink">
                           {formatMoney(totals.overheadTotalCents)}{" "}
                           <span className="text-muted">
@@ -2188,7 +2188,7 @@ export default function CostingApp() {
                       <h3 className="font-serif text-base tracking-tight text-ink">Pricing</h3>
                       <div className="mt-3 grid gap-3">
                         <div>
-                          <label className="block font-mono text-xs text-muted">Markup %</label>
+                          <label className="block text-xs font-medium tracking-wide text-muted">Markup %</label>
                           <DeferredNumberInput
                             className={inputBase + " mt-1 " + inputMono}
                             value={selectedSheet.markupPct}
@@ -2201,7 +2201,7 @@ export default function CostingApp() {
                           />
                         </div>
                         <div>
-                          <label className="block font-mono text-xs text-muted">
+                          <label className="block text-xs font-medium tracking-wide text-muted">
                             Sales tax % (optional)
                           </label>
                           <DeferredNumberInput
@@ -2352,7 +2352,7 @@ function SummaryRow({
   return (
     <div className="flex items-baseline justify-between gap-4">
       <div className="min-w-0">
-        <p className="truncate font-mono text-xs text-muted">{label}</p>
+        <p className="truncate text-xs font-medium tracking-wide text-muted">{label}</p>
         {hint ? (
           <p className="mt-0.5 truncate font-mono text-[11px] text-muted">{hint}</p>
         ) : null}
