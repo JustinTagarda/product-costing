@@ -28,10 +28,10 @@
   --color-card: var(--card);
   --color-border: var(--border);
 
-  /* Fonts: Geist for body copy, Geist Mono for data, Space Grotesk gives
-     headings (font-serif throughout the app) a modern geometric voice. */
+  /* Fonts: Geist everywhere for text (font-serif headings reuse the same
+     face, just heavier), Geist Mono reserved for data. */
   --font-sans: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
-  --font-serif: var(--font-display), var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -235,12 +235,12 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
   background-color: color-mix(in srgb, var(--paper) 92%, var(--accent) 8%) !important;
 }
 
-/* Display headings (Space Grotesk via font-serif): optical tightening and
-   balanced wrapping for a modern editorial feel. */
+/* Display headings (font-serif, same Geist face at heavier weight): slight
+   optical tightening and balanced wrapping for a confident but consistent
+   heading voice. */
 .font-serif {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   text-wrap: balance;
-  font-feature-settings: "ss01";
 }
 
 /* Tabular figures everywhere numbers matter keeps columns and totals aligned. */
