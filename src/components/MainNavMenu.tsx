@@ -483,25 +483,7 @@ function SidebarSections({
             </p>
           ) : (
             <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-              <p className="truncate text-xs font-semibold text-ink">Justiniano Tagarda</p>
-              <p className="truncate text-[11px] text-muted">Full-Stack Developer</p>
-              <a
-                href="https://justintagarda.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 block truncate text-[11px] font-medium text-accent2 hover:underline"
-              >
-                justintagarda.com
-              </a>
-              <address className="not-italic">
-                <a
-                  href="mailto:justintagarda@gmail.com"
-                  className="mt-0.5 block truncate text-[11px] font-medium text-accent2 hover:underline"
-                >
-                  justintagarda@gmail.com
-                </a>
-              </address>
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1">
                 {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map((tech) => (
                   <span
                     key={tech}
@@ -511,7 +493,9 @@ function SidebarSections({
                   </span>
                 ))}
               </div>
-              <p className="mt-2.5 text-[10px] text-muted/80">© 2026 · All rights reserved</p>
+              <p className="mt-2.5 text-[10px] text-muted/80">
+                © 2026 JustinTagarda · All rights reserved
+              </p>
             </div>
           )}
         </footer>

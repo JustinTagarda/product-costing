@@ -989,26 +989,7 @@ export default function CostingApp() {
               </p>
 
               <footer className="mx-auto mt-8 w-full max-w-2xl border-t border-zinc-200/80 pt-5 text-center">
-                <p className="text-[11px] text-muted">
-                  © 2026{" "}
-                  <span className="font-semibold text-ink">Justiniano Tagarda</span> · Full-Stack
-                  Developer ·{" "}
-                  <a
-                    href="https://justintagarda.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-accent2 hover:underline"
-                  >
-                    justintagarda.com
-                  </a>{" "}
-                  ·{" "}
-                  <a
-                    href="mailto:justintagarda@gmail.com"
-                    className="font-medium text-accent2 hover:underline"
-                  >
-                    justintagarda@gmail.com
-                  </a>
-                </p>
+                <p className="text-[11px] text-muted">© 2026 JustinTagarda · All rights reserved</p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
                   {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map(
                     (tech) => (
