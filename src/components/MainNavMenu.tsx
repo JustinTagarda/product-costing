@@ -395,7 +395,7 @@ function BrandMark() {
       <p className="truncate font-serif text-[1.05rem] font-bold leading-tight tracking-tight text-ink">
         Product Costing
       </p>
-      <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
+      <p className="text-[11px] font-medium leading-snug text-muted">
         Material, Labor &amp; Overhead Tracker
       </p>
     </div>
