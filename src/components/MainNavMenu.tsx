@@ -396,7 +396,7 @@ function BrandMark() {
         Product Costing
       </p>
       <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
-        Pricing for Makers &amp; Sellers
+        Material, Labor &amp; Overhead Tracker
       </p>
     </div>
   );
