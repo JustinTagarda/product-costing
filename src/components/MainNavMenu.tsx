@@ -338,7 +338,7 @@ export function MainNavMenu({
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-zinc-100/90 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
-            <CloseIcon />
+            <PanelCloseIcon />
           </button>
         </div>
 
@@ -365,7 +365,7 @@ export function MainNavMenu({
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
-            {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
+            {isTabletExpanded ? <PanelCloseIcon /> : <MenuIcon />}
           </button>
 
           <div className={["ml-2 min-w-0 xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
@@ -666,7 +666,10 @@ function MenuIcon({ className }: IconProps) {
   );
 }
 
-function CloseIcon({ className }: IconProps) {
+// Collapse-panel glyph (sidebar outline with an inward chevron), used to close
+// or collapse the nav panel — distinct from a plain X so it doesn't read as
+// "close the app".
+function PanelCloseIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -677,10 +680,12 @@ function CloseIcon({ className }: IconProps) {
       stroke="currentColor"
       strokeWidth="1.8"
       strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
     >
-      <path d="M6 6l12 12" />
-      <path d="M18 6L6 18" />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <path d="M9.5 4.5v15" />
+      <path d="M16.5 9.5l-3 2.5 3 2.5" />
     </svg>
   );
 }
