@@ -136,14 +136,14 @@ export default function ComingSoonApp() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70"
+                className="rounded-xl app-btn-secondary px-4 py-2 text-sm"
                 onClick={goBack}
               >
                 Go back
               </button>
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm"
                 onClick={() => router.push("/")}
               >
                 Go to Dashboard

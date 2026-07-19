@@ -1381,7 +1381,7 @@ export default function PurchasesApp() {
               </button>
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={onNewPurchaseButtonClick}
                 disabled={isReadOnlyData}
               >
@@ -1615,7 +1615,7 @@ export default function PurchasesApp() {
 	                    </button>
 	                    <button
 	                      type="button"
-	                      className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+	                      className="rounded-lg app-btn-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
 	                      onClick={onNewPurchaseButtonClick}
 	                      disabled={savingDraftPurchase}
 	                    >
@@ -1913,7 +1913,7 @@ export default function PurchasesApp() {
 	                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
 	                      <button
 	                        type="button"
-	                        className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+	                        className="rounded-lg border border-border app-btn-danger px-2.5 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
 	                        onClick={() => void deletePurchase(row.id)}
 	                        disabled={isImportedRowSaving || isReadOnlyData}
 	                      >
@@ -2161,7 +2161,7 @@ export default function PurchasesApp() {
                           ) : null}
                           <button
                             type="button"
-                            className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-lg border border-border app-btn-danger px-2 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                             onClick={() => void deletePurchase(row.id)}
                             disabled={isImportedRowSaving || isReadOnlyData}
                           >

@@ -681,7 +681,7 @@ export default function MaterialsApp() {
               </label>
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => focusDraftNameInput()}
                 disabled={isReadOnlyData}
               >
@@ -782,7 +782,7 @@ export default function MaterialsApp() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-lg app-btn-primary px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => void commitDraftMaterial()}
                       disabled={savingDraftMaterial || Boolean(duplicateNameModal)}
                     >
@@ -857,7 +857,7 @@ export default function MaterialsApp() {
                   <div className="mt-3 flex justify-end">
                     <button
                       type="button"
-                      className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                      className="rounded-lg border border-border app-btn-danger px-2.5 py-1.5 text-xs"
                       onClick={() => void deleteMaterial(row.id)}
                       disabled={isReadOnlyData}
                     >
@@ -935,7 +935,7 @@ export default function MaterialsApp() {
                         <div className="flex justify-center">
                           <button
                             type="button"
-                            className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                            className="rounded-lg border border-border app-btn-danger px-2 py-1.5 text-xs"
                             onClick={() => void deleteMaterial(row.id)}
                             disabled={isReadOnlyData}
                           >
@@ -1062,7 +1062,7 @@ export default function MaterialsApp() {
                 <div className="mt-5 flex justify-end">
                   <button
                     type="button"
-                    className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                     onClick={() => {
                       setDuplicateNameModal(null);
                       focusDraftNameInput("auto");

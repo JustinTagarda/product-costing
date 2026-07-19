@@ -295,7 +295,7 @@ export default function SettingsApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                className="rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
                 onClick={resetDefaults}
                 disabled={isReadOnlyData}
               >
@@ -303,7 +303,7 @@ export default function SettingsApp() {
               </button>
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => void onSave()}
                 disabled={saving || isReadOnlyData}
               >

@@ -332,7 +332,7 @@ export default function ProductDetailsApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => router.push("/calculator?new=1")}
                 disabled={isReadOnlyData}
               >

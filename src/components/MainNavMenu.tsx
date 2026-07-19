@@ -266,7 +266,7 @@ export function MainNavMenu({
             <button
               type="button"
               aria-label={effectiveQuickAddLabel}
-              className="inline-flex h-9 items-center rounded-xl bg-accent px-2.5 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3"
+              className="inline-flex h-9 items-center rounded-xl app-btn-primary px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3"
               onClick={() => onQuickAdd()}
               disabled={Boolean(quickAddDisabled)}
             >

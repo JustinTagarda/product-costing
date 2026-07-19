@@ -116,7 +116,7 @@ export function DataSelectionModal({
         <div className="mt-4 flex justify-end">
           <button
             type="button"
-            className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/70"
+            className="rounded-xl app-btn-secondary px-4 py-2 text-sm"
             onClick={onClose}
           >
             Cancel

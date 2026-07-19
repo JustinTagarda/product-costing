@@ -297,7 +297,7 @@ export function ShareSheetModal({
             </select>
             <button
               type="button"
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl app-btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => void addShare()}
               disabled={savingShare}
             >
@@ -378,7 +378,7 @@ export function ShareSheetModal({
             </div>
             <button
               type="button"
-              className="rounded-lg border border-border bg-paper px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/75"
+              className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
               onClick={() => {
                 requestClose();
                 router.push("/activities");

@@ -429,14 +429,14 @@ export default function DashboardApp() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                        className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
                         onClick={() => router.push(`/products/${row.sheet.id}`)}
                       >
                         View
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                        className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
                         onClick={() => router.push("/calculator")}
                       >
                         Calculate

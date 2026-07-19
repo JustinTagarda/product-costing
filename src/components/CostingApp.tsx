@@ -944,7 +944,7 @@ export default function CostingApp() {
                 {supabase ? (
                   <button
                     type="button"
-                    className="grid w-[90%] grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center rounded-2xl bg-accent p-[4px] text-base font-semibold text-white shadow-[0_8px_24px_rgba(79,125,229,0.35)] transition hover:brightness-95 active:translate-y-px"
+                    className="grid w-[90%] grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center rounded-2xl bg-gradient-to-b from-[#6b93ea] via-accent to-[#3d66cc] p-[4px] text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_rgba(79,125,229,0.4)] transition hover:brightness-105 active:translate-y-px"
                     style={{ marginInline: "auto" }}
                     onClick={() => void signInWithGoogle()}
                   >
@@ -1048,7 +1048,7 @@ export default function CostingApp() {
               <div className="mt-6 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                  className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                   onClick={() => void newSheet()}
                   disabled={isReadOnlyData}
                 >
@@ -1102,7 +1102,7 @@ export default function CostingApp() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+              className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
               onClick={() => void newSheet()}
               disabled={isReadOnlyData}
             >
@@ -1110,7 +1110,7 @@ export default function CostingApp() {
             </button>
             <button
               type="button"
-              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+              className="rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
               onClick={importAll}
               disabled={isReadOnlyData}
             >
@@ -1118,7 +1118,7 @@ export default function CostingApp() {
             </button>
             <button
               type="button"
-              className="rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+              className="rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
               onClick={exportAll}
             >
               Export
@@ -1195,7 +1195,7 @@ export default function CostingApp() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                    className="rounded-xl app-btn-secondary px-3 py-2 text-sm active:translate-y-px"
                     onClick={duplicateSelected}
                     disabled={isReadOnlyData}
                   >
@@ -1203,7 +1203,7 @@ export default function CostingApp() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-xl border border-border bg-danger/10 px-3 py-2 text-sm font-semibold text-danger shadow-sm transition hover:bg-danger/15 active:translate-y-px"
+                    className="rounded-xl app-btn-danger px-3 py-2 text-sm active:translate-y-px"
                     onClick={deleteSelected}
                     disabled={isReadOnlyData}
                   >
@@ -1259,7 +1259,7 @@ export default function CostingApp() {
                       </div>
                       <button
                         type="button"
-                        className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                        className="rounded-xl app-btn-secondary px-3 py-2 text-sm active:translate-y-px"
                         onClick={() => {
                           if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
                             focusDraftMaterialSelect("smooth", { openPicker: true });
@@ -1623,7 +1623,7 @@ export default function CostingApp() {
                       </div>
                       <button
                         type="button"
-                        className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                        className="rounded-xl app-btn-secondary px-3 py-2 text-sm active:translate-y-px"
                         onClick={() => {
                           updateSelected((s) => ({
                             ...s,
@@ -1851,7 +1851,7 @@ export default function CostingApp() {
                       </div>
                       <button
                         type="button"
-                        className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                        className="rounded-xl app-btn-secondary px-3 py-2 text-sm active:translate-y-px"
                         onClick={() => {
                           updateSelected((s) => ({
                             ...s,
@@ -2252,7 +2252,7 @@ export default function CostingApp() {
                       <div className="mt-3 space-y-3">
                       <button
                         type="button"
-                        className="w-full rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px"
+                        className="w-full rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
                         onClick={() => {
                           const stamp = new Date().toISOString().slice(0, 10);
                           downloadJson(`sheet-${stamp}.json`, {
@@ -2268,7 +2268,7 @@ export default function CostingApp() {
 
                       <button
                         type="button"
-                        className="w-full rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                        className="w-full rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                         onClick={() => {
                           const lines = [
                             ["Product", selectedSheet.name || "Untitled"],

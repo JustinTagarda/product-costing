@@ -269,7 +269,7 @@ export default function ProductsApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => router.push("/calculator?new=1")}
                 disabled={isReadOnlyData}
               >
@@ -335,21 +335,21 @@ export default function ProductsApp() {
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
                           onClick={() => router.push(`/products/${sheet.id}`)}
                         >
                           Details
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
                           onClick={() => router.push("/calculator")}
                         >
                           Calculator
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-lg border border-border app-btn-danger px-2.5 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => void deleteProduct(sheet)}
                           disabled={deletingProductId === sheet.id || isReadOnlyData}
                         >
@@ -416,7 +416,7 @@ export default function ProductsApp() {
                             </button>
                             <button
                               type="button"
-                              className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-lg border border-border app-btn-danger px-2.5 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                               onClick={() => void deleteProduct(sheet)}
                               disabled={deletingProductId === sheet.id || isReadOnlyData}
                             >

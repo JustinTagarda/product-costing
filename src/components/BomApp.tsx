@@ -644,7 +644,7 @@ export default function BomApp() {
               </label>
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
+                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => void createBom()}
                 disabled={isReadOnlyData}
               >
@@ -714,14 +714,14 @@ export default function BomApp() {
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
+                          className="rounded-lg app-btn-secondary px-2.5 py-1.5 text-xs"
                           onClick={() => setSelectedId(item.id)}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                          className="rounded-lg border border-border app-btn-danger px-2.5 py-1.5 text-xs"
                           onClick={() => void deleteBom(item.id)}
                           disabled={isReadOnlyData}
                         >
@@ -776,7 +776,7 @@ export default function BomApp() {
                         <td className="p-2">
                           <button
                             type="button"
-                            className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                            className="rounded-lg border border-border app-btn-danger px-2 py-1.5 text-xs"
                             onClick={() => void deleteBom(item.id)}
                             disabled={isReadOnlyData}
                           >
@@ -841,7 +841,7 @@ export default function BomApp() {
               <div className="border-t border-border px-4 py-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-serif text-xl tracking-tight text-ink">Components</h3>
-                  <button type="button" className="rounded-xl border border-border bg-paper/55 px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/70 active:translate-y-px" onClick={() => void addLine()} disabled={isReadOnlyData}>
+                  <button type="button" className="rounded-xl app-btn-secondary px-3 py-2 text-sm active:translate-y-px" onClick={() => void addLine()} disabled={isReadOnlyData}>
                     Add line
                   </button>
                 </div>
@@ -1143,7 +1143,7 @@ export default function BomApp() {
                             <input className={inputBase} value={line.notes} onChange={(e) => updateLine(selectedBom.id, line.id, (row) => ({ ...row, notes: e.target.value }))} />
                           </td>
                           <td className="p-2">
-                            <button type="button" className="rounded-lg border border-border bg-danger/10 px-2 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/15" onClick={() => void removeLine(line.id)} disabled={isReadOnlyData}>
+                            <button type="button" className="rounded-lg border border-border app-btn-danger px-2 py-1.5 text-xs" onClick={() => void removeLine(line.id)} disabled={isReadOnlyData}>
                               Remove
                             </button>
                           </td>
