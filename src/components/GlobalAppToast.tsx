@@ -11,9 +11,9 @@ type GlobalAppToastProps = {
 };
 
 function toastBackground(kind: GlobalNotice["kind"]): string {
-  if (kind === "error") return "#FA8072";
-  if (kind === "success") return "#B0E0E6";
-  return "#FFFFF0";
+  if (kind === "error") return "#fef2f2";
+  if (kind === "success") return "#f0fdf4";
+  return "#ffffff";
 }
 
 export function GlobalAppToast({ notice, onDismiss }: GlobalAppToastProps) {

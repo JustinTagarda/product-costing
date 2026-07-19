@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #ffffff;
-  --ink: #000000;
-  --muted: #3f3f46;
+  /* Softened neutrals: near-black ink on a faint warm-gray paper keeps contrast
+     high (AAA) while letting white cards read as elevated surfaces. */
+  --paper: #fafafa;
+  --ink: #18181b;
+  --muted: #52525b;
   --accent: #4f7de5;
   --accent2: #1d4ed8;
   --danger: #b91c1c;
+  --success: #15803d;
   --card: #ffffff;
-  --border: #d4d4d8;
+  --border: #e4e4e7;
   --app-shell-sidebar-offset: 0px;
   --app-shell-topbar-height: 72px;
 }
@@ -21,6 +24,7 @@
   --color-accent: var(--accent);
   --color-accent2: var(--accent2);
   --color-danger: var(--danger);
+  --color-success: var(--success);
   --color-card: var(--card);
   --color-border: var(--border);
 
@@ -33,9 +37,17 @@
 body {
   min-height: 100dvh;
   background-color: var(--paper);
+  /* Faint top glow gives pages depth without competing with content. */
+  background-image: radial-gradient(
+    1100px 420px at 50% -140px,
+    color-mix(in srgb, var(--accent) 7%, transparent),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
   color: var(--ink);
   font-family: var(--font-body), "Segoe UI", Roboto, Arial, sans-serif;
   text-rendering: geometricPrecision;
+  accent-color: var(--accent);
 }
 
 button:disabled {
@@ -61,8 +73,14 @@ button:disabled {
   display: none !important;
 }
 
+/* Unify corner rounding: gentle 10px everywhere, but keep true circles
+   (avatars, dots) fully round. */
 :where([class*="rounded"], [style*="border-radius"]) {
-  border-radius: 6px !important;
+  border-radius: 10px !important;
+}
+
+:where([class*="rounded-full"]) {
+  border-radius: 9999px !important;
 }
 
 table {
@@ -107,6 +125,21 @@ table > :is(thead, tbody, tfoot) > tr > :is(th, td):first-child {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent;
+}
+
+.app-table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.app-table-scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 8px;
+}
+
+.app-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 table > thead > tr:first-child > :is(th, td) {
@@ -114,7 +147,18 @@ table > thead > tr:first-child > :is(th, td) {
 }
 
 table > thead > tr > th {
-  background-color: #f5f5f5;
+  background-color: color-mix(in srgb, var(--paper) 70%, var(--border) 30%);
+  color: var(--muted);
+}
+
+/* Numbers align cleanly in dense editors. */
+table td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gentle hover cue on data rows (draft-entry rows keep their own styling). */
+table > tbody > tr:not(.app-table-new-entry-row):hover > td {
+  background-color: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 table > :is(thead, tbody, tfoot) > tr.app-table-new-entry-row :is(input, textarea)::placeholder {
@@ -181,7 +225,7 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
 
 .app-popup-notification {
   border: 1px solid var(--border);
-  background-color: #fffff0;
+  background-color: #ffffff;
   color: var(--ink);
   padding: 12px 16px;
   border-radius: 10px;
@@ -193,19 +237,33 @@ table[data-input-layout] td :is(input:not([type="checkbox"]):not([type="radio"])
 .app-global-toast {
   position: fixed;
   left: calc(var(--app-shell-sidebar-offset) + ((100vw - var(--app-shell-sidebar-offset)) / 2));
-  bottom: 14px;
+  bottom: 18px;
   transform: translateX(-50%);
   z-index: 160;
   max-width: min(680px, calc(100vw - var(--app-shell-sidebar-offset) - 1.5rem));
   width: max-content;
   border: 1px solid var(--border);
+  border-left-width: 4px;
   color: var(--ink);
-  padding: 12px 16px;
+  padding: 11px 16px;
   border-radius: 10px;
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
   font-size: 14px;
+  font-weight: 500;
   line-height: 1.4;
-  pointer-events: none;
+  animation: popIn 0.18s ease-out;
+}
+
+.app-global-toast[data-toast-kind="success"] {
+  border-left-color: var(--success);
+}
+
+.app-global-toast[data-toast-kind="error"] {
+  border-left-color: var(--danger);
+}
+
+.app-global-toast[data-toast-kind="info"] {
+  border-left-color: var(--accent);
 }
 
 .app-modal-overlay {

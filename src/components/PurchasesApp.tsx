@@ -337,7 +337,7 @@ function isDraftPurchaseComplete(row: DraftPurchaseRow): boolean {
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
-    "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
+    "shadow-[0_8px_28px_rgba(0,0,0,.06)]",
     "backdrop-blur-md",
   ].join(" ");
 }
@@ -1326,8 +1326,8 @@ export default function PurchasesApp() {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <div className="h-6 w-40 rounded bg-ink/10" />
-          <div className={cardClassName() + " mt-6 h-[420px]"} />
+          <div className="h-6 w-40 animate-pulse rounded bg-ink/10" />
+          <div className={cardClassName() + " mt-6 h-[420px] animate-pulse"} />
         </div>
       </div>
     );

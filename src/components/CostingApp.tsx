@@ -183,7 +183,7 @@ function downloadJson(filename: string, data: unknown): void {
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
-    "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
+    "shadow-[0_8px_28px_rgba(0,0,0,.06)]",
     "backdrop-blur-md",
   ].join(" ");
 }
@@ -906,10 +906,10 @@ export default function CostingApp() {
     return (
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
-          <div className="h-6 w-40 rounded bg-ink/10" />
+          <div className="h-6 w-40 animate-pulse rounded bg-ink/10" />
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
-            <div className={cardClassName() + " h-[520px]"} />
-            <div className={cardClassName() + " h-[520px]"} />
+            <div className={cardClassName() + " h-[520px] animate-pulse"} />
+            <div className={cardClassName() + " h-[520px] animate-pulse"} />
           </div>
         </div>
       </div>
@@ -922,19 +922,29 @@ export default function CostingApp() {
         <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-4xl flex-col">
           <main className="flex flex-1 items-center justify-center">
             <section className="w-full max-w-xl text-center">
-              <p className="text-4xl font-semibold tracking-tight text-ink md:text-5xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent">
                 Welcome to
               </p>
-              <h1 className="mt-2 text-5xl font-bold tracking-tight text-ink md:text-6xl">
+              <h1 className="mt-3 text-5xl font-bold tracking-tight text-ink md:text-6xl">
                 Product Costing
                 <span className="block">for Small Business</span>
               </h1>
+              <p className="mx-auto mt-5 max-w-md text-base leading-7 text-muted">
+                Price your products with confidence — materials, labor, overhead, and
+                margins in one simple ledger.
+              </p>
 
-              <div className="mx-auto mt-10 w-full max-w-md space-y-4">
+              <ul className="mx-auto mt-6 flex max-w-lg flex-wrap items-center justify-center gap-2 text-xs font-medium text-muted">
+                <li className="rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">Cost sheets &amp; margins</li>
+                <li className="rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">Materials &amp; purchases</li>
+                <li className="rounded-full border border-border bg-card px-3 py-1.5 shadow-sm">Share with your team</li>
+              </ul>
+
+              <div className="mx-auto mt-8 w-full max-w-md space-y-4">
                 {supabase ? (
                   <button
                     type="button"
-                    className="grid w-[90%] grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center rounded-2xl bg-[#4f7de5] p-[4px] text-base font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px"
+                    className="grid w-[90%] grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] items-center rounded-2xl bg-accent p-[4px] text-base font-semibold text-white shadow-[0_8px_24px_rgba(79,125,229,0.35)] transition hover:brightness-95 active:translate-y-px"
                     style={{ marginInline: "auto" }}
                     onClick={() => void signInWithGoogle()}
                   >
@@ -974,7 +984,7 @@ export default function CostingApp() {
                 )}
               </div>
 
-              <p className="mx-auto mt-10 max-w-2xl text-base text-muted">
+              <p className="mx-auto mt-6 max-w-2xl text-sm text-muted">
                 Sign in with Google to access and sync your costing data across devices.
               </p>
 
@@ -1005,8 +1015,8 @@ export default function CostingApp() {
         <div className="w-full animate-[fadeUp_.45s_ease-out]">
           <p className="font-mono text-xs text-muted">Loading sheets...</p>
           <div className="mt-6 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
-            <div className={cardClassName() + " h-[520px]"} />
-            <div className={cardClassName() + " h-[520px]"} />
+            <div className={cardClassName() + " h-[520px] animate-pulse"} />
+            <div className={cardClassName() + " h-[520px] animate-pulse"} />
           </div>
         </div>
       </div>

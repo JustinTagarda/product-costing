@@ -289,7 +289,7 @@ export function MainNavMenu({
       <aside
         aria-label="Main menu"
         className={[
-          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-zinc-300 bg-zinc-200/95 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur transition-transform duration-200 ease-out md:hidden",
+          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-zinc-300 bg-zinc-100/95 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur transition-transform duration-200 ease-out md:hidden",
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
@@ -303,7 +303,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label="Close menu"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
             <CloseIcon />
@@ -323,14 +323,14 @@ export function MainNavMenu({
 
       <aside
         aria-label="Main menu"
-        className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-300 bg-zinc-200/95 backdrop-blur md:flex"
+        className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-300 bg-zinc-100/95 backdrop-blur md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
         <div className="flex h-[65px] items-center border-b border-zinc-300 px-3">
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
@@ -407,8 +407,8 @@ function SidebarSections({
                   "flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
                   buttonClasses,
                   isActive
-                    ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                    : "border-transparent text-ink hover:bg-zinc-100/75",
+                    ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                    : "border-transparent text-ink hover:bg-white/80",
                 ].join(" ")}
                 onClick={() => onNavigate(item)}
               >
@@ -429,8 +429,8 @@ function SidebarSections({
               "mt-2 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
               isSettingsActive
-                ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                : "border-transparent text-ink hover:bg-zinc-100/75",
+                ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                : "border-transparent text-ink hover:bg-white/80",
             ].join(" ")}
             onClick={() => onNavigate({ label: "Settings", href: "/settings" })}
           >
@@ -446,8 +446,8 @@ function SidebarSections({
               "mt-1 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
               isActivitiesActive
-                ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                : "border-transparent text-ink hover:bg-zinc-100/75",
+                ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
+                : "border-transparent text-ink hover:bg-white/80",
             ].join(" ")}
             onClick={() => onNavigate({ label: "Activities", href: "/activities" })}
           >
@@ -459,7 +459,7 @@ function SidebarSections({
             type="button"
             title={compact ? "Log out" : undefined}
             className={[
-              "mt-1 flex w-full items-center rounded-lg border-l-2 border-transparent py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              "mt-1 flex w-full items-center rounded-lg border-l-2 border-transparent py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
             ].join(" ")}
             onClick={onLogout}

@@ -23,7 +23,7 @@ const KNOWN_MENU_ITEMS = new Set([
 function cardClassName(): string {
   return [
     "rounded-2xl border border-border bg-card/80",
-    "shadow-[0_18px_55px_rgba(0,0,0,.08)]",
+    "shadow-[0_8px_28px_rgba(0,0,0,.06)]",
     "backdrop-blur-md",
   ].join(" ");
 }
