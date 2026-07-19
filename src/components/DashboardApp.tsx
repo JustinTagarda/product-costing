@@ -296,7 +296,7 @@ export default function DashboardApp() {
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.25rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.75rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3.25rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
           <header className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div>
-              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">Dashboard</h1>
+              <h1 className="font-serif text-[1.75rem] leading-[1.12] tracking-tight text-ink sm:text-[2rem]">Dashboard</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
                 Overview of total costs, margin health, and recent products. Use the top bar to search and jump
                 quickly into product details or the cost calculator.

@@ -616,7 +616,7 @@ export default function BomApp() {
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.5rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3rem)] w-full flex-col animate-[fadeUp_.55s_ease-out]">
           <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-ink">
+              <h1 className="font-serif text-[1.75rem] leading-[1.12] tracking-tight text-ink sm:text-[2rem]">
                 Bill of Materials
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
