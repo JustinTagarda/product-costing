@@ -391,21 +391,13 @@ export function MainNavMenu({
 
 function BrandMark() {
   return (
-    <div className="flex min-w-0 items-center gap-2.5 text-left">
-      <span
-        aria-hidden="true"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-accent to-accent2 text-[13px] font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_6px_rgba(79,125,229,0.35)]"
-      >
-        PC
-      </span>
-      <div className="min-w-0">
-        <p className="truncate font-serif text-[1.05rem] font-bold leading-tight tracking-tight text-ink">
-          Product Costing
-        </p>
-        <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
-          for Small Business
-        </p>
-      </div>
+    <div className="min-w-0 text-left">
+      <p className="truncate font-serif text-[1.05rem] font-bold leading-tight tracking-tight text-ink">
+        Product Costing
+      </p>
+      <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
+        for Small Business
+      </p>
     </div>
   );
 }
