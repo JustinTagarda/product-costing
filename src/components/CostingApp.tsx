@@ -1202,7 +1202,9 @@ export default function CostingApp() {
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+              {/* The editor already sits beside the 320px sheet list; only split off a
+                  side summary column when there is real width left for the form. */}
+              <div className="mt-6 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="min-w-0 space-y-6">
                   <section className={panelClassName()}>
                     <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -2137,7 +2139,7 @@ export default function CostingApp() {
                   </section>
                 </div>
                 <div className="space-y-6">
-                  <section className={panelClassName() + " lg:sticky lg:top-6"}>
+                  <section className={panelClassName() + " 2xl:sticky 2xl:top-6"}>
                     <div className="border-b border-border px-4 py-3">
                       <h2 className="font-serif text-lg tracking-tight text-ink">Summary</h2>
                     </div>
