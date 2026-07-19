@@ -28,7 +28,7 @@ type MainNavMenuProps = {
 const TOP_BAR_HEIGHT = 65;
 const DESKTOP_SIDEBAR_WIDTH = 272;
 const TABLET_EXPANDED_SIDEBAR_WIDTH = 248;
-const TABLET_COLLAPSED_SIDEBAR_WIDTH = 88;
+const TABLET_COLLAPSED_SIDEBAR_WIDTH = 78;
 
 const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Dashboard", href: "/" },
@@ -358,7 +358,14 @@ export function MainNavMenu({
         className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-200 bg-white/75 backdrop-blur-md md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[65px] items-center pl-[3px] pr-2">
+        <div
+          className={[
+            "flex h-[65px] items-center",
+            isTabletExpanded
+              ? "pl-[3px] pr-2"
+              : "justify-center px-2 xl:justify-start xl:pl-[3px] xl:pr-2",
+          ].join(" ")}
+        >
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
