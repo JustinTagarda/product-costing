@@ -396,7 +396,7 @@ function BrandMark() {
         Product Costing
       </p>
       <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
-        for Small Business
+        Pricing for Makers &amp; Sellers
       </p>
     </div>
   );
@@ -666,26 +666,25 @@ function MenuIcon({ className }: IconProps) {
   );
 }
 
-// Collapse-panel glyph (sidebar outline with an inward chevron), used to close
-// or collapse the nav panel — distinct from a plain X so it doesn't read as
-// "close the app".
+// Double-chevron collapse glyph: an unambiguous, widely recognized "tuck this
+// panel away" affordance (distinct from a plain X so it doesn't read as
+// "close the app").
 function PanelCloseIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="20"
-      height="20"
+      width="18"
+      height="18"
       aria-hidden="true"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
-      <path d="M9.5 4.5v15" />
-      <path d="M16.5 9.5l-3 2.5 3 2.5" />
+      <path d="M11 6l-5 6 5 6" />
+      <path d="M18 6l-5 6 5 6" />
     </svg>
   );
 }
