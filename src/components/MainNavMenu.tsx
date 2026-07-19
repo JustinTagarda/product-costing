@@ -475,26 +475,45 @@ function SidebarSections({
         <footer className="mt-3 border-t border-zinc-200/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
             <p
-              className="text-center text-[10px] font-normal leading-4 text-muted"
+              className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-muted"
               title="© 2026 Justiniano Tagarda · Full-Stack Developer"
             >
               JT
               <span className="sr-only">© 2026 Justiniano Tagarda · Full-Stack Developer</span>
             </p>
           ) : (
-            <div className="space-y-1 text-[10px] font-normal leading-4 text-muted">
-              <p>© 2026 Justiniano Tagarda · Full-Stack Developer</p>
+            <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
+              <div className="flex items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-accent to-accent2 text-[11px] font-bold text-white shadow-sm"
+                >
+                  JT
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-ink">Justiniano Tagarda</p>
+                  <p className="truncate text-[11px] text-muted">Full-Stack Developer</p>
+                </div>
+              </div>
               <address className="not-italic">
                 <a
                   href="mailto:justintagarda@gmail.com"
-                  className="hover:underline"
+                  className="mt-2 block truncate text-[11px] font-medium text-accent2 hover:underline"
                 >
-                  Email: justintagarda@gmail.com
+                  justintagarda@gmail.com
                 </a>
               </address>
-              <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
-              <p>Hosting: Vercel</p>
-              <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map((tech) => (
+                  <span
+                    key={tech}
+                    className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-muted"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2.5 text-[10px] text-muted/80">© 2026 · All rights reserved</p>
             </div>
           )}
         </footer>

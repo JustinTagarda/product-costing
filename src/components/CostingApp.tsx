@@ -988,16 +988,30 @@ export default function CostingApp() {
                 Sign in with Google to access and sync your costing data across devices.
               </p>
 
-              <footer className="mx-auto mt-8 w-full max-w-2xl border-t border-zinc-300/80 pt-4 text-center text-[11px] font-normal leading-5 text-muted">
-                <p>© 2026 Justiniano Tagarda · Full-Stack Developer</p>
-                <address className="not-italic">
-                  <a href="mailto:justintagarda@gmail.com" className="hover:underline">
-                    Email: justintagarda@gmail.com
+              <footer className="mx-auto mt-8 w-full max-w-2xl border-t border-zinc-200/80 pt-5 text-center">
+                <p className="text-[11px] text-muted">
+                  © 2026{" "}
+                  <span className="font-semibold text-ink">Justiniano Tagarda</span> · Full-Stack
+                  Developer ·{" "}
+                  <a
+                    href="mailto:justintagarda@gmail.com"
+                    className="font-medium text-accent2 hover:underline"
+                  >
+                    justintagarda@gmail.com
                   </a>
-                </address>
-                <p>Stack: Next.js, React, TypeScript, Tailwind CSS</p>
-                <p>Hosting: Vercel</p>
-                <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
+                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                  {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map(
+                    (tech) => (
+                      <span
+                        key={tech}
+                        className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[10px] font-medium text-muted"
+                      >
+                        {tech}
+                      </span>
+                    ),
+                  )}
+                </div>
               </footer>
 
               <GlobalAppToast notice={notice} onDismiss={dismiss} />
