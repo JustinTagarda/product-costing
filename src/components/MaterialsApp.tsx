@@ -38,7 +38,7 @@ type DraftMaterialRow = {
 };
 
 const inputBase =
-  "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
+  "w-full rounded-xl border border-border bg-white px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm transition-colors hover:border-zinc-300 focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
 const inputMono = "tabular-nums font-mono tracking-tight";
 const MATERIAL_CODE_PREFIX = "MA-";
 const STANDARD_USABLE_UNITS = [

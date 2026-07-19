@@ -203,14 +203,14 @@ export function MainNavMenu({
   return (
     <>
       <header
-        className="fixed left-0 right-0 top-0 z-[55] border-b border-zinc-300 bg-zinc-100/95 backdrop-blur"
+        className="fixed left-0 right-0 top-0 z-[55] border-b border-zinc-200 bg-white/80 backdrop-blur-md"
         style={{ left: "var(--app-shell-sidebar-offset)" }}
       >
         <div className="flex h-[65px] items-center gap-1.5 px-2.5 sm:gap-2 sm:px-4 lg:px-6">
           <button
             type="button"
             aria-label="Open navigation menu"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-200/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 md:hidden"
             onClick={() => setIsMobileDrawerOpen(true)}
           >
             <MenuIcon />
@@ -230,7 +230,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label={effectiveShareLabel}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:gap-2 sm:px-3"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:gap-2 sm:px-3"
             onClick={handleShareClick}
             disabled={Boolean(shareDisabled)}
           >
@@ -241,7 +241,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label="Open profile"
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:gap-2"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:gap-2"
             onClick={() => (onProfileClick || onSettings)()}
           >
             <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-200">
@@ -289,13 +289,13 @@ export function MainNavMenu({
       <aside
         aria-label="Main menu"
         className={[
-          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-zinc-300 bg-zinc-100/95 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur transition-transform duration-200 ease-out md:hidden",
+          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-zinc-200 bg-white/75 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur-md transition-transform duration-200 ease-out md:hidden",
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <div className="flex h-[65px] items-center justify-between border-b border-zinc-300 px-3">
+        <div className="flex h-[65px] items-center justify-between border-b border-zinc-200 px-3">
           <div className="min-w-0 text-left">
-            <p className="text-[1.14rem] font-bold leading-tight tracking-tight text-black">
+            <p className="font-serif text-[1.14rem] font-bold leading-tight tracking-tight text-ink">
               Product Costing
             </p>
             <p className="text-sm font-semibold leading-tight text-ink">for Small Business</p>
@@ -303,7 +303,7 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label="Close menu"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
             <CloseIcon />
@@ -323,21 +323,21 @@ export function MainNavMenu({
 
       <aside
         aria-label="Main menu"
-        className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-300 bg-zinc-100/95 backdrop-blur md:flex"
+        className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-200 bg-white/75 backdrop-blur-md md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[65px] items-center border-b border-zinc-300 px-3">
+        <div className="flex h-[65px] items-center border-b border-zinc-200 px-3">
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
           </button>
 
           <div className={["ml-2 min-w-0 text-left xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
-            <p className="truncate text-[1.14rem] font-bold leading-tight tracking-tight text-black">
+            <p className="truncate font-serif text-[1.14rem] font-bold leading-tight tracking-tight text-ink">
               Product Costing
             </p>
             <p className="truncate text-sm font-semibold leading-tight text-ink">
@@ -407,8 +407,8 @@ function SidebarSections({
                   "flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
                   buttonClasses,
                   isActive
-                    ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                    : "border-transparent text-ink hover:bg-white/80",
+                    ? "border-accent bg-accent/10 text-accent2 shadow-[0_1px_3px_rgba(0,0,0,.05)]"
+                    : "border-transparent text-ink hover:bg-zinc-100/90",
                 ].join(" ")}
                 onClick={() => onNavigate(item)}
               >
@@ -419,7 +419,7 @@ function SidebarSections({
           })}
         </div>
 
-        <div className="mt-4 border-t border-zinc-300 pt-3">
+        <div className="mt-4 border-t border-zinc-200 pt-3">
           <SidebarSectionLabel compact={compact} label="Account" compactLabel="A" />
           <Link
             href="/settings"
@@ -429,8 +429,8 @@ function SidebarSections({
               "mt-2 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
               isSettingsActive
-                ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                : "border-transparent text-ink hover:bg-white/80",
+                ? "border-accent bg-accent/10 text-accent2 shadow-[0_1px_3px_rgba(0,0,0,.05)]"
+                : "border-transparent text-ink hover:bg-zinc-100/90",
             ].join(" ")}
             onClick={() => onNavigate({ label: "Settings", href: "/settings" })}
           >
@@ -446,8 +446,8 @@ function SidebarSections({
               "mt-1 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
               isActivitiesActive
-                ? "border-accent bg-white text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
-                : "border-transparent text-ink hover:bg-white/80",
+                ? "border-accent bg-accent/10 text-accent2 shadow-[0_1px_3px_rgba(0,0,0,.05)]"
+                : "border-transparent text-ink hover:bg-zinc-100/90",
             ].join(" ")}
             onClick={() => onNavigate({ label: "Activities", href: "/activities" })}
           >
@@ -459,7 +459,7 @@ function SidebarSections({
             type="button"
             title={compact ? "Log out" : undefined}
             className={[
-              "mt-1 flex w-full items-center rounded-lg border-l-2 border-transparent py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
+              "mt-1 flex w-full items-center rounded-lg border-l-2 border-transparent py-2.5 text-left text-sm font-semibold text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
             ].join(" ")}
             onClick={onLogout}
@@ -472,7 +472,7 @@ function SidebarSections({
 
       <div className="px-2 py-3">
 
-        <footer className="mt-3 border-t border-zinc-300/80 pt-3" aria-label="Sidebar footer">
+        <footer className="mt-3 border-t border-zinc-200/80 pt-3" aria-label="Sidebar footer">
           {compact ? (
             <p
               className="text-center text-[10px] font-normal leading-4 text-muted"
