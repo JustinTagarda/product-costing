@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -36,7 +37,6 @@ const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Materials", href: "/materials" },
   { label: "Purchases", href: "/purchases" },
 ];
-const ACTIVITIES_NAV_ITEM = { label: "Activities", href: "/activities" } as const;
 
 export function MainNavMenu({
   activeItem,
@@ -166,14 +166,6 @@ export function MainNavMenu({
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileDrawerOpen]);
-
-  function navigateTo(item: { label: string; href?: string }) {
-    if (item.href) {
-      if (pathname !== item.href) router.push(item.href);
-      return;
-    }
-    router.push(`/coming-soon?section=${encodeURIComponent(item.label)}`);
-  }
 
   function isMainItemActive(item: { label: string; href?: string }): boolean {
     if (activeItem) return activeItem === item.label;
@@ -324,9 +316,7 @@ export function MainNavMenu({
           isMainItemActive={isMainItemActive}
           isSettingsActive={activeItem === "Settings" || pathname === "/settings"}
           isActivitiesActive={activeItem === "Activities" || pathname === "/activities"}
-          onNavigate={(item) => runAction(() => navigateTo(item))}
-          onSettings={() => runAction(onSettings)}
-          onActivities={() => runAction(() => navigateTo(ACTIVITIES_NAV_ITEM))}
+          onNavigate={() => setIsMobileDrawerOpen(false)}
           onLogout={() => runAction(onLogout)}
         />
       </aside>
@@ -365,9 +355,7 @@ export function MainNavMenu({
           isMainItemActive={isMainItemActive}
           isSettingsActive={activeItem === "Settings" || pathname === "/settings"}
           isActivitiesActive={activeItem === "Activities" || pathname === "/activities"}
-          onNavigate={navigateTo}
-          onSettings={onSettings}
-          onActivities={() => navigateTo(ACTIVITIES_NAV_ITEM)}
+          onNavigate={() => {}}
           onLogout={onLogout}
         />
       </aside>
@@ -385,8 +373,6 @@ type SidebarSectionsProps = {
   isSettingsActive: boolean;
   isActivitiesActive: boolean;
   onNavigate: (item: { label: string; href?: string }) => void;
-  onSettings: () => void;
-  onActivities: () => void;
   onLogout: () => void;
 };
 
@@ -400,8 +386,6 @@ function SidebarSections({
   isSettingsActive,
   isActivitiesActive,
   onNavigate,
-  onSettings,
-  onActivities,
   onLogout,
 }: SidebarSectionsProps) {
   const buttonClasses = compactButtonClasses || (compact ? "justify-center px-2" : "justify-start px-3");
@@ -414,10 +398,11 @@ function SidebarSections({
           {items.map((item) => {
             const isActive = isMainItemActive(item);
             return (
-              <button
+              <Link
                 key={item.label}
-                type="button"
+                href={item.href ?? `/coming-soon?section=${encodeURIComponent(item.label)}`}
                 title={compact ? item.label : undefined}
+                aria-current={isActive ? "page" : undefined}
                 className={[
                   "flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
                   buttonClasses,
@@ -429,16 +414,17 @@ function SidebarSections({
               >
                 <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>{item.label}</span>
                 {compact ? <span className={compactLabelClasses || "md:hidden"}>{item.label.slice(0, 1).toUpperCase()}</span> : null}
-              </button>
+              </Link>
             );
           })}
         </div>
 
         <div className="mt-4 border-t border-zinc-300 pt-3">
           <SidebarSectionLabel compact={compact} label="Account" compactLabel="A" />
-          <button
-            type="button"
+          <Link
+            href="/settings"
             title={compact ? "Settings" : undefined}
+            aria-current={isSettingsActive ? "page" : undefined}
             className={[
               "mt-2 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
@@ -446,15 +432,16 @@ function SidebarSections({
                 ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
                 : "border-transparent text-ink hover:bg-zinc-100/75",
             ].join(" ")}
-            onClick={onSettings}
+            onClick={() => onNavigate({ label: "Settings", href: "/settings" })}
           >
             <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Settings</span>
             {compact ? <span className={compactLabelClasses || "md:hidden"}>S</span> : null}
-          </button>
+          </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/activities"
             title={compact ? "Activities" : undefined}
+            aria-current={isActivitiesActive ? "page" : undefined}
             className={[
               "mt-1 flex w-full items-center rounded-lg border-l-2 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45",
               buttonClasses,
@@ -462,11 +449,11 @@ function SidebarSections({
                 ? "border-accent bg-zinc-100 text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]"
                 : "border-transparent text-ink hover:bg-zinc-100/75",
             ].join(" ")}
-            onClick={onActivities}
+            onClick={() => onNavigate({ label: "Activities", href: "/activities" })}
           >
             <span className={compactFullLabelClasses || (compact ? "hidden md:inline" : "")}>Activities</span>
             {compact ? <span className={compactLabelClasses || "md:hidden"}>A</span> : null}
-          </button>
+          </Link>
 
           <button
             type="button"

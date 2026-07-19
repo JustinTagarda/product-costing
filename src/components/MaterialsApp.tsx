@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -29,7 +31,6 @@ import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { goToWelcomePage } from "@/lib/navigation";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type DraftMaterialRow = {
   name: string;
   unit: string;
@@ -225,7 +226,8 @@ export default function MaterialsApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
@@ -248,10 +250,6 @@ export default function MaterialsApp() {
   const mobileDraftCardRef = useRef<HTMLElement | null>(null);
   const mobileDraftNameInputRef = useRef<HTMLInputElement | null>(null);
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -606,7 +604,7 @@ export default function MaterialsApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   const filteredMaterials = useMemo(() => {
@@ -692,7 +690,7 @@ export default function MaterialsApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">

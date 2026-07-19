@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { computeTotals } from "@/lib/costing";
 import type { CostSheet } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -20,7 +22,6 @@ import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 
 function cardClassName(): string {
   return [
@@ -50,7 +51,8 @@ export default function DashboardApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loadingSheets, setLoadingSheets] = useState(false);
@@ -60,10 +62,6 @@ export default function DashboardApp() {
 
   const user = session?.user ?? null;
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -204,7 +202,7 @@ export default function DashboardApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   const filteredSheets = useMemo(() => {
@@ -311,7 +309,7 @@ export default function DashboardApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Total Cost" value={formatMoney(kpis.totalCostCents)} note={`${dashboardRows.length} product(s)`} />
@@ -432,14 +430,14 @@ export default function DashboardApp() {
                       <button
                         type="button"
                         className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
-                        onClick={() => window.location.assign(`/products/${row.sheet.id}`)}
+                        onClick={() => router.push(`/products/${row.sheet.id}`)}
                       >
                         View
                       </button>
                       <button
                         type="button"
                         className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
-                        onClick={() => window.location.assign("/calculator")}
+                        onClick={() => router.push("/calculator")}
                       >
                         Calculate
                       </button>
@@ -482,14 +480,14 @@ export default function DashboardApp() {
                           <button
                             type="button"
                             className="rounded-lg border border-border bg-paper/55 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                            onClick={() => window.location.assign(`/products/${row.sheet.id}`)}
+                            onClick={() => router.push(`/products/${row.sheet.id}`)}
                           >
                             View
                           </button>
                           <button
                             type="button"
                             className="rounded-lg border border-border bg-paper/55 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                            onClick={() => window.location.assign("/calculator")}
+                            onClick={() => router.push("/calculator")}
                           >
                             Calculate
                           </button>

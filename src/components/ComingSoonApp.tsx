@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
@@ -31,6 +31,8 @@ function cardClassName(): string {
 export default function ComingSoonApp() {
   const searchParams = useSearchParams();
   const section = (searchParams.get("section") || "").trim();
+
+  const router = useRouter();
 
   const [{ supabase, supabaseError }] = useState(() => {
     try {
@@ -89,7 +91,7 @@ export default function ComingSoonApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   function goBack() {
@@ -97,7 +99,7 @@ export default function ComingSoonApp() {
       window.history.back();
       return;
     }
-    window.location.assign("/");
+    router.push("/");
   }
 
   return (
@@ -107,7 +109,7 @@ export default function ComingSoonApp() {
         onSettings={openSettings}
         onLogout={() => void signOut()}
         searchPlaceholder="Search..."
-        onQuickAdd={() => window.location.assign("/calculator")}
+        onQuickAdd={() => router.push("/calculator")}
         quickAddLabel="+ New Product"
         profileImageUrl={getUserProfileImageUrl(session?.user)}
         profileLabel={session?.user?.email || "Profile"}
@@ -142,7 +144,7 @@ export default function ComingSoonApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95"
-                onClick={() => window.location.assign("/")}
+                onClick={() => router.push("/")}
               >
                 Go to Dashboard
               </button>

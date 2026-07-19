@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import {
   DeferredMoneyInput,
@@ -10,6 +11,7 @@ import {
   parseMoneyToCents,
 } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
@@ -54,7 +56,6 @@ import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type DraftPurchaseRow = {
   materialId: string | null;
   description: string;
@@ -369,7 +370,8 @@ export default function PurchasesApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
@@ -398,10 +400,6 @@ export default function PurchasesApp() {
   const importRowMetaByIdRef = useRef<Record<string, ImportedPurchaseRowMeta>>({});
   const importCommitInFlightRef = useRef<Set<string>>(new Set());
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -950,7 +948,7 @@ export default function PurchasesApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   function onNewPurchaseButtonClick(): void {
@@ -1404,7 +1402,7 @@ export default function PurchasesApp() {
             placeholder="material,description,quantity,cost..."
           />
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
 	          <section className={cardClassName() + " mt-6 overflow-hidden"}>
 	            <div className="flex items-center justify-between border-b border-border px-4 py-3">

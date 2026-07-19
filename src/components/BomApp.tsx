@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { DeferredMoneyInput, DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -32,13 +34,13 @@ import {
   type DbBomLineRow,
 } from "@/lib/supabase/bom";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
+import { useDebouncedRowSaver } from "@/lib/useDebouncedRowSaver";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type MaterialOption = Pick<MaterialRecord, "id" | "name" | "unit" | "unitCostCents" | "isActive">;
 type BomCostSummary = {
   totalCostCents: number;
@@ -159,7 +161,8 @@ export default function BomApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
@@ -172,13 +175,7 @@ export default function BomApp() {
 
   const user = session?.user ?? null;
   const hasHydratedRef = useRef(false);
-  const itemSaveTimersRef = useRef<Map<string, number>>(new Map());
-  const lineSaveTimersRef = useRef<Map<string, number>>(new Map());
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -289,17 +286,6 @@ export default function BomApp() {
   }, [authReady, session]);
 
   useEffect(() => {
-    const itemTimers = itemSaveTimersRef.current;
-    const lineTimers = lineSaveTimersRef.current;
-    return () => {
-      for (const timer of itemTimers.values()) window.clearTimeout(timer);
-      itemTimers.clear();
-      for (const timer of lineTimers.values()) window.clearTimeout(timer);
-      lineTimers.clear();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
@@ -400,19 +386,18 @@ export default function BomApp() {
     if (error) toast("error", `Line save failed: ${error.message}`);
   }
 
+  const itemSaver = useDebouncedRowSaver<BomRecord>((row) => persistBomItem(row), 420);
+  const lineSaver = useDebouncedRowSaver<{ bomId: string; line: BomLine }>(
+    ({ bomId, line }) => persistBomLine(bomId, line),
+    420,
+  );
+
   function scheduleItemPersist(next: BomRecord): void {
-    const timer = itemSaveTimersRef.current.get(next.id);
-    if (timer) window.clearTimeout(timer);
-    const nextTimer = window.setTimeout(() => void persistBomItem(next), 420);
-    itemSaveTimersRef.current.set(next.id, nextTimer);
+    itemSaver.schedule(next.id, next);
   }
 
   function scheduleLinePersist(bomId: string, line: BomLine): void {
-    const key = `${bomId}:${line.id}`;
-    const timer = lineSaveTimersRef.current.get(key);
-    if (timer) window.clearTimeout(timer);
-    const nextTimer = window.setTimeout(() => void persistBomLine(bomId, line), 420);
-    lineSaveTimersRef.current.set(key, nextTimer);
+    lineSaver.schedule(`${bomId}:${line.id}`, { bomId, line });
   }
 
   function updateBom(id: string, updater: (row: BomRecord) => BomRecord): void {
@@ -508,6 +493,7 @@ export default function BomApp() {
     const row = bomById.get(id);
     const ok = window.confirm(`Delete "${row?.name || "Untitled BOM"}"?`);
     if (!ok) return;
+    itemSaver.cancel(id);
     const { error } = await supabase.from("bom_items").delete().eq("id", id);
     if (error) {
       toast("error", error.message);
@@ -558,6 +544,7 @@ export default function BomApp() {
       return;
     }
     if (!selectedBom) return;
+    lineSaver.cancel(`${selectedBom.id}:${lineId}`);
     const { error } = await supabase.from("bom_item_lines").delete().eq("id", lineId);
     if (error) {
       toast("error", error.message);
@@ -595,7 +582,7 @@ export default function BomApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   if (!dataAuthReady) {
@@ -666,7 +653,7 @@ export default function BomApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">

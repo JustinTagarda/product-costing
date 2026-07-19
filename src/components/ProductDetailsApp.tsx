@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { computeTotals } from "@/lib/costing";
 import type { CostSheet } from "@/lib/costing";
@@ -9,6 +9,7 @@ import { formatShortDate } from "@/lib/format";
 import { currencyCodeFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -25,7 +26,6 @@ import {
   type DbAccountChangeLogRow,
 } from "@/lib/supabase/accountChangeLogs";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type TabKey = "overview" | "cost-breakdown" | "history" | "notes";
 
 function cardClassName(): string {
@@ -55,7 +55,8 @@ export default function ProductDetailsApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
@@ -68,10 +69,6 @@ export default function ProductDetailsApp() {
 
   const user = session?.user ?? null;
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -253,7 +250,7 @@ export default function ProductDetailsApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   const totals = useMemo(() => (sheet ? computeTotals(sheet) : null), [sheet]);
@@ -336,7 +333,7 @@ export default function ProductDetailsApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => window.location.assign("/calculator?new=1")}
+                onClick={() => router.push("/calculator?new=1")}
                 disabled={isReadOnlyData}
               >
                 New product
@@ -344,7 +341,7 @@ export default function ProductDetailsApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           {loading ? (
             <section className={cardClassName() + " mt-6 p-6"}>
@@ -361,7 +358,7 @@ export default function ProductDetailsApp() {
               <button
                 type="button"
                 className="mt-4 rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/70"
-                onClick={() => window.location.assign("/products")}
+                onClick={() => router.push("/products")}
               >
                 Back to Products
               </button>

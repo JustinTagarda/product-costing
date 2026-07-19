@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -24,7 +26,6 @@ import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 
 const inputBase =
   "w-full rounded-xl border border-border bg-paper/65 px-3 py-2 text-base text-ink placeholder:text-muted/80 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:text-sm";
@@ -66,7 +67,8 @@ export default function SettingsApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [saving, setSaving] = useState(false);
@@ -74,10 +76,6 @@ export default function SettingsApp() {
 
   const user = session?.user ?? null;
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -145,7 +143,7 @@ export default function SettingsApp() {
   });
 
   function openSettingsPage() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   async function signOut() {
@@ -314,7 +312,7 @@ export default function SettingsApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <fieldset disabled={isReadOnlyData} className="m-0 border-0 p-0">
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

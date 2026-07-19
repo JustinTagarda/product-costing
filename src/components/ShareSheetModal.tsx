@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type NoticeKind = "info" | "success" | "error";
@@ -51,6 +52,7 @@ export function ShareSheetModal({
 }: ShareSheetModalProps) {
   const titleId = useId();
   const descriptionId = useId();
+  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [newShareAccessLevel, setNewShareAccessLevel] = useState<AccessLevel>("viewer");
@@ -379,7 +381,7 @@ export function ShareSheetModal({
               className="rounded-lg border border-border bg-paper px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/75"
               onClick={() => {
                 requestClose();
-                window.location.assign("/activities");
+                router.push("/activities");
               }}
             >
               Open Activities

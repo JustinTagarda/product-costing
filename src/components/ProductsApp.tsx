@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { computeTotals } from "@/lib/costing";
 import type { CostSheet } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -19,7 +21,6 @@ import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 
 function cardClassName(): string {
   return [
@@ -49,7 +50,8 @@ export default function ProductsApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loading, setLoading] = useState(false);
@@ -60,10 +62,6 @@ export default function ProductsApp() {
 
   const user = session?.user ?? null;
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -195,7 +193,7 @@ export default function ProductsApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   async function deleteProduct(sheet: CostSheet): Promise<void> {
@@ -272,7 +270,7 @@ export default function ProductsApp() {
               <button
                 type="button"
                 className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-paper shadow-sm transition hover:brightness-95 active:translate-y-px"
-                onClick={() => window.location.assign("/calculator?new=1")}
+                onClick={() => router.push("/calculator?new=1")}
                 disabled={isReadOnlyData}
               >
                 New product
@@ -280,7 +278,7 @@ export default function ProductsApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <section className={cardClassName() + " mt-6 overflow-hidden"}>
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -338,14 +336,14 @@ export default function ProductsApp() {
                         <button
                           type="button"
                           className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
-                          onClick={() => window.location.assign(`/products/${sheet.id}`)}
+                          onClick={() => router.push(`/products/${sheet.id}`)}
                         >
                           Details
                         </button>
                         <button
                           type="button"
                           className="rounded-lg border border-border bg-paper/70 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/85"
-                          onClick={() => window.location.assign("/calculator")}
+                          onClick={() => router.push("/calculator")}
                         >
                           Calculator
                         </button>
@@ -405,14 +403,14 @@ export default function ProductsApp() {
                             <button
                               type="button"
                               className="rounded-lg border border-border bg-paper/55 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                              onClick={() => window.location.assign(`/products/${sheet.id}`)}
+                              onClick={() => router.push(`/products/${sheet.id}`)}
                             >
                               Details
                             </button>
                             <button
                               type="button"
                               className="rounded-lg border border-border bg-paper/55 px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
-                              onClick={() => window.location.assign("/calculator")}
+                              onClick={() => router.push("/calculator")}
                             >
                               Calculator
                             </button>

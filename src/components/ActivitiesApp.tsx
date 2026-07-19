@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
@@ -19,7 +21,6 @@ import {
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type ActionFilter = "all" | AccountChangeLogEntry["action"];
 
 const TABLE_NAME_LABELS: Record<string, string> = {
@@ -91,7 +92,8 @@ export default function ActivitiesApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -106,10 +108,6 @@ export default function ActivitiesApp() {
 
   const user = session?.user ?? null;
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -242,7 +240,7 @@ export default function ActivitiesApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   const tableOptions = useMemo(() => {
@@ -345,7 +343,7 @@ export default function ActivitiesApp() {
             </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import type { SharedAccountOption } from "@/lib/useAccountDataScope";
 
 type DataSelectionModalProps = {
@@ -26,6 +26,15 @@ export function DataSelectionModal({
 }: DataSelectionModalProps) {
   const titleId = useId();
   const descriptionId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

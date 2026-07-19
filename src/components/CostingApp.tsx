@@ -3,12 +3,14 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import {
   DeferredMoneyInput,
   DeferredNumberInput,
   parseLooseNumber,
 } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
+import { useToastNotice } from "@/lib/useToastNotice";
 import {
   computeOverheadBaseCents,
   computeOverheadLineTotalCents,
@@ -49,7 +51,6 @@ import { rowToMaterial, type DbMaterialRow } from "@/lib/supabase/materials";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 
-type Notice = { kind: "info" | "success" | "error"; message: string };
 type MaterialOption = {
   id: string;
   name: string;
@@ -226,7 +227,8 @@ export default function CostingApp() {
     }
   });
 
-  const [notice, setNotice] = useState<Notice | null>(null);
+  const { notice, toast, dismiss } = useToastNotice();
+  const router = useRouter();
   const [query, setQuery] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -255,10 +257,6 @@ export default function CostingApp() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcomeGate, setShowWelcomeGate] = useState(true);
 
-  const toast = useCallback((kind: Notice["kind"], message: string): void => {
-    setNotice({ kind, message });
-    window.setTimeout(() => setNotice(null), 2600);
-  }, []);
 
   const {
     signedInUserId,
@@ -608,7 +606,7 @@ export default function CostingApp() {
   }
 
   function openSettings() {
-    window.location.assign("/settings");
+    router.push("/settings");
   }
 
   const newSheet = useCallback(async () => {
@@ -992,7 +990,7 @@ export default function CostingApp() {
                 <p>Database/Auth: Supabase (Postgres + Google OAuth)</p>
               </footer>
 
-              <GlobalAppToast notice={notice} />
+              <GlobalAppToast notice={notice} onDismiss={dismiss} />
             </section>
           </main>
 
@@ -1125,7 +1123,7 @@ export default function CostingApp() {
           </div>
           </header>
 
-          <GlobalAppToast notice={notice} />
+          <GlobalAppToast notice={notice} onDismiss={dismiss} />
 
           <div className="mt-8 grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <aside className={cardClassName()}>
