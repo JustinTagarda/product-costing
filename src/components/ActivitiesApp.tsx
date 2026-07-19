@@ -9,6 +9,7 @@ import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
+import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { goToWelcomePage } from "@/lib/navigation";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
@@ -482,9 +483,7 @@ export default function ActivitiesApp() {
 
             <div className="space-y-3 p-3 md:hidden">
               {loadingLogs ? (
-                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
-                  Loading activity logs...
-                </p>
+                <LoadingBlock />
               ) : filteredLogs.length ? (
                 filteredLogs.map((log) => (
                   <article
@@ -546,8 +545,8 @@ export default function ActivitiesApp() {
                 <tbody>
                   {loadingLogs ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
-                        Loading activity logs...
+                      <td colSpan={5}>
+                        <LoadingBlock />
                       </td>
                     </tr>
                   ) : filteredLogs.length ? (

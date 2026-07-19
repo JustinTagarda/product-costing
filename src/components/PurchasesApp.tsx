@@ -16,6 +16,7 @@ import { ImportDataModal } from "@/components/ImportDataModal";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
+import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
@@ -1934,6 +1935,7 @@ export default function PurchasesApp() {
 	                  No purchases found. Create one using <span className="font-semibold">New purchase</span>.
 	                </p>
 	              ) : null}
+	              {loading && purchases.length === 0 ? <LoadingBlock /> : null}
 	            </div>
 
 	            <div className="app-table-scroll hidden overflow-x-auto md:block">
@@ -2181,6 +2183,13 @@ export default function PurchasesApp() {
                     <tr>
                       <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted">
                         No purchases found. Create one using <span className="font-semibold">New purchase</span>.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {loading && purchases.length === 0 ? (
+                    <tr>
+                      <td colSpan={11}>
+                        <LoadingBlock />
                       </td>
                     </tr>
                   ) : null}

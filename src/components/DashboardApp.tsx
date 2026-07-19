@@ -13,6 +13,7 @@ import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
+import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -406,9 +407,7 @@ export default function DashboardApp() {
 
             <div className="space-y-3 p-3 md:hidden">
               {loadingSheets ? (
-                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
-                  Loading products...
-                </p>
+                <LoadingBlock />
               ) : recentProducts.length ? (
                 recentProducts.map((row) => (
                   <article
@@ -516,6 +515,13 @@ export default function DashboardApp() {
                     <tr>
                       <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">
                         No products matched your search. Try a different term or create a new product from the top bar.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {loadingSheets ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <LoadingBlock />
                       </td>
                     </tr>
                   ) : null}

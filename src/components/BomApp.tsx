@@ -10,6 +10,7 @@ import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
+import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
@@ -670,9 +671,7 @@ export default function BomApp() {
             </div>
             <div className="space-y-3 p-3 md:hidden">
               {loading ? (
-                <p className="rounded-xl border border-border bg-paper/55 px-3 py-3 text-sm text-muted">
-                  Loading BOM...
-                </p>
+                <LoadingBlock />
               ) : filteredBoms.length ? (
                 filteredBoms.map((item) => {
                   const cost = bomCosts.get(item.id);
@@ -792,6 +791,13 @@ export default function BomApp() {
                       </tr>
                     );
                   })}
+                  {loading ? (
+                    <tr>
+                      <td colSpan={8}>
+                        <LoadingBlock />
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </div>

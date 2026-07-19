@@ -9,6 +9,7 @@ import { useToastNotice } from "@/lib/useToastNotice";
 import { MainContentStatusFooter } from "@/components/MainContentStatusFooter";
 import { MainNavMenu } from "@/components/MainNavMenu";
 import { PageLoadingSkeleton } from "@/components/PageLoadingSkeleton";
+import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
@@ -877,6 +878,7 @@ export default function MaterialsApp() {
                   No materials found. Create one using <span className="font-semibold">New material</span>.
                 </p>
               ) : null}
+              {loading && materials.length === 0 ? <LoadingBlock /> : null}
             </div>
 
             <div className="app-table-scroll hidden overflow-x-auto md:block">
@@ -955,6 +957,13 @@ export default function MaterialsApp() {
                     <tr>
                       <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">
                         No materials found. Create one using <span className="font-semibold">New material</span>.
+                      </td>
+                    </tr>
+                  ) : null}
+                  {loading && materials.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <LoadingBlock />
                       </td>
                     </tr>
                   ) : null}
