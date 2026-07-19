@@ -990,18 +990,10 @@ export default function CostingApp() {
 
               <footer className="mx-auto mt-8 w-full max-w-2xl border-t border-zinc-200/80 pt-5 text-center">
                 <p className="text-[11px] text-muted">© 2026 JustinTagarda · All rights reserved</p>
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-                  {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map(
-                    (tech) => (
-                      <span
-                        key={tech}
-                        className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[10px] font-medium text-muted"
-                      >
-                        {tech}
-                      </span>
-                    ),
-                  )}
-                </div>
+                <p className="mt-2 text-[10px] text-muted/80">
+                  <span className="font-semibold uppercase tracking-[0.14em]">Built with</span>{" "}
+                  Next.js · React · TypeScript · Tailwind · Supabase · Vercel
+                </p>
               </footer>
 
               <GlobalAppToast notice={notice} onDismiss={dismiss} />

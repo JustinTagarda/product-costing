@@ -483,16 +483,12 @@ function SidebarSections({
             </p>
           ) : (
             <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-              <div className="flex flex-wrap gap-1">
-                {["Next.js", "React", "TypeScript", "Tailwind", "Supabase", "Vercel"].map((tech) => (
-                  <span
-                    key={tech}
-                    className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-muted"
-                  >
-                    {tech}
-                  </span>
-                ))}
-              </div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/80">
+                Built with
+              </p>
+              <p className="mt-1 text-[10px] leading-4 text-muted">
+                Next.js · React · TypeScript · Tailwind · Supabase · Vercel
+              </p>
               <p className="mt-2.5 text-[10px] text-muted/80">
                 © 2026 JustinTagarda · All rights reserved
               </p>
