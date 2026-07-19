@@ -358,7 +358,7 @@ export function MainNavMenu({
         className="fixed left-0 top-0 z-40 hidden h-dvh flex-col border-r border-zinc-200 bg-white/75 backdrop-blur-md md:flex"
         style={{ width: "var(--app-shell-sidebar-offset)" }}
       >
-        <div className="flex h-[65px] items-center px-2">
+        <div className="flex h-[65px] items-center pl-[3px] pr-2">
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
