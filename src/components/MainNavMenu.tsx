@@ -29,6 +29,7 @@ const TOP_BAR_HEIGHT = 65;
 const DESKTOP_SIDEBAR_WIDTH = 272;
 const TABLET_EXPANDED_SIDEBAR_WIDTH = 248;
 const TABLET_COLLAPSED_SIDEBAR_WIDTH = 60;
+const TABLET_EXPANDED_STORAGE_KEY = "product-costing:sidebar-tablet-expanded";
 
 const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Dashboard", href: "/" },
@@ -57,7 +58,19 @@ export function MainNavMenu({
   profileImageUrl,
   onProfileClick,
 }: MainNavMenuProps) {
-  const [isTabletExpanded, setIsTabletExpanded] = useState(true);
+  // Each page mounts its own MainNavMenu instance, so this preference must be
+  // persisted rather than kept in plain local state — otherwise every
+  // navigation remounts the component and silently re-expands the rail,
+  // discarding the user's choice.
+  const [isTabletExpanded, setIsTabletExpanded] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const stored = window.localStorage.getItem(TABLET_EXPANDED_STORAGE_KEY);
+      return stored === null ? true : stored === "1";
+    } catch {
+      return true;
+    }
+  });
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
   const [failedProfileImageUrl, setFailedProfileImageUrl] = useState<string | null>(null);
@@ -171,6 +184,15 @@ export function MainNavMenu({
       document.body.style.paddingTop = "";
       document.documentElement.style.setProperty("--app-shell-sidebar-offset", "0px");
     };
+  }, [isTabletExpanded]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(TABLET_EXPANDED_STORAGE_KEY, isTabletExpanded ? "1" : "0");
+    } catch {
+      // Ignore storage write failures (e.g. private browsing); the preference
+      // just won't survive this session.
+    }
   }, [isTabletExpanded]);
 
   useEffect(() => {
