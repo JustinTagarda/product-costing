@@ -330,17 +330,12 @@ export function MainNavMenu({
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
-        <div className="flex h-[65px] items-center justify-between border-b border-zinc-200 px-3">
-          <div className="min-w-0 text-left">
-            <p className="font-serif text-[1.14rem] font-bold leading-tight tracking-tight text-ink">
-              Product Costing
-            </p>
-            <p className="text-sm font-semibold leading-tight text-ink">for Small Business</p>
-          </div>
+        <div className="flex h-[65px] items-center justify-between gap-2 border-b border-zinc-200 px-3">
+          <BrandMark />
           <button
             type="button"
             aria-label="Close menu"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-zinc-100/90 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
             <CloseIcon />
@@ -373,13 +368,8 @@ export function MainNavMenu({
             {isTabletExpanded ? <CloseIcon /> : <MenuIcon />}
           </button>
 
-          <div className={["ml-2 min-w-0 text-left xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
-            <p className="truncate font-serif text-[1.14rem] font-bold leading-tight tracking-tight text-ink">
-              Product Costing
-            </p>
-            <p className="truncate text-sm font-semibold leading-tight text-ink">
-              for Small Business
-            </p>
+          <div className={["ml-2 min-w-0 xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
+            <BrandMark />
           </div>
         </div>
 
@@ -396,6 +386,27 @@ export function MainNavMenu({
         />
       </aside>
     </>
+  );
+}
+
+function BrandMark() {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5 text-left">
+      <span
+        aria-hidden="true"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-accent to-accent2 text-[13px] font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_6px_rgba(79,125,229,0.35)]"
+      >
+        PC
+      </span>
+      <div className="min-w-0">
+        <p className="truncate font-serif text-[1.05rem] font-bold leading-tight tracking-tight text-ink">
+          Product Costing
+        </p>
+        <p className="truncate text-[11px] font-medium leading-tight tracking-wide text-muted">
+          for Small Business
+        </p>
+      </div>
+    </div>
   );
 }
 
