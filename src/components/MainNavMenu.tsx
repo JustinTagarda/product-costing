@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 type MainNavMenuProps = {
@@ -64,6 +64,28 @@ export function MainNavMenu({
 
   const router = useRouter();
   const pathname = usePathname();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // "/" focuses search from anywhere outside a form field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const effectiveSearchValue = searchValue ?? localSearch;
   const effectiveShareLabel = shareLabel || "Share";
@@ -217,64 +239,78 @@ export function MainNavMenu({
             <MenuIcon />
           </button>
 
-          <div className="relative min-w-0 flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted/80" />
             <input
+              ref={searchInputRef}
               value={effectiveSearchValue}
               onChange={(event) => handleSearchInput(event.target.value)}
               placeholder={searchPlaceholder || "Search"}
               aria-label="Search"
-              className="w-full rounded-xl border border-border bg-paper px-10 py-2 text-sm text-ink placeholder:text-muted/75 outline-none shadow-sm focus:border-accent/60 focus:ring-2 focus:ring-accent/15 sm:py-2.5"
+              className="w-full rounded-xl border border-transparent bg-zinc-100/80 py-2 pl-10 pr-9 text-sm text-ink placeholder:text-muted/70 outline-none transition-colors hover:bg-zinc-100 focus:border-accent/50 focus:bg-white focus:ring-2 focus:ring-accent/15 sm:py-2.5"
             />
+            <kbd
+              aria-hidden="true"
+              className="pointer-events-none absolute right-2.5 top-1/2 hidden h-5 -translate-y-1/2 items-center rounded-md border border-zinc-200 bg-white px-1.5 font-mono text-[10px] text-muted/80 sm:inline-flex"
+            >
+              /
+            </kbd>
           </div>
+
+          <div className="hidden flex-1 sm:block" aria-hidden="true" />
 
           <button
             type="button"
             aria-label={effectiveShareLabel}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:gap-2 sm:px-3"
+            className="app-btn-secondary inline-flex h-9 rounded-xl px-2.5 text-sm sm:h-10 sm:px-3 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={handleShareClick}
             disabled={Boolean(shareDisabled)}
           >
             <ShareIcon />
-            <span className="hidden sm:inline">{effectiveShareLabel}</span>
-          </button>
-
-          <button
-            type="button"
-            aria-label="Open profile"
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-paper px-2.5 text-sm font-semibold text-ink transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 sm:h-10 sm:gap-2"
-            onClick={() => (onProfileClick || onSettings)()}
-          >
-            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-200">
-              {showProfileImage ? (
-                <Image
-                  src={normalizedProfileImageUrl}
-                  alt={profileLabel ? `${profileLabel} profile photo` : "Profile photo"}
-                  width={24}
-                  height={24}
-                  unoptimized
-                  className="h-6 w-6 object-cover"
-                  onError={() => setFailedProfileImageUrl(normalizedProfileImageUrl)}
-                />
-              ) : (
-                <span className="text-[11px] font-semibold text-ink">{profileInitials()}</span>
-              )}
-            </span>
-            <span className="hidden sm:inline">{profileLabel || "Profile"}</span>
+            <span className="hidden lg:inline">{effectiveShareLabel}</span>
           </button>
 
           {onQuickAdd ? (
             <button
               type="button"
               aria-label={effectiveQuickAddLabel}
-              className="inline-flex h-9 items-center rounded-xl app-btn-primary px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3"
+              className="app-btn-primary inline-flex h-9 rounded-xl px-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:h-10 sm:px-3.5"
               onClick={() => onQuickAdd()}
               disabled={Boolean(quickAddDisabled)}
             >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">{effectiveQuickAddLabel}</span>
+              <span className="lg:hidden">+</span>
+              <span className="hidden lg:inline">{effectiveQuickAddLabel}</span>
             </button>
           ) : null}
+
+          <span aria-hidden="true" className="mx-0.5 hidden h-6 w-px bg-zinc-200 sm:inline-block" />
+
+          <button
+            type="button"
+            aria-label={profileLabel ? `Open profile: ${profileLabel}` : "Open profile"}
+            title={profileLabel || "Profile"}
+            className="group inline-flex shrink-0 items-center gap-2 rounded-full p-1 transition hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
+            onClick={() => (onProfileClick || onSettings)()}
+          >
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-b from-zinc-100 to-zinc-200 ring-1 ring-zinc-200 transition group-hover:ring-accent/40">
+              {showProfileImage ? (
+                <Image
+                  src={normalizedProfileImageUrl}
+                  alt={profileLabel ? `${profileLabel} profile photo` : "Profile photo"}
+                  width={32}
+                  height={32}
+                  unoptimized
+                  className="h-8 w-8 object-cover"
+                  onError={() => setFailedProfileImageUrl(normalizedProfileImageUrl)}
+                />
+              ) : (
+                <span className="text-xs font-semibold text-ink">{profileInitials()}</span>
+              )}
+            </span>
+            <span className="hidden max-w-[180px] truncate pr-1.5 text-sm font-medium text-ink xl:inline">
+              {profileLabel || "Profile"}
+            </span>
+          </button>
         </div>
       </header>
 
