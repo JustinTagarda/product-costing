@@ -26,9 +26,9 @@ type MainNavMenuProps = {
 };
 
 const TOP_BAR_HEIGHT = 65;
-const DESKTOP_SIDEBAR_WIDTH = 272;
-const TABLET_EXPANDED_SIDEBAR_WIDTH = 248;
-const TABLET_COLLAPSED_SIDEBAR_WIDTH = 88;
+const DESKTOP_SIDEBAR_WIDTH = 245;
+const TABLET_EXPANDED_SIDEBAR_WIDTH = 223;
+const TABLET_COLLAPSED_SIDEBAR_WIDTH = 79;
 
 const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Dashboard", href: "/" },
@@ -326,7 +326,7 @@ export function MainNavMenu({
       <aside
         aria-label="Main menu"
         className={[
-          "fixed left-0 top-0 z-50 flex h-dvh w-[280px] flex-col border-r border-zinc-200 bg-white/75 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur-md transition-transform duration-200 ease-out md:hidden",
+          "fixed left-0 top-0 z-50 flex h-dvh w-[252px] flex-col border-r border-zinc-200 bg-white/75 shadow-[0_18px_45px_rgba(0,0,0,.18)] backdrop-blur-md transition-transform duration-200 ease-out md:hidden",
           isMobileDrawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
