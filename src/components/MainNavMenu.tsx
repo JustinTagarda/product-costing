@@ -36,6 +36,7 @@ const MAIN_NAV_ITEMS: Array<{ label: string; href?: string }> = [
   { label: "Products", href: "/products" },
   { label: "Materials", href: "/materials" },
   { label: "Purchases", href: "/purchases" },
+  { label: "BOM", href: "/bom" },
 ];
 
 export function MainNavMenu({
@@ -464,10 +465,10 @@ function SidebarSections({
           {compact ? (
             <p
               className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-[10px] font-semibold text-muted"
-              title="© 2026 Justiniano Tagarda · Full-Stack Developer"
+              title="© 2026 JustinTagarda · All rights reserved"
             >
               JT
-              <span className="sr-only">© 2026 Justiniano Tagarda · Full-Stack Developer</span>
+              <span className="sr-only">© 2026 JustinTagarda · All rights reserved</span>
             </p>
           ) : (
             <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
@@ -562,6 +563,16 @@ function NavItemIcon({ label }: { label: string }) {
           <circle cx="9" cy="20" r="1.4" />
           <circle cx="17" cy="20" r="1.4" />
           <path d="M3 4h2.5l2.2 11.5a1.6 1.6 0 001.6 1.3h7.6a1.6 1.6 0 001.6-1.3L20 8H6" />
+        </svg>
+      );
+    case "BOM":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="4" width="6" height="6" rx="1.5" />
+          <rect x="14.5" y="4" width="6" height="6" rx="1.5" />
+          <rect x="9" y="14" width="6" height="6" rx="1.5" />
+          <path d="M6.5 10v2a2 2 0 002 2h.5" />
+          <path d="M17.5 10v2a2 2 0 01-2 2H15" />
         </svg>
       );
     case "Settings":
