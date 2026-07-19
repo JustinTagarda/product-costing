@@ -994,6 +994,15 @@ export default function CostingApp() {
                   <span className="font-semibold text-ink">Justiniano Tagarda</span> · Full-Stack
                   Developer ·{" "}
                   <a
+                    href="https://justintagarda.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-accent2 hover:underline"
+                  >
+                    justintagarda.com
+                  </a>{" "}
+                  ·{" "}
+                  <a
                     href="mailto:justintagarda@gmail.com"
                     className="font-medium text-accent2 hover:underline"
                   >

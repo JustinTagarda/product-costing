@@ -483,22 +483,20 @@ function SidebarSections({
             </p>
           ) : (
             <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3">
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-accent to-accent2 text-[11px] font-bold text-white shadow-sm"
-                >
-                  JT
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-ink">Justiniano Tagarda</p>
-                  <p className="truncate text-[11px] text-muted">Full-Stack Developer</p>
-                </div>
-              </div>
+              <p className="truncate text-xs font-semibold text-ink">Justiniano Tagarda</p>
+              <p className="truncate text-[11px] text-muted">Full-Stack Developer</p>
+              <a
+                href="https://justintagarda.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 block truncate text-[11px] font-medium text-accent2 hover:underline"
+              >
+                justintagarda.com
+              </a>
               <address className="not-italic">
                 <a
                   href="mailto:justintagarda@gmail.com"
-                  className="mt-2 block truncate text-[11px] font-medium text-accent2 hover:underline"
+                  className="mt-0.5 block truncate text-[11px] font-medium text-accent2 hover:underline"
                 >
                   justintagarda@gmail.com
                 </a>
