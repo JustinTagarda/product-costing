@@ -12,6 +12,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/fetchAll";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { goToWelcomePage } from "@/lib/navigation";
 import { rowToSheet, type DbCostSheetRow } from "@/lib/supabase/costSheets";
@@ -154,11 +155,15 @@ export default function ProductsApp() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("cost_sheets")
-        .select("*")
-        .eq("user_id", activeOwnerUserId)
-        .order("updated_at", { ascending: false });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("cost_sheets")
+          .select("*")
+          .eq("user_id", activeOwnerUserId)
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       if (cancelled) return;
 

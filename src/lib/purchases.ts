@@ -24,9 +24,6 @@ export type PurchaseRecord = {
 export const PURCHASE_MARKETPLACES = ["shopee", "lazada", "local", "other"] as const;
 export type PurchaseMarketplace = (typeof PURCHASE_MARKETPLACES)[number];
 
-export const LOCAL_PURCHASES_STORAGE_KEY = "product-costing:purchases:local:v1";
-export const LOCAL_MATERIALS_STORAGE_KEY = "product-costing:materials:local:v1";
-
 export function currentDateInputValue(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -105,37 +102,4 @@ export function makeBlankPurchase(id: string, defaults?: BlankPurchaseDefaults):
     createdAt: now,
     updatedAt: now,
   };
-}
-
-export function createDemoPurchases(
-  seed?: Array<{ id: string; name: string; supplier?: string; unit?: string }>,
-  options?: { currency?: string },
-): PurchaseRecord[] {
-  const t = "2026-02-10T00:00:00.000Z";
-  const base = seed?.[0];
-  const currency = options?.currency ? options.currency.toUpperCase() : "USD";
-  return [
-    {
-      id: "purchase_demo_1",
-      purchaseDate: "2026-02-10",
-      materialId: base?.id ?? null,
-      materialName: base?.name ?? "Canvas fabric",
-      description: "12oz cotton canvas",
-      variation: "Natural",
-      quantity: 10,
-      usableQuantity: 9.5,
-      unit: base?.unit ?? "yd",
-      unitCostCents: 600,
-      costCents: computePurchaseTotalCents(10, 600),
-      totalCostCents: computePurchaseTotalCents(10, 600),
-      currency,
-      marketplace: "local",
-      store: base?.supplier ?? "Metro Textile",
-      supplier: base?.supplier ?? "Metro Textile",
-      referenceNo: "PO-1001",
-      notes: "Initial stock order",
-      createdAt: t,
-      updatedAt: t,
-    },
-  ];
 }

@@ -31,8 +31,10 @@ import {
   handleDraftRowBlurCapture,
   handleDraftRowKeyDownCapture,
 } from "@/lib/tableDraftEntry";
+import { useDebouncedRowSaver } from "@/lib/useDebouncedRowSaver";
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/fetchAll";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
@@ -232,7 +234,7 @@ export default function CostingApp() {
   const draftMaterialSelectRef = useRef<HTMLSelectElement | null>(null);
   const draftMaterialQtyInputRef = useRef<HTMLInputElement | null>(null);
 
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  const sheetSaver = useDebouncedRowSaver<CostSheet>((sheet) => persistSheet(sheet), 450);
   const hasHydratedSheetsRef = useRef(false);
   const handledNewSheetFromQueryRef = useRef(false);
   const handledShareFromQueryRef = useRef(false);
@@ -343,23 +345,19 @@ export default function CostingApp() {
     };
   }, [supabase, toast]);
 
-  useEffect(() => {
-    const timers = saveTimersRef.current;
-    return () => {
-      for (const t of timers.values()) window.clearTimeout(t);
-      timers.clear();
-    };
-  }, []);
-
   const fetchSheetsForUser = useCallback(
     async (ownerUserId: string): Promise<CostSheet[]> => {
       if (!supabase) return [];
 
-      const { data: rows, error } = await supabase
-        .from("cost_sheets")
-        .select("*")
-        .eq("user_id", ownerUserId)
-        .order("updated_at", { ascending: false });
+      const { data: rows, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("cost_sheets")
+          .select("*")
+          .eq("user_id", ownerUserId)
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       if (error) {
         toast("error", error.message);
@@ -417,11 +415,15 @@ export default function CostingApp() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("materials")
-        .select("*")
-        .eq("user_id", activeOwnerUserId)
-        .order("name", { ascending: true });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("materials")
+          .select("*")
+          .eq("user_id", activeOwnerUserId)
+          .order("name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       if (cancelled) return;
       if (error) {
         toast("error", error.message);
@@ -548,18 +550,23 @@ export default function CostingApp() {
   }
 
   function schedulePersist(next: CostSheet): void {
-    const existing = saveTimersRef.current.get(next.id);
-    if (existing) window.clearTimeout(existing);
-    const t = window.setTimeout(() => void persistSheet(next), 450);
-    saveTimersRef.current.set(next.id, t);
+    sheetSaver.schedule(next.id, next);
   }
 
   function updateSelected(updater: (sheet: CostSheet) => CostSheet) {
     if (!selectedSheet || isReadOnlyData) return;
+    const targetId = selectedSheet.id;
     const now = new Date().toISOString();
-    const next = { ...updater(selectedSheet), updatedAt: now };
-    setSheets((prev) => prev.map((s) => (s.id === next.id ? next : s)));
-    if (isCloudMode) schedulePersist(next);
+    // Derive the next sheet from the freshest state so rapid successive updates
+    // in the same tick don't clobber each other.
+    setSheets((prev) =>
+      prev.map((s) => {
+        if (s.id !== targetId) return s;
+        const next = { ...updater(s), updatedAt: now };
+        if (isCloudMode) schedulePersist(next);
+        return next;
+      }),
+    );
   }
 
   function selectSheet(id: string) {
@@ -614,24 +621,28 @@ export default function CostingApp() {
       return;
     }
 
-    const nextCodeNumber = getNextCodeNumber(
-      sheets.map((sheet) => sheet.sku),
-      PRODUCT_CODE_PREFIX,
+    const { data: skuRows, error: lookupError } = await fetchAllRows((from, to) =>
+      supabase
+        .from("cost_sheets")
+        .select("sku")
+        .eq("user_id", activeOwnerUserId)
+        .order("id", { ascending: true })
+        .range(from, to),
     );
+    if (lookupError) {
+      toast("error", lookupError.message);
+      return;
+    }
+
+    const takenSkus = new Set<string>([
+      ...sheets.map((sheet) => sheet.sku),
+      ...(skuRows as Array<{ sku: string }>).map((row) => row.sku),
+    ]);
+    const nextCodeNumber = getNextCodeNumber([...takenSkus], PRODUCT_CODE_PREFIX);
 
     for (let offset = 0; offset < 1000; offset += 1) {
       const code = formatCode(PRODUCT_CODE_PREFIX, nextCodeNumber + offset);
-      const { data: existing, error: lookupError } = await supabase
-        .from("cost_sheets")
-        .select("id")
-        .eq("user_id", activeOwnerUserId)
-        .eq("sku", code)
-        .limit(1);
-      if (lookupError) {
-        toast("error", lookupError.message);
-        return;
-      }
-      if ((existing ?? []).length > 0) continue;
+      if (takenSkus.has(code)) continue;
 
       const insert = makeBlankSheetInsert(activeOwnerUserId, {
         currency: settingsCurrencyCode,
@@ -782,6 +793,7 @@ export default function CostingApp() {
     const ok = window.confirm(`Delete "${selectedSheet.name || "Untitled"}"?`);
     if (!ok) return;
 
+    sheetSaver.cancel(selectedSheet.id);
     const { error } = await supabase.from("cost_sheets").delete().eq("id", selectedSheet.id);
     if (error) {
       toast("error", error.message);

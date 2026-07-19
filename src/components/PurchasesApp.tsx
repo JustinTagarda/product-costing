@@ -19,6 +19,7 @@ import { makeId } from "@/lib/costing";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { openNativeDatePicker } from "@/lib/datePicker";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
+import { useDebouncedRowSaver } from "@/lib/useDebouncedRowSaver";
 import {
   type MaterialRecord,
 } from "@/lib/materials";
@@ -39,6 +40,7 @@ import {
   validatePurchasesImportTsv,
 } from "@/lib/purchasesImportValidation";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/fetchAll";
 import { type DbMaterialRow, rowToMaterial } from "@/lib/supabase/materials";
 import {
   makeBlankPurchaseInsert,
@@ -384,7 +386,7 @@ export default function PurchasesApp() {
 
   const user = session?.user ?? null;
 
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  const purchaseSaver = useDebouncedRowSaver<PurchaseRecord>((row) => persistPurchase(row), 420);
   const hasHydratedRef = useRef(false);
   const savingDraftPurchaseRef = useRef(false);
   const draftRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -579,14 +581,6 @@ export default function PurchasesApp() {
   }, [authReady, session]);
 
   useEffect(() => {
-    const timers = saveTimersRef.current;
-    return () => {
-      for (const timer of timers.values()) window.clearTimeout(timer);
-      timers.clear();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
@@ -606,11 +600,23 @@ export default function PurchasesApp() {
       }
 
       const [purchasesRes, materialsRes] = await Promise.all([
-        supabase
-          .from("purchases")
-          .select("*")
-          .eq("user_id", activeOwnerUserId),
-        supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("purchases")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("materials")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("name", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
 
       if (cancelled) return;
@@ -651,6 +657,16 @@ export default function PurchasesApp() {
 
       if (!isCloudMode || !supabase) return;
 
+      // Only the material's most recent purchase may drive its supplier/unit and
+      // "last purchase" fields; editing an older purchase must not rewrite them.
+      const isLatestForMaterial = purchases.every(
+        (p) =>
+          p.id === next.id ||
+          p.materialId !== next.materialId ||
+          (p.purchaseDate || "") <= (next.purchaseDate || ""),
+      );
+      if (!isLatestForMaterial) return;
+
       const { error } = await supabase
         .from("materials")
         .update({
@@ -666,7 +682,7 @@ export default function PurchasesApp() {
       }
       return;
     },
-    [isCloudMode, isReadOnlyData, supabase, toast],
+    [isCloudMode, isReadOnlyData, purchases, supabase, toast],
   );
 
   async function persistPurchase(next: PurchaseRecord): Promise<void> {
@@ -683,10 +699,7 @@ export default function PurchasesApp() {
   }
 
   function schedulePersist(next: PurchaseRecord): void {
-    const currentTimer = saveTimersRef.current.get(next.id);
-    if (currentTimer) window.clearTimeout(currentTimer);
-    const timer = window.setTimeout(() => void persistPurchase(next), 420);
-    saveTimersRef.current.set(next.id, timer);
+    purchaseSaver.schedule(next.id, next);
   }
 
   function normalizeImportedDraftRow(row: PurchaseRecord, updatedAt: string): PurchaseRecord {
@@ -908,6 +921,7 @@ export default function PurchasesApp() {
         toast("error", "Sign in with Google to delete purchases.");
         return;
       }
+      purchaseSaver.cancel(id);
       const { error } = await supabase.from("purchases").delete().eq("id", id);
       if (error) {
         toast("error", error.message);

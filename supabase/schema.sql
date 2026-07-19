@@ -28,13 +28,6 @@ create index if not exists cost_sheets_user_id_updated_at_idx
 
 alter table public.cost_sheets enable row level security;
 
-drop policy if exists "cost_sheets_owner_all" on public.cost_sheets;
-create policy "cost_sheets_owner_all"
-  on public.cost_sheets
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
 -- Keep updated_at fresh on updates.
 create or replace function public.set_updated_at()
 returns trigger
@@ -63,6 +56,8 @@ create table if not exists public.account_shares (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null references auth.users(id) on delete cascade,
   shared_with_email text not null default '',
+  access_level text not null default 'editor'
+    constraint account_shares_access_level_check check (access_level in ('editor', 'viewer')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint account_shares_owner_email_key unique (owner_user_id, shared_with_email)
@@ -124,6 +119,9 @@ create trigger account_shares_set_updated_at
 before update on public.account_shares
 for each row execute function public.set_updated_at();
 
+-- Account access helpers. Any shared user (viewer or editor) can read; only the
+-- owner or an editor share can write. Per-table policies live in the access-level
+-- enforcement section near the end of this file.
 create or replace function public.has_account_access(p_owner_user_id uuid)
 returns boolean
 language sql
@@ -139,57 +137,20 @@ as $$
     );
 $$;
 
-drop policy if exists "cost_sheets_shared_select" on public.cost_sheets;
-drop policy if exists "cost_sheets_shared_update" on public.cost_sheets;
-drop policy if exists "cost_sheets_owner_all" on public.cost_sheets;
-drop policy if exists "cost_sheets_account_access_all" on public.cost_sheets;
-create policy "cost_sheets_account_access_all"
-  on public.cost_sheets
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
-
-create or replace function public.share_account_with_email(
-  p_email text
-)
-returns public.account_shares
-language plpgsql
-security definer
-set search_path = public, auth
+create or replace function public.has_account_write_access(p_owner_user_id uuid)
+returns boolean
+language sql
+stable
 as $$
-declare
-  v_email text;
-  v_row public.account_shares;
-begin
-  if auth.uid() is null then
-    raise exception 'Not authenticated';
-  end if;
-
-  v_email := lower(trim(coalesce(p_email, '')));
-  if v_email = '' then
-    raise exception 'Email is required';
-  end if;
-
-  if v_email !~* '^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$' then
-    raise exception 'Invalid email address';
-  end if;
-
-  insert into public.account_shares (
-    owner_user_id,
-    shared_with_email
-  )
-  values (
-    auth.uid(),
-    v_email
-  )
-  on conflict (owner_user_id, shared_with_email)
-  do update
-    set updated_at = now()
-  returning *
-    into v_row;
-
-  return v_row;
-end;
+  select
+    auth.uid() = p_owner_user_id
+    or exists (
+      select 1
+      from public.account_shares s
+      where s.owner_user_id = p_owner_user_id
+        and lower(s.shared_with_email) = public.current_user_email()
+        and s.access_level = 'editor'
+    );
 $$;
 
 create or replace function public.unshare_account_by_email(
@@ -218,31 +179,8 @@ begin
 end;
 $$;
 
-create or replace function public.list_shared_accounts_for_current_user()
-returns table (
-  owner_user_id uuid,
-  owner_email text,
-  shared_at timestamptz
-)
-language sql
-security definer
-set search_path = public, auth
-as $$
-  select
-    s.owner_user_id,
-    lower(coalesce(u.email, '')) as owner_email,
-    min(s.created_at) as shared_at
-  from public.account_shares s
-  left join auth.users u
-    on u.id = s.owner_user_id
-  where lower(s.shared_with_email) = public.current_user_email()
-  group by s.owner_user_id, lower(coalesce(u.email, ''))
-  order by min(s.created_at) desc, lower(coalesce(u.email, ''));
-$$;
-
-grant execute on function public.share_account_with_email(text) to authenticated;
-grant execute on function public.unshare_account_by_email(text) to authenticated;
-grant execute on function public.list_shared_accounts_for_current_user() to authenticated;
+-- share/list RPCs and their grants are defined in the access-level enforcement
+-- section near the end of this file.
 
 create table if not exists public.account_change_logs (
   id uuid primary key default gen_random_uuid(),
@@ -510,14 +448,6 @@ create index if not exists materials_user_id_active_name_idx
 
 alter table public.materials enable row level security;
 
-drop policy if exists "materials_owner_all" on public.materials;
-drop policy if exists "materials_account_access_all" on public.materials;
-create policy "materials_account_access_all"
-  on public.materials
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
-
 drop trigger if exists materials_set_updated_at on public.materials;
 create trigger materials_set_updated_at
 before update on public.materials
@@ -654,14 +584,6 @@ create index if not exists purchases_user_id_material_id_idx
 
 alter table public.purchases enable row level security;
 
-drop policy if exists "purchases_owner_all" on public.purchases;
-drop policy if exists "purchases_account_access_all" on public.purchases;
-create policy "purchases_account_access_all"
-  on public.purchases
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
-
 drop trigger if exists purchases_set_updated_at on public.purchases;
 create trigger purchases_set_updated_at
 before update on public.purchases
@@ -786,14 +708,6 @@ create index if not exists bom_items_user_id_type_active_name_idx
 
 alter table public.bom_items enable row level security;
 
-drop policy if exists "bom_items_owner_all" on public.bom_items;
-drop policy if exists "bom_items_account_access_all" on public.bom_items;
-create policy "bom_items_account_access_all"
-  on public.bom_items
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
-
 drop trigger if exists bom_items_set_updated_at on public.bom_items;
 create trigger bom_items_set_updated_at
 before update on public.bom_items
@@ -828,14 +742,6 @@ create index if not exists bom_item_lines_user_id_component_bom_item_id_idx
   on public.bom_item_lines (user_id, component_bom_item_id);
 
 alter table public.bom_item_lines enable row level security;
-
-drop policy if exists "bom_item_lines_owner_all" on public.bom_item_lines;
-drop policy if exists "bom_item_lines_account_access_all" on public.bom_item_lines;
-create policy "bom_item_lines_account_access_all"
-  on public.bom_item_lines
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
 
 drop trigger if exists bom_item_lines_set_updated_at on public.bom_item_lines;
 create trigger bom_item_lines_set_updated_at
@@ -875,14 +781,6 @@ create index if not exists app_settings_updated_at_idx
   on public.app_settings (updated_at desc);
 
 alter table public.app_settings enable row level security;
-
-drop policy if exists "app_settings_owner_all" on public.app_settings;
-drop policy if exists "app_settings_account_access_all" on public.app_settings;
-create policy "app_settings_account_access_all"
-  on public.app_settings
-  for all
-  using (public.has_account_access(user_id))
-  with check (public.has_account_access(user_id));
 
 drop trigger if exists app_settings_set_updated_at on public.app_settings;
 create trigger app_settings_set_updated_at

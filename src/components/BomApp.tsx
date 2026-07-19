@@ -20,6 +20,7 @@ import {
   type BomRecord,
 } from "@/lib/bom";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/fetchAll";
 import {
   bomToItemUpdate,
   combineBomRows,
@@ -317,17 +318,33 @@ export default function BomApp() {
       }
 
       const [itemsRes, linesRes, materialsRes] = await Promise.all([
-        supabase
-          .from("bom_items")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("updated_at", { ascending: false }),
-        supabase
-          .from("bom_item_lines")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("sort_order", { ascending: true }),
-        supabase.from("materials").select("*").eq("user_id", activeOwnerUserId).order("name", { ascending: true }),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("bom_items")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("updated_at", { ascending: false })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("bom_item_lines")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("sort_order", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("materials")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("name", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
 
       if (cancelled) return;

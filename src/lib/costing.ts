@@ -99,59 +99,6 @@ export function makeBlankSheet(id: string): CostSheet {
   };
 }
 
-export function createDemoSheet(): CostSheet {
-  // Keep this deterministic to avoid SSR/client hydration mismatches.
-  const t = "2026-02-09T00:00:00.000Z";
-  return {
-    id: "demo",
-    name: "Demo: Canvas Tote Bag",
-    sku: "TOTE-001",
-    currency: "USD",
-    unitName: "bag",
-    batchSize: 10,
-    wastePct: 6,
-    markupPct: 55,
-    taxPct: 0,
-    materials: [
-      {
-        id: "m_canvas",
-        materialId: "material_demo_canvas",
-        name: "Canvas fabric",
-        qty: 6.2,
-        unit: "yd",
-        unitCostCents: 625,
-      },
-      {
-        id: "m_thread",
-        materialId: "material_demo_thread",
-        name: "Thread",
-        qty: 1,
-        unit: "spool",
-        unitCostCents: 399,
-      },
-      {
-        id: "m_label",
-        materialId: null,
-        name: "Woven label",
-        qty: 10,
-        unit: "ea",
-        unitCostCents: 28,
-      },
-    ],
-    labor: [
-      { id: "l_cut", role: "Cut + sew", hours: 2.5, rateCents: 2200 },
-    ],
-    overhead: [
-      { id: "o_shop", name: "Shop overhead", kind: "percent", percent: 12 },
-      { id: "o_pack", name: "Packaging", kind: "flat", amountCents: 600 },
-    ],
-    notes:
-      "This demo is stored in your browser. Create a new sheet to start costing your own products.",
-    createdAt: t,
-    updatedAt: t,
-  };
-}
-
 export type SheetTotals = {
   materialsSubtotalCents: number;
   materialsWithWasteCents: number;
@@ -241,7 +188,7 @@ export function computeTotals(sheet: CostSheet): SheetTotals {
       : roundCents(pricePerUnitCents - costPerUnitCents);
 
   const marginPct =
-    pricePerUnitCents && profitPerUnitCents !== null
+    pricePerUnitCents !== null && pricePerUnitCents !== 0 && profitPerUnitCents !== null
       ? Math.round((profitPerUnitCents / pricePerUnitCents) * 1000) / 10
       : null;
 

@@ -47,3 +47,6 @@ next-env.d.ts
 # local documentation (keep local, do not push)
 /docs/
 /task-list.md
+
+# claude local settings
+.claude/settings.local.json

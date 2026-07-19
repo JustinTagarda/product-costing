@@ -1,4 +1,4 @@
-import type { CostSheet, OverheadItem } from "@/lib/costing";
+import type { CostSheet, LaborItem, MaterialItem, OverheadItem } from "@/lib/costing";
 import { clampNumber, makeBlankSheet } from "@/lib/costing";
 
 export type DbCostSheetRow = {
@@ -48,6 +48,47 @@ function asNumber(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function normalizeMaterials(items: unknown): MaterialItem[] {
+  return asArray(items)
+    .map((m): MaterialItem | null => {
+      if (!m || typeof m !== "object") return null;
+      const r = m as Record<string, unknown>;
+      const id = asString(r.id);
+      if (!id) return null;
+      return {
+        id,
+        materialId: typeof r.materialId === "string" ? r.materialId : null,
+        name: asString(r.name),
+        qty: Math.max(0, asNumber(r.qty, 0)),
+        unit: asString(r.unit),
+        unitCostCents: Math.max(0, Math.round(asNumber(r.unitCostCents, 0))),
+      };
+    })
+    .filter((m): m is MaterialItem => m !== null);
+}
+
+function normalizeLabor(items: unknown): LaborItem[] {
+  return asArray(items)
+    .map((l) => {
+      if (!l || typeof l !== "object") return null;
+      const r = l as Record<string, unknown>;
+      const id = asString(r.id);
+      if (!id) return null;
+      return {
+        id,
+        role: asString(r.role),
+        hours: Math.max(0, asNumber(r.hours, 0)),
+        rateCents: Math.max(0, Math.round(asNumber(r.rateCents, 0))),
+      };
+    })
+    .filter((l): l is LaborItem => l !== null);
+}
+
+function asIsoDate(v: unknown): string {
+  const d = new Date(typeof v === "string" ? v : NaN);
+  return Number.isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString();
+}
+
 function normalizeOverhead(items: unknown): OverheadItem[] {
   return asArray(items)
     .map((o) => {
@@ -79,8 +120,8 @@ function normalizeOverhead(items: unknown): OverheadItem[] {
 }
 
 export function rowToSheet(row: DbCostSheetRow): CostSheet {
-  const createdAt = new Date(row.created_at).toISOString();
-  const updatedAt = new Date(row.updated_at).toISOString();
+  const createdAt = asIsoDate(row.created_at);
+  const updatedAt = asIsoDate(row.updated_at);
 
   return {
     id: row.id,
@@ -93,8 +134,8 @@ export function rowToSheet(row: DbCostSheetRow): CostSheet {
     wastePct: clampNumber(asNumber(row.waste_pct, 0), 0, 1000),
     markupPct: clampNumber(asNumber(row.markup_pct, 40), 0, 10000),
     taxPct: clampNumber(asNumber(row.tax_pct, 0), 0, 1000),
-    materials: (asArray(row.materials) as CostSheet["materials"]) || [],
-    labor: (asArray(row.labor) as CostSheet["labor"]) || [],
+    materials: normalizeMaterials(row.materials),
+    labor: normalizeLabor(row.labor),
     overhead: normalizeOverhead(row.overhead),
     notes: row.notes ?? "",
     createdAt,

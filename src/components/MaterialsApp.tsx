@@ -9,11 +9,13 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
+import { useDebouncedRowSaver } from "@/lib/useDebouncedRowSaver";
 import {
   sortMaterialsByNameAsc,
   type MaterialRecord,
 } from "@/lib/materials";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/fetchAll";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { formatCode, getNextCodeNumber, isDuplicateKeyError } from "@/lib/itemCodes";
@@ -237,7 +239,7 @@ export default function MaterialsApp() {
 
   const user = session?.user ?? null;
 
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  const materialSaver = useDebouncedRowSaver<MaterialRecord>((row) => persistMaterial(row), 420);
   const hasHydratedRef = useRef(false);
   const pendingScrollMaterialIdRef = useRef<string | null>(null);
   const savingDraftMaterialRef = useRef(false);
@@ -375,14 +377,6 @@ export default function MaterialsApp() {
   }, [authReady, session]);
 
   useEffect(() => {
-    const timers = saveTimersRef.current;
-    return () => {
-      for (const timer of timers.values()) window.clearTimeout(timer);
-      timers.clear();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!dataAuthReady) return;
     let cancelled = false;
 
@@ -399,16 +393,24 @@ export default function MaterialsApp() {
       }
 
       const [materialsRes, purchasesRes] = await Promise.all([
-        supabase
-          .from("materials")
-          .select("*")
-          .eq("user_id", activeOwnerUserId)
-          .order("name", { ascending: true }),
-        supabase
-          .from("purchases")
-          .select("material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
-          .eq("user_id", activeOwnerUserId)
-          .not("material_id", "is", null),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("materials")
+            .select("*")
+            .eq("user_id", activeOwnerUserId)
+            .order("name", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("purchases")
+            .select("id, material_id, quantity, usable_quantity, unit_cost_cents, total_cost_cents, cost_cents, currency")
+            .eq("user_id", activeOwnerUserId)
+            .not("material_id", "is", null)
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
 
       if (cancelled) return;
@@ -474,10 +476,7 @@ export default function MaterialsApp() {
   }
 
   function schedulePersist(next: MaterialRecord): void {
-    const currentTimer = saveTimersRef.current.get(next.id);
-    if (currentTimer) window.clearTimeout(currentTimer);
-    const timer = window.setTimeout(() => void persistMaterial(next), 420);
-    saveTimersRef.current.set(next.id, timer);
+    materialSaver.schedule(next.id, next);
   }
 
   function updateMaterial(id: string, updater: (row: MaterialRecord) => MaterialRecord): void {
@@ -586,6 +585,7 @@ export default function MaterialsApp() {
       toast("error", "Sign in with Google to delete materials.");
       return;
     }
+    materialSaver.cancel(id);
     const { error } = await supabase.from("materials").delete().eq("id", id);
     if (error) {
       toast("error", error.message);
