@@ -283,7 +283,7 @@ export default function SettingsApp() {
 
       <div className="px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.5rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3rem)] w-full flex-col animate-[fadeUp_.55s_ease-out]">
-          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="font-serif text-[1.75rem] leading-[1.12] tracking-tight text-ink sm:text-[2rem]">Settings</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
@@ -301,22 +301,22 @@ export default function SettingsApp() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-nowrap items-center justify-end gap-2">
               <button
                 type="button"
-                className="rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
+                className="min-w-0 shrink rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
                 onClick={resetDefaults}
                 disabled={isReadOnlyData}
               >
-                Load defaults
+                <span className="block truncate">Load defaults</span>
               </button>
               <button
                 type="button"
-                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-w-0 shrink-0 rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => void onSave()}
                 disabled={saving || isReadOnlyData}
               >
-                {saving ? "Saving..." : "Save settings"}
+                <span className="block truncate">{saving ? "Saving..." : "Save settings"}</span>
               </button>
             </div>
           </header>

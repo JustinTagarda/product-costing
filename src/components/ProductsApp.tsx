@@ -265,7 +265,7 @@ export default function ProductsApp() {
 
       <div className="px-2 pb-6 pt-3 sm:px-3 sm:pb-7 sm:pt-4 lg:px-4 lg:pb-8 lg:pt-5">
         <div className="flex min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.25rem)] sm:min-h-[calc(100dvh-var(--app-shell-topbar-height)-2.75rem)] lg:min-h-[calc(100dvh-var(--app-shell-topbar-height)-3.25rem)] w-full flex-col animate-[fadeUp_.45s_ease-out]">
-          <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="font-serif text-[1.75rem] leading-[1.12] tracking-tight text-ink sm:text-[2rem]">Products</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
@@ -283,14 +283,14 @@ export default function ProductsApp() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-nowrap items-center justify-end gap-2">
               <button
                 type="button"
-                className="rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
+                className="min-w-0 shrink-0 rounded-xl app-btn-primary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => router.push("/calculator?new=1")}
                 disabled={isReadOnlyData}
               >
-                New product
+                <span className="block truncate">New product</span>
               </button>
             </div>
           </header>
