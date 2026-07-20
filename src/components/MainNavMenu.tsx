@@ -360,7 +360,7 @@ export function MainNavMenu({
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-zinc-100/90 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45"
             onClick={() => setIsMobileDrawerOpen(false)}
           >
-            <PanelCloseIcon />
+            <PanelToggleIcon />
           </button>
         </div>
 
@@ -394,7 +394,7 @@ export function MainNavMenu({
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
-            {isTabletExpanded ? <PanelCloseIcon /> : <MenuIcon />}
+            <PanelToggleIcon />
           </button>
 
           <div className={["ml-1.5 min-w-0 xl:ml-0", compactModeClasses.fullLabel].join(" ")}>
@@ -696,10 +696,11 @@ function MenuIcon({ className }: IconProps) {
   );
 }
 
-// Double-chevron collapse glyph: an unambiguous, widely recognized "tuck this
-// panel away" affordance (distinct from a plain X so it doesn't read as
-// "close the app").
-function PanelCloseIcon({ className }: IconProps) {
+// Sidebar-panel glyph: a rounded rectangle with a divided, filled left
+// section representing the nav panel itself — the same convention used by
+// shadcn/ui and Notion's sidebar trigger. One consistent icon regardless of
+// collapsed/expanded state, unlike an X, doesn't read as "close the app".
+function PanelToggleIcon({ className }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -708,13 +709,14 @@ function PanelCloseIcon({ className }: IconProps) {
       aria-hidden="true"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
-      <path d="M11 6l-5 6 5 6" />
-      <path d="M18 6l-5 6 5 6" />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M9.5 4.5v15" />
+      <rect x="4.5" y="5.5" width="4" height="13" rx="1.25" fill="currentColor" stroke="none" />
     </svg>
   );
 }
