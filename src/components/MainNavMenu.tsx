@@ -709,14 +709,19 @@ function PanelToggleIcon({ className }: IconProps) {
       aria-hidden="true"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-      <path d="M9.5 4.5v15" />
-      <rect x="4.5" y="5.5" width="4" height="13" rx="1.25" fill="currentColor" stroke="none" />
+      <rect x="3" y="3" width="18" height="18" rx="3.5" />
+      <path
+        d="M6.5 3.75A2.75 2.75 0 003.75 6.5v11A2.75 2.75 0 006.5 20.25h2.75V3.75H6.5z"
+        fill="currentColor"
+        fillOpacity="0.18"
+        stroke="none"
+      />
+      <path d="M9.25 4v16" strokeWidth="1.6" />
     </svg>
   );
 }
