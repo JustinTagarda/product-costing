@@ -260,7 +260,7 @@ export function ShareSheetModal({
           </div>
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-paper/75"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg app-btn-secondary"
             aria-label="Close share dialog"
             onClick={requestClose}
           >
@@ -346,7 +346,7 @@ export function ShareSheetModal({
                           </select>
                           <button
                             type="button"
-                            className="rounded-lg border border-border bg-paper px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-lg app-btn-secondary px-2.5 py-1 text-xs"
                             onClick={() => void removeShare(share)}
                             disabled={controlsDisabled}
                           >

@@ -373,7 +373,7 @@ export default function ProductDetailsApp() {
               </p>
               <button
                 type="button"
-                className="mt-4 rounded-xl border border-border bg-paper/55 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/70"
+                className="mt-4 rounded-xl app-btn-secondary px-4 py-2 text-sm"
                 onClick={() => router.push("/products")}
               >
                 Back to Products

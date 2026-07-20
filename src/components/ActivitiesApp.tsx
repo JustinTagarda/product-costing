@@ -466,7 +466,7 @@ export default function ActivitiesApp() {
               <div className="flex justify-start lg:justify-end">
                 <button
                   type="button"
-                  className="rounded-lg border border-border bg-paper px-3 py-2 text-xs font-semibold text-ink transition hover:bg-paper/70"
+                  className="rounded-lg app-btn-secondary px-3 py-2 text-xs"
                   onClick={() => {
                     setQuery("");
                     setUserFilter("all");

@@ -479,7 +479,7 @@ export default function SettingsApp() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="rounded-lg border border-border bg-paper/55 px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
+                      className="rounded-lg app-btn-secondary px-3 py-1.5 text-xs"
                       onClick={() =>
                         updateSettings((prev) => ({
                           ...prev,
@@ -491,7 +491,7 @@ export default function SettingsApp() {
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border border-border bg-paper/55 px-3 py-1.5 text-xs font-semibold text-ink transition hover:bg-paper/70"
+                      className="rounded-lg app-btn-secondary px-3 py-1.5 text-xs"
                       onClick={addConversion}
                     >
                       Add conversion
@@ -531,7 +531,7 @@ export default function SettingsApp() {
                       />
                       <button
                         type="button"
-                        className="rounded-lg border border-border bg-danger/10 px-3 py-2 text-xs font-semibold text-danger transition hover:bg-danger/15"
+                        className="rounded-lg app-btn-danger px-3 py-2 text-xs"
                         onClick={() => removeConversion(row.id)}
                       >
                         Remove

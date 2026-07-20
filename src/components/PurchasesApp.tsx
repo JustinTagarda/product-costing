@@ -1379,7 +1379,7 @@ export default function PurchasesApp() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-paper/75 active:translate-y-px"
+                className="rounded-xl app-btn-secondary px-4 py-2 text-sm active:translate-y-px"
                 onClick={() => setIsImportModalOpen(true)}
                 disabled={isReadOnlyData}
               >
@@ -1613,7 +1613,7 @@ export default function PurchasesApp() {
 	                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
 	                    <button
 	                      type="button"
-	                      className="rounded-lg border border-border bg-paper px-3 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+	                      className="rounded-lg app-btn-secondary px-3 py-2 text-sm"
 	                      onClick={resetDraftPurchase}
 	                      disabled={savingDraftPurchase || !hasDraftPurchaseValues()}
 	                    >

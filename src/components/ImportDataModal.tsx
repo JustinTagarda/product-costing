@@ -177,7 +177,7 @@ export function ImportDataModal({
           </div>
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-paper text-ink transition hover:bg-paper/75"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg app-btn-secondary"
             aria-label="Close import popup"
             onClick={requestClose}
           >
@@ -209,7 +209,7 @@ export function ImportDataModal({
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
-            className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl app-btn-secondary px-4 py-2 text-sm"
             onClick={clearTextarea}
             disabled={isTextareaEmpty}
             aria-disabled={isTextareaEmpty}
@@ -218,7 +218,7 @@ export function ImportDataModal({
           </button>
           <button
             type="button"
-            className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl app-btn-secondary px-4 py-2 text-sm"
             onClick={validateInput}
             disabled={isTextareaEmpty}
             aria-disabled={isTextareaEmpty}
@@ -227,7 +227,7 @@ export function ImportDataModal({
           </button>
           <button
             type="button"
-            className="rounded-xl border border-border bg-paper px-4 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75"
+            className="rounded-xl app-btn-secondary px-4 py-2 text-sm"
             onClick={requestClose}
           >
             Cancel

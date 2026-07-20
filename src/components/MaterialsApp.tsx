@@ -775,7 +775,7 @@ export default function MaterialsApp() {
                   <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
                     <button
                       type="button"
-                      className="rounded-lg border border-border bg-paper px-3 py-2 text-sm font-semibold text-ink transition hover:bg-paper/75 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-lg app-btn-secondary px-3 py-2 text-sm"
                       onClick={resetDraftMaterial}
                       disabled={
                         savingDraftMaterial ||

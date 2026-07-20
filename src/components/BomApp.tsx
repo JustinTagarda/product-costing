@@ -877,7 +877,7 @@ export default function BomApp() {
                         </div>
                         <button
                           type="button"
-                          className="rounded-lg border border-border bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger transition hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-lg app-btn-danger px-2.5 py-1 text-xs"
                           onClick={() => void removeLine(line.id)}
                           disabled={isReadOnlyData}
                           aria-label="Remove BOM line"
