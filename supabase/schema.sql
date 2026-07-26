@@ -1235,4 +1235,25 @@ grant execute on function public.share_account_with_email(text, text) to authent
 grant execute on function public.unshare_account_by_email(text) to authenticated;
 grant execute on function public.update_account_share_access_level(text, text) to authenticated;
 grant execute on function public.list_shared_accounts_for_current_user() to authenticated;
+
+-- One-row-per-account marker recording whether sample onboarding data has
+-- been seeded, so a new account is seeded exactly once.
+create table if not exists public.account_bootstrap (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  sample_data_seeded_at timestamptz not null default now()
+);
+
+alter table public.account_bootstrap enable row level security;
+
+drop policy if exists "account_bootstrap_select" on public.account_bootstrap;
+create policy "account_bootstrap_select"
+  on public.account_bootstrap
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "account_bootstrap_insert" on public.account_bootstrap;
+create policy "account_bootstrap_insert"
+  on public.account_bootstrap
+  for insert
+  with check (auth.uid() = user_id);
 grant execute on function public.list_account_shares_for_owner(uuid) to authenticated;

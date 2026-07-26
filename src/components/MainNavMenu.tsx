@@ -61,11 +61,13 @@ export function MainNavMenu({
   // Each page mounts its own MainNavMenu instance, so this preference must be
   // persisted rather than kept in plain local state — otherwise every
   // navigation remounts the component and silently re-expands the rail,
-  // discarding the user's choice.
+  // discarding the user's choice. sessionStorage (not localStorage) keeps the
+  // choice for the current tab/session only, so a new browser session (e.g. a
+  // fresh visitor on a shared/demo machine) always starts expanded.
   const [isTabletExpanded, setIsTabletExpanded] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
-      const stored = window.localStorage.getItem(TABLET_EXPANDED_STORAGE_KEY);
+      const stored = window.sessionStorage.getItem(TABLET_EXPANDED_STORAGE_KEY);
       return stored === null ? true : stored === "1";
     } catch {
       return true;
@@ -188,7 +190,7 @@ export function MainNavMenu({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(TABLET_EXPANDED_STORAGE_KEY, isTabletExpanded ? "1" : "0");
+      window.sessionStorage.setItem(TABLET_EXPANDED_STORAGE_KEY, isTabletExpanded ? "1" : "0");
     } catch {
       // Ignore storage write failures (e.g. private browsing); the preference
       // just won't survive this session.

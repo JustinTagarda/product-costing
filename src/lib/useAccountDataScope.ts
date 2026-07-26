@@ -6,6 +6,7 @@ import {
   getSelectedOwnerUserIdForSession,
   setSelectedOwnerUserIdForSession,
 } from "@/lib/accountScopeSelection";
+import { seedSampleAccountData } from "@/lib/supabase/sampleData";
 
 export type SharedAccountOption = {
   ownerUserId: string;
@@ -100,6 +101,7 @@ export function useAccountDataScope({
         setSelectedOwnerUserIdForSession(signedInUserId, signedInUserId);
         setSelectionRequired(false);
         setScopeReady(true);
+        void seedSampleAccountData(supabase, signedInUserId);
         return;
       }
 
@@ -111,6 +113,9 @@ export function useAccountDataScope({
         setActiveOwnerUserId(nextOwnerUserId);
         setSelectionRequired(false);
         setScopeReady(true);
+        if (nextOwnerUserId === signedInUserId) {
+          void seedSampleAccountData(supabase, signedInUserId);
+        }
         return;
       }
 
@@ -138,7 +143,10 @@ export function useAccountDataScope({
     setSelectedOwnerUserIdForSession(signedInUserId, signedInUserId);
     setSelectionRequired(false);
     setShowSelectionModal(false);
-  }, [signedInUserId]);
+    if (supabase) {
+      void seedSampleAccountData(supabase, signedInUserId);
+    }
+  }, [signedInUserId, supabase]);
 
   const selectSharedData = useCallback(
     (ownerUserId: string) => {
