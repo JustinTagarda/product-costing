@@ -42,7 +42,7 @@ export default function AuthCallbackPage() {
         // redirects to /dataset-select. Forcing every login through that page
         // unconditionally would duplicate that check and add an extra hop for
         // the common case of a user with no shared accounts.
-        if (!cancelled) router.replace("/calculator");
+        if (!cancelled) router.replace("/");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Auth callback failed.";
         if (!cancelled) setError(msg);
