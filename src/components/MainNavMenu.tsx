@@ -386,7 +386,7 @@ export function MainNavMenu({
           className={[
             "flex h-[65px] items-center",
             isTabletExpanded
-              ? "gap-0 pl-[13px] pr-[10px]"
+              ? "gap-0 pl-[13px] pr-[5px]"
               : "gap-1.5 justify-center px-2 xl:justify-start xl:pl-[3px] xl:pr-2",
           ].join(" ")}
         >
@@ -399,7 +399,10 @@ export function MainNavMenu({
           <button
             type="button"
             aria-label={isTabletExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden"
+            className={[
+              "inline-flex shrink-0 items-center justify-center rounded-lg text-ink transition hover:bg-zinc-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45 xl:hidden",
+              isTabletExpanded ? "h-7 w-7" : "h-9 w-9",
+            ].join(" ")}
             onClick={() => setIsTabletExpanded((prev) => !prev)}
           >
             <PanelToggleIcon />
