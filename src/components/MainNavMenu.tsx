@@ -384,10 +384,10 @@ export function MainNavMenu({
       >
         <div
           className={[
-            "flex h-[65px] items-center gap-1.5",
+            "flex h-[65px] items-center",
             isTabletExpanded
-              ? "pl-[13px] pr-[10px]"
-              : "justify-center px-2 xl:justify-start xl:pl-[3px] xl:pr-2",
+              ? "gap-0 pl-[13px] pr-[10px]"
+              : "gap-1.5 justify-center px-2 xl:justify-start xl:pl-[3px] xl:pr-2",
           ].join(" ")}
         >
           {isTabletExpanded ? (
