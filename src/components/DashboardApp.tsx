@@ -268,11 +268,6 @@ export default function DashboardApp() {
       .slice(0, 6);
   }, [dashboardRows]);
 
-  const maxLeaderMargin = useMemo(
-    () => Math.max(1, ...marginLeaders.map((row) => row.totals.marginPct ?? 0)),
-    [marginLeaders],
-  );
-
   const recentProducts = useMemo(
     () => [...dashboardRows].sort((a, b) => Date.parse(b.sheet.updatedAt) - Date.parse(a.sheet.updatedAt)).slice(0, 10),
     [dashboardRows],
@@ -375,7 +370,7 @@ export default function DashboardApp() {
                 {marginLeaders.length ? (
                   marginLeaders.map((row) => {
                     const margin = row.totals.marginPct ?? 0;
-                    const width = (margin / maxLeaderMargin) * 100;
+                    const width = Math.max(0, Math.min(100, margin));
                     return (
                       <div key={row.sheet.id}>
                         <div className="flex items-center justify-between gap-3 text-sm">

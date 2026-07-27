@@ -780,6 +780,62 @@ create table if not exists public.app_settings (
 create index if not exists app_settings_updated_at_idx
   on public.app_settings (updated_at desc);
 
+-- Currency columns had no DB-level validation; normalize any out-of-range
+-- rows before constraining, so this is safe against data older than the
+-- constraints below.
+update public.app_settings set base_currency = 'USD' where base_currency !~ '^[A-Z]{3}$';
+update public.app_settings set currency_display = 'symbol' where currency_display <> 'code';
+update public.app_settings set currency_rounding_mode = 'nearest' where currency_rounding_mode not in ('up', 'down');
+update public.app_settings set currency_rounding_increment = 100 where currency_rounding_increment > 100;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'app_settings_base_currency_format'
+      and conrelid = 'public.app_settings'::regclass
+  ) then
+    alter table public.app_settings
+      add constraint app_settings_base_currency_format check (base_currency ~ '^[A-Z]{3}$');
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'app_settings_currency_display_check'
+      and conrelid = 'public.app_settings'::regclass
+  ) then
+    alter table public.app_settings
+      add constraint app_settings_currency_display_check check (currency_display in ('symbol', 'code'));
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'app_settings_currency_rounding_mode_check'
+      and conrelid = 'public.app_settings'::regclass
+  ) then
+    alter table public.app_settings
+      add constraint app_settings_currency_rounding_mode_check check (currency_rounding_mode in ('nearest', 'up', 'down'));
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'app_settings_currency_rounding_increment_max'
+      and conrelid = 'public.app_settings'::regclass
+  ) then
+    alter table public.app_settings
+      add constraint app_settings_currency_rounding_increment_max check (currency_rounding_increment <= 100);
+  end if;
+end $$;
+
 alter table public.app_settings enable row level security;
 
 drop trigger if exists app_settings_set_updated_at on public.app_settings;

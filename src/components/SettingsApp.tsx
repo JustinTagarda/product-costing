@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { CurrencyChangeConfirmModal } from "@/components/CurrencyChangeConfirmModal";
 import { DataSelectionModal } from "@/components/DataSelectionModal";
 import { DeferredNumberInput } from "@/components/DeferredNumericInput";
 import { GlobalAppToast } from "@/components/GlobalAppToast";
@@ -12,6 +13,7 @@ import { MainNavMenu } from "@/components/MainNavMenu";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatCents } from "@/lib/format";
+import { listSupportedCurrencies } from "@/lib/currencyCodes";
 import {
   defaultUomConversions,
   makeDefaultSettings,
@@ -22,6 +24,7 @@ import {
 import { signOutAndClearClientAuth } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getUserProfileImageUrl } from "@/lib/supabase/profile";
+import { hasExistingAccountData } from "@/lib/supabase/accountData";
 import { goToWelcomePage } from "@/lib/navigation";
 import { useAccountDataScope } from "@/lib/useAccountDataScope";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -73,6 +76,10 @@ export default function SettingsApp() {
   const [authReady, setAuthReady] = useState(() => !supabase);
   const [saving, setSaving] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [pendingCurrencyChange, setPendingCurrencyChange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
 
   const user = session?.user ?? null;
 
@@ -142,6 +149,19 @@ export default function SettingsApp() {
     onError: (message) => toast("error", message),
   });
 
+  // Captures the base currency as it was loaded for the active account, so
+  // onSave can tell "the user changed currency this session" apart from
+  // "it was already this value." Recaptures whenever the active account
+  // changes (own vs. a shared dataset), not just on first load.
+  const loadedBaseCurrencyRef = useRef<string | null>(null);
+  const loadedForOwnerRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!settingsReady) return;
+    if (loadedForOwnerRef.current === activeOwnerUserId) return;
+    loadedForOwnerRef.current = activeOwnerUserId;
+    loadedBaseCurrencyRef.current = settings.baseCurrency;
+  }, [settingsReady, settings.baseCurrency, activeOwnerUserId]);
+
   function openSettingsPage() {
     router.push("/settings");
   }
@@ -187,11 +207,7 @@ export default function SettingsApp() {
     }));
   }
 
-  async function onSave() {
-    if (isReadOnlyData) {
-      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
-      return;
-    }
+  async function persistSettings() {
     setSaving(true);
     const result = await saveSettings(settings);
     setSaving(false);
@@ -199,7 +215,32 @@ export default function SettingsApp() {
       toast("error", result.message);
       return;
     }
+    loadedBaseCurrencyRef.current = settings.baseCurrency;
     toast("success", "Settings saved.");
+  }
+
+  async function onSave() {
+    if (isReadOnlyData) {
+      toast("error", "Viewer access is read-only. Ask the owner for Editor access.");
+      return;
+    }
+
+    const previousCurrency = loadedBaseCurrencyRef.current;
+    const currencyChanged = Boolean(previousCurrency) && previousCurrency !== settings.baseCurrency;
+    if (currencyChanged && supabase && activeOwnerUserId) {
+      const hasData = await hasExistingAccountData(supabase, activeOwnerUserId);
+      if (hasData) {
+        setPendingCurrencyChange({ from: previousCurrency as string, to: settings.baseCurrency });
+        return;
+      }
+    }
+
+    await persistSettings();
+  }
+
+  async function confirmCurrencyChangeAndSave() {
+    setPendingCurrencyChange(null);
+    await persistSettings();
   }
 
   function resetDefaults() {
@@ -237,6 +278,8 @@ export default function SettingsApp() {
     [],
   );
 
+  const currencyOptions = useMemo(() => listSupportedCurrencies(), []);
+
   const symbolExample = useMemo(
     () => safeCurrencyExample(settings.baseCurrency, "symbol"),
     [settings.baseCurrency],
@@ -245,6 +288,11 @@ export default function SettingsApp() {
   const codeExample = useMemo(
     () => safeCurrencyExample(settings.baseCurrency, "code"),
     [settings.baseCurrency],
+  );
+
+  const currencyPreview = useMemo(
+    () => safeCurrencyExample(settings.baseCurrency, settings.currencyDisplay),
+    [settings.baseCurrency, settings.currencyDisplay],
   );
 
   if (!dataAuthReady || !settingsReady) {
@@ -381,15 +429,20 @@ export default function SettingsApp() {
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium tracking-wide text-muted">Base currency</label>
-                  <input
-                    className={inputBase + " mt-1 font-mono uppercase"}
+                  <select
+                    className={inputBase + " mt-1"}
                     value={settings.baseCurrency}
-                    maxLength={3}
                     onChange={(e) =>
                       updateSettings((prev) => ({ ...prev, baseCurrency: e.target.value.toUpperCase() }))
                     }
-                    placeholder="USD"
-                  />
+                  >
+                    {currencyOptions.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {`${option.code} — ${option.name} (${option.symbol})`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-muted">Preview: {currencyPreview}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium tracking-wide text-muted">Currency format</label>
@@ -672,6 +725,14 @@ export default function SettingsApp() {
             onSelectOwn={selectOwnData}
             onSelectShared={selectSharedData}
             onClose={() => setShowSelectionModal(false)}
+          />
+
+          <CurrencyChangeConfirmModal
+            isOpen={pendingCurrencyChange !== null}
+            fromCurrency={pendingCurrencyChange?.from || ""}
+            toCurrency={pendingCurrencyChange?.to || ""}
+            onConfirm={() => void confirmCurrencyChangeAndSave()}
+            onCancel={() => setPendingCurrencyChange(null)}
           />
 
         </div>

@@ -20,7 +20,7 @@ import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
 import { makeId } from "@/lib/costing";
-import { formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { currencyDecimalDigitsFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import { openNativeDatePicker } from "@/lib/datePicker";
 import { handleDraftRowBlurCapture, handleDraftRowKeyDownCapture } from "@/lib/tableDraftEntry";
 import { useDebouncedRowSaver } from "@/lib/useDebouncedRowSaver";
@@ -433,6 +433,8 @@ export default function PurchasesApp() {
     authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
+
+  const moneyDecimalDigits = currencyDecimalDigitsFromSettings(settings.baseCurrency);
 
   const materialById = useMemo(() => {
     return new Map(materials.map((item) => [item.id, item]));
@@ -1760,6 +1762,7 @@ export default function PurchasesApp() {
 	                              (invalidImportedField("unitCostCents") ? " !bg-[#ffe9ec]" : "")
 	                            }
 	                            valueCents={row.unitCostCents}
+	                            decimalDigits={moneyDecimalDigits}
 	                            onCommitCents={(valueCents) =>
 	                              updatePurchase(row.id, (x) => ({
 	                                ...x,
@@ -2054,6 +2057,7 @@ export default function PurchasesApp() {
                               inputBase + " " + inputMono + (invalidImportedField("unitCostCents") ? " !bg-[#ffe9ec]" : "")
                             }
                             valueCents={row.unitCostCents}
+                            decimalDigits={moneyDecimalDigits}
                             onCommitCents={(valueCents) =>
                               updatePurchase(row.id, (x) => ({
                                 ...x,

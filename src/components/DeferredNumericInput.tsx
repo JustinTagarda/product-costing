@@ -20,6 +20,7 @@ type DeferredMoneyInputProps = Omit<
 > & {
   valueCents: number;
   onCommitCents: (valueCents: number) => void;
+  decimalDigits?: number;
 };
 
 export function parseLooseNumber(raw: string): number {
@@ -34,13 +35,17 @@ export function formatLooseNumber(value: number): string {
   return `${safe}`;
 }
 
-export function parseMoneyToCents(raw: string): number {
-  return Math.max(0, Math.round(parseLooseNumber(raw) * 100));
+export function parseMoneyToCents(raw: string, decimalDigits = 2): number {
+  const digits = Math.min(Math.max(Math.trunc(decimalDigits), 0), 2);
+  const scale = 10 ** digits;
+  const rescale = 10 ** (2 - digits);
+  return Math.max(0, Math.round(parseLooseNumber(raw) * scale) * rescale);
 }
 
-export function formatCentsToMoney(valueCents: number): string {
+export function formatCentsToMoney(valueCents: number, decimalDigits = 2): string {
   const safe = Number.isFinite(valueCents) ? valueCents : 0;
-  return (safe / 100).toFixed(2);
+  const digits = Math.min(Math.max(Math.trunc(decimalDigits), 0), 2);
+  return (safe / 100).toFixed(digits);
 }
 
 export function DeferredNumberInput({
@@ -108,15 +113,20 @@ export function DeferredNumberInput({
   );
 }
 
-export function DeferredMoneyInput({ valueCents, onCommitCents, ...rest }: DeferredMoneyInputProps) {
+export function DeferredMoneyInput({
+  valueCents,
+  onCommitCents,
+  decimalDigits = 2,
+  ...rest
+}: DeferredMoneyInputProps) {
   return (
     <DeferredNumberInput
       {...rest}
       value={valueCents}
       onCommit={onCommitCents}
-      parseValue={parseMoneyToCents}
-      formatValue={formatCentsToMoney}
-      inputMode="decimal"
+      parseValue={(raw) => parseMoneyToCents(raw, decimalDigits)}
+      formatValue={(value) => formatCentsToMoney(value, decimalDigits)}
+      inputMode={decimalDigits === 0 ? "numeric" : "decimal"}
     />
   );
 }

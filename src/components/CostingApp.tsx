@@ -25,6 +25,7 @@ import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { formatShortDate } from "@/lib/format";
 import {
   currencyCodeFromSettings,
+  currencyDecimalDigitsFromSettings,
   formatCentsWithSettingsSymbol,
 } from "@/lib/currency";
 import { appendImportedRowsAtBottom } from "@/lib/importOrdering";
@@ -301,6 +302,8 @@ export default function CostingApp() {
     () => currencyCodeFromSettings(settings.baseCurrency),
     [settings.baseCurrency],
   );
+
+  const moneyDecimalDigits = currencyDecimalDigitsFromSettings(settings.baseCurrency);
 
   const formatMoney = useCallback(
     (cents: number) =>
@@ -1712,6 +1715,7 @@ export default function CostingApp() {
                                 <DeferredMoneyInput
                                   className={inputBase + " " + inputMono}
                                   valueCents={it.rateCents}
+                                  decimalDigits={moneyDecimalDigits}
                                   onCommitCents={(valueCents) =>
                                     updateSelected((s) => ({
                                       ...s,
@@ -1793,6 +1797,7 @@ export default function CostingApp() {
                                 <DeferredMoneyInput
                                   className={inputBase + " " + inputMono}
                                   valueCents={it.rateCents}
+                                  decimalDigits={moneyDecimalDigits}
                                   onCommitCents={(valueCents) =>
                                     updateSelected((s) => ({
                                       ...s,
@@ -1951,6 +1956,7 @@ export default function CostingApp() {
                                     <DeferredMoneyInput
                                       className={inputBase + " " + inputMono}
                                       valueCents={it.amountCents}
+                                      decimalDigits={moneyDecimalDigits}
                                       onCommitCents={(valueCents) =>
                                         updateSelected((s) => ({
                                           ...s,
@@ -2067,6 +2073,7 @@ export default function CostingApp() {
                                     <DeferredMoneyInput
                                       className={inputBase + " " + inputMono}
                                       valueCents={it.amountCents}
+                                      decimalDigits={moneyDecimalDigits}
                                       onCommitCents={(valueCents) =>
                                         updateSelected((s) => ({
                                           ...s,

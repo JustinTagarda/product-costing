@@ -24,17 +24,50 @@ function applyCurrencyRounding(cents: number, options?: FormatCurrencyOptions): 
   return roundByMode(cents / increment, mode) * increment;
 }
 
+/**
+ * Real decimal precision for a currency, capped at 2: this app stores every
+ * money value as an integer number of "cents" (hundredths of a major unit),
+ * so digits beyond 2 can't be represented without rescaling that storage
+ * model everywhere. The cap makes 0-decimal currencies (JPY, KRW, VND)
+ * fully correct while being an honest, deliberate limit for the rare
+ * 3-decimal currencies (KWD, BHD, OMR) rather than a silent wrong answer.
+ */
+export function getCurrencyDecimalDigits(currency: string): number {
+  try {
+    const digits = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).resolvedOptions().maximumFractionDigits ?? 2;
+    return Math.min(Math.max(digits, 0), 2);
+  } catch {
+    return 2;
+  }
+}
+
 function getCurrencyFormatter(currency: string, display: "symbol" | "code"): Intl.NumberFormat {
   const currencyCode = currency.toUpperCase();
   const key = `${currencyCode}_${display}`;
   const cached = currencyFormatterCache.get(key);
   if (cached) return cached;
-  const fmt = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: currencyCode,
-    currencyDisplay: display === "code" ? "code" : "narrowSymbol",
-    maximumFractionDigits: 2,
-  });
+  const digits = getCurrencyDecimalDigits(currencyCode);
+  let fmt: Intl.NumberFormat;
+  try {
+    fmt = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currencyCode,
+      currencyDisplay: display === "code" ? "code" : "narrowSymbol",
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  } catch {
+    fmt = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: "USD",
+      currencyDisplay: display === "code" ? "code" : "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
   currencyFormatterCache.set(key, fmt);
   return fmt;
 }
@@ -47,15 +80,19 @@ export function formatCents(cents: number, currency = "USD", options?: FormatCur
 }
 
 export function currencySymbol(currency: string): string {
-  const parts = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency: currency.toUpperCase(),
-    currencyDisplay: "narrowSymbol",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).formatToParts(0);
-  const symbol = parts.find((part) => part.type === "currency")?.value;
-  return symbol || "$";
+  try {
+    const parts = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).formatToParts(0);
+    const symbol = parts.find((part) => part.type === "currency")?.value;
+    return symbol || "$";
+  } catch {
+    return "$";
+  }
 }
 
 export function formatShortDate(iso: string, options?: DateFormatOptions): string {

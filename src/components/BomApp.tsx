@@ -14,7 +14,7 @@ import { LoadingBlock } from "@/components/Spinner";
 import { ShareSheetModal } from "@/components/ShareSheetModal";
 import { makeId } from "@/lib/costing";
 import { formatShortDate } from "@/lib/format";
-import { formatCentsWithSettingsSymbol } from "@/lib/currency";
+import { currencyDecimalDigitsFromSettings, formatCentsWithSettingsSymbol } from "@/lib/currency";
 import {
   type MaterialRecord,
 } from "@/lib/materials";
@@ -209,6 +209,8 @@ export default function BomApp() {
     authReady: dataAuthReady,
     onError: (message) => toast("error", message),
   });
+
+  const moneyDecimalDigits = currencyDecimalDigitsFromSettings(settings.baseCurrency);
 
   const formatMoney = useCallback(
     (cents: number) =>
@@ -1028,6 +1030,7 @@ export default function BomApp() {
                                 <DeferredMoneyInput
                                   className={inputBase + " " + inputMono}
                                   valueCents={line.unitCostCents}
+                                  decimalDigits={moneyDecimalDigits}
                                   onCommitCents={(valueCents) =>
                                     updateLine(selectedBom.id, line.id, (row) => ({
                                       ...row,
@@ -1138,6 +1141,7 @@ export default function BomApp() {
                               <DeferredMoneyInput
                                 className={inputBase + " " + inputMono}
                                 valueCents={line.unitCostCents}
+                                decimalDigits={moneyDecimalDigits}
                                 onCommitCents={(valueCents) =>
                                   updateLine(selectedBom.id, line.id, (row) => ({
                                     ...row,
