@@ -386,7 +386,7 @@ export function MainNavMenu({
           className={[
             "flex h-[65px] items-center gap-1.5",
             isTabletExpanded
-              ? "pl-[3px] pr-2"
+              ? "pl-[13px] pr-1"
               : "justify-center px-2 xl:justify-start xl:pl-[3px] xl:pr-2",
           ].join(" ")}
         >
