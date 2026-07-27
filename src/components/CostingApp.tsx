@@ -1298,7 +1298,7 @@ export default function CostingApp() {
                               <p className="font-semibold text-ink">{displayName || "Material line"}</p>
                               <button
                                 type="button"
-                                className="rounded-lg app-btn-secondary px-2.5 py-1 text-xs"
+                                className="rounded-lg border border-border app-btn-danger px-2.5 py-1 text-xs"
                                 onClick={() => {
                                   updateSelected((s) => {
                                     const next = s.materials.filter((m) => m.id !== it.id);
@@ -1493,7 +1493,7 @@ export default function CostingApp() {
                                     </span>
                                     <button
                                       type="button"
-                                      className="rounded-lg app-btn-secondary px-2 py-1 text-xs"
+                                      className="rounded-lg border border-border app-btn-danger px-2 py-1 text-xs"
                                       onClick={() => {
                                         updateSelected((s) => {
                                           const next = s.materials.filter((m) => m.id !== it.id);
@@ -1653,7 +1653,7 @@ export default function CostingApp() {
                             <p className="font-semibold text-ink">{it.role || `Labor line ${idx + 1}`}</p>
                             <button
                               type="button"
-                              className="rounded-lg app-btn-secondary px-2.5 py-1 text-xs"
+                              className="rounded-lg border border-border app-btn-danger px-2.5 py-1 text-xs"
                               onClick={() => {
                                 updateSelected((s) => {
                                   const next = s.labor.filter((l) => l.id !== it.id);
@@ -1817,7 +1817,7 @@ export default function CostingApp() {
                                   </span>
                                   <button
                                     type="button"
-                                    className="rounded-lg app-btn-secondary px-2 py-1 text-xs"
+                                    className="rounded-lg border border-border app-btn-danger px-2 py-1 text-xs"
                                     onClick={() => {
                                       updateSelected((s) => {
                                         const next = s.labor.filter((l) => l.id !== it.id);
@@ -1893,7 +1893,7 @@ export default function CostingApp() {
                               <p className="font-semibold text-ink">{it.name || `Overhead line ${idx + 1}`}</p>
                               <button
                                 type="button"
-                                className="rounded-lg app-btn-secondary px-2.5 py-1 text-xs"
+                                className="rounded-lg border border-border app-btn-danger px-2.5 py-1 text-xs"
                                 onClick={() => {
                                   updateSelected((s) => ({
                                     ...s,
@@ -2114,7 +2114,7 @@ export default function CostingApp() {
                                     </span>
                                     <button
                                       type="button"
-                                      className="rounded-lg app-btn-secondary px-2 py-1 text-xs"
+                                      className="rounded-lg border border-border app-btn-danger px-2 py-1 text-xs"
                                       onClick={() => {
                                         updateSelected((s) => ({
                                           ...s,
